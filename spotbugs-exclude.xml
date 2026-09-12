@@ -1,0 +1,1 @@
+<FindBugsFilter><!-- GWT intentionally names both the legacy and DOM classes Element. --><Match><Class name="com.google.gwt.user.client.Element"/><Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/></Match></FindBugsFilter>

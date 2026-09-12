@@ -1,0 +1,47 @@
+/*
+ * #%L
+ * GWT Bootstrap
+ * %%
+ * Copyright (C) 2026 Carl Stainton
+ * %%
+ * Reimplements, over TeaVM's JSO libraries, part of the GWT client API. Class,
+ * method and package names follow GWT (https://github.com/gwtproject/gwt),
+ * Copyright (C) The GWT Project Authors, licensed under the Apache License,
+ * Version 2.0. No GWT source is included.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+package com.google.gwt.resources.client;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Marker for an interface whose methods name packaged resources.
+ *
+ * <p>In GWT a generator reads each {@link Source} at compile time and inlines the file's contents
+ * into the compiled output. The TeaVM build does the same job with an annotation processor, so
+ * bundle interfaces and their call sites are unchanged.
+ */
+public interface ClientBundle {
+
+  /** The classpath location of a resource, relative to the declaring package. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.METHOD)
+  @interface Source {
+    String[] value();
+  }
+}

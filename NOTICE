@@ -1,0 +1,13 @@
+TeaVM Compatibility Libraries
+
+Elemental2 and JsInterop APIs originate with Google and their contributors, under
+Apache License 2.0. Immutable Elemental2 inputs retain their original source headers.
+
+The modular GWT service subset was extracted from the pinned cstainton/domino-ui
+fork; original package names and copyright headers are preserved. Provenance and
+hashes are recorded in upstream/provenance.json.
+
+The GWT client compatibility implementation and portable contracts were extracted
+from cstainton/bootstrap-widgets at the recorded commit. Sources retain their Google,
+GWT and other original contributor headers. Independent TeaVM adaptations are
+maintained under io.instanto, without claiming upstream ownership or endorsement.
