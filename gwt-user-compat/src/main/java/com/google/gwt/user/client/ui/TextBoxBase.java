@@ -33,4 +33,9 @@ public class TextBoxBase extends ValueBoxBase<String> {
   protected TextBoxBase(final Element element) {
     super(element, PassthroughRenderer.instance(), PassthroughParser.instance());
   }
+
+  @Override
+  public String getValue() {
+    return getText();
+  }
 }

@@ -36,6 +36,14 @@ public class TextBox extends TextBoxBase {
     return getElement().getPropertyInt("maxLength");
   }
 
+  public int getVisibleLength() {
+    return getElement().getPropertyInt("size");
+  }
+
+  public void setVisibleLength(int length) {
+    getElement().setPropertyInt("size", length);
+  }
+
   public void setMaxLength(final int length) {
     getElement().setPropertyInt("maxLength", length);
   }

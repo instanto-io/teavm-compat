@@ -45,6 +45,14 @@ public final class Storage {
     this.local = local;
   }
 
+  public static boolean isLocalStorageSupported() {
+    return isSupported(true);
+  }
+
+  public static boolean isSessionStorageSupported() {
+    return isSupported(false);
+  }
+
   public static Storage getLocalStorageIfSupported() {
     return isSupported(true) ? LOCAL : null;
   }

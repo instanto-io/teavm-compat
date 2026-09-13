@@ -19,10 +19,10 @@ run twice:
 That is the point. A contract passing against GWT and failing here is a divergence,
 and it is reported as a test failure naming the behaviour.
 
-The shared assertions are compiled once against `gwt-user` and linked against the
-compatibility layer, so they can only use API whose signatures match exactly in both.
-Where they do not, a test is written once per backend instead, as the root panel
-caching and detach tests are.
+Portable Material assertions are compiled against each backend's API. The TeaVM
+module copies their sources from `gwt-api-contracts`, so changes to GWT wrapper
+hierarchies cannot be hidden by linking old compiled tests. TeaVM-specific native
+fixtures live here and are not counted as upstream GWT parity checks.
 
 ## Running them
 
@@ -32,3 +32,13 @@ mvn -pl gwt-user-compat-tests test
 
 They need Chrome. `teavm-junit` compiles the tests to JavaScript and runs them there,
 so this exercises the compiled artefact rather than the JVM.
+
+To check the portable Material contracts against the original GWT runtime, use
+the optional reference test profile:
+
+```sh
+mvn -Pnative-gwt-baseline -pl gwt-api-contracts-browser-baseline -am verify
+```
+
+This builds a test application, not a GWT compatibility distribution. The default
+reactor remains the TeaVM libraries and their tests.

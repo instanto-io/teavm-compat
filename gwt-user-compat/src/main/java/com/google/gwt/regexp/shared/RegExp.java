@@ -69,6 +69,10 @@ public class RegExp {
     return pattern.pattern();
   }
 
+  public SplitResult split(String input) {
+    return new SplitResult(pattern.split(input, -1));
+  }
+
   public String replace(final String input, final String replacement) {
     return input == null ? null : pattern.matcher(input).replaceAll(replacement);
   }

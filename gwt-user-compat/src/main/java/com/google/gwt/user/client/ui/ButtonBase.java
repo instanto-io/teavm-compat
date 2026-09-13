@@ -27,7 +27,8 @@ package com.google.gwt.user.client.ui;
 import com.google.gwt.dom.client.Element;
 
 /** Base class for button-like widgets. */
-public abstract class ButtonBase extends FocusWidget implements HasHTML {
+public abstract class ButtonBase extends FocusWidget
+    implements HasHTML, com.google.gwt.safehtml.client.HasSafeHtml {
 
   protected ButtonBase(final Element element) {
     super(element);
@@ -51,5 +52,10 @@ public abstract class ButtonBase extends FocusWidget implements HasHTML {
   @Override
   public void setHTML(final String html) {
     getElement().setInnerHTML(html == null ? "" : html);
+  }
+
+  @Override
+  public void setHTML(final com.google.gwt.safehtml.shared.SafeHtml html) {
+    setHTML(html.asString());
   }
 }

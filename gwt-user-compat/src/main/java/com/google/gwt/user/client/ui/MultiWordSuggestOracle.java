@@ -37,6 +37,10 @@ public class MultiWordSuggestOracle extends SuggestOracle {
     private final String replacement;
     private final String display;
 
+    public MultiWordSuggestion() {
+      this(null, null);
+    }
+
     public MultiWordSuggestion(final String replacement, final String display) {
       this.replacement = replacement;
       this.display = display;

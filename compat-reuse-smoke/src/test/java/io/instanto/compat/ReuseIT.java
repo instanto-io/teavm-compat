@@ -64,6 +64,7 @@ public class ReuseIT {
             new String[][] {
               {"data-storage", "passed"},
               {"data-date-parse", "passed"},
+              {"data-intl", "passed"},
               {"data-spanish", "enero"},
               {"data-promise", "PROMISE-VALUE"},
               {"data-rejection", "rejected-value"},

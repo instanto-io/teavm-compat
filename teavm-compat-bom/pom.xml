@@ -3,7 +3,7 @@
   <artifactId>teavm-compat-bom</artifactId>
   <packaging>pom</packaging>
   <dependencyManagement>
-    <dependencies>
+    <dependencies><dependency><groupId>io.instanto</groupId><artifactId>teavm-classlib-compat</artifactId><version>${project.version}</version></dependency><dependency><groupId>io.instanto</groupId><artifactId>gwt-uibinder-processor</artifactId><version>${project.version}</version></dependency>
       <dependency>
         <groupId>io.instanto</groupId>
         <artifactId>jsinterop-binding-generator</artifactId>

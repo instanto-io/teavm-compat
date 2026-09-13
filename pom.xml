@@ -29,6 +29,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.build.outputTimestamp>2026-09-07T16:00:00Z</project.build.outputTimestamp>
     <gwt.version>2.13.1</gwt.version>
+    <elemental2.version>1.2.3</elemental2.version>
+    <jsinterop.annotations.version>2.0.2</jsinterop.annotations.version>
+    <jsinterop.base.version>1.0.1</jsinterop.base.version>
     <teavm.version>0.15.0</teavm.version>
     <teavm.optimization>SIMPLE</teavm.optimization>
     <teavm.minify>false</teavm.minify>
@@ -40,7 +43,9 @@
   </properties>
   <modules>
     <module>teavm-compat-bom</module>
+    <module>teavm-classlib-compat</module>
     <module>jsinterop-binding-generator</module>
+    <module>gwt-uibinder-processor</module>
     <module>jsinterop-base-compat</module>
     <module>elemental2-compat</module>
     <module>gwt-modular-services-compat</module>
@@ -104,37 +109,37 @@
       <dependency>
         <groupId>com.google.elemental2</groupId>
         <artifactId>elemental2-core</artifactId>
-        <version>1.2.3</version>
+        <version>${elemental2.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.elemental2</groupId>
         <artifactId>elemental2-dom</artifactId>
-        <version>1.2.3</version>
+        <version>${elemental2.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.elemental2</groupId>
         <artifactId>elemental2-svg</artifactId>
-        <version>1.2.3</version>
+        <version>${elemental2.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.elemental2</groupId>
         <artifactId>elemental2-webstorage</artifactId>
-        <version>1.2.3</version>
+        <version>${elemental2.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.elemental2</groupId>
         <artifactId>elemental2-promise</artifactId>
-        <version>1.2.3</version>
+        <version>${elemental2.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.jsinterop</groupId>
         <artifactId>jsinterop-annotations</artifactId>
-        <version>2.0.2</version>
+        <version>${jsinterop.annotations.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.jsinterop</groupId>
         <artifactId>base</artifactId>
-        <version>1.0.1</version>
+        <version>${jsinterop.base.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -269,7 +274,7 @@
       </plugin>
     </plugins>
   </build>
-  <profiles>
+  <profiles><profile><id>native-gwt-baseline</id><modules><module>gwt-api-contracts-browser-baseline</module></modules></profile>
     <profile>
       <id>production</id>
       <properties>

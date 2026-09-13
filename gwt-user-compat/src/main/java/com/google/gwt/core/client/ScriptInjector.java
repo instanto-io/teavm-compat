@@ -24,26 +24,26 @@
  */
 package com.google.gwt.core.client;
 
-import org.teavm.jso.dom.html.HTMLDocument;
-import org.teavm.jso.dom.html.HTMLElement;
-import org.teavm.jso.dom.xml.Node;
+import org.teavm.jso.JSBody;
+import org.teavm.jso.JSFunctor;
+import org.teavm.jso.JSObject;
 
-/** Injects script text or a script URL into the host page. */
-public class ScriptInjector {
+/** Injects script text or URLs into the selected window, with native loading callbacks. */
+public final class ScriptInjector {
+  /** TeaVM executes in the host window; unlike GWT it has no separate code iframe. */
+  public static final JavaScriptObject TOP_WINDOW = JavaScriptObject.of(currentWindow());
 
-  public static final Object TOP_WINDOW = new Object();
-
-  /** Builder for injecting inline script text. */
-  public static class FromString {
-
+  public static final class FromString {
     private final String scriptText;
     private boolean removeTag = true;
+    private JavaScriptObject window;
 
-    FromString(final String scriptText) {
+    public FromString(final String scriptText) {
       this.scriptText = scriptText;
     }
 
-    public FromString setWindow(final Object window) {
+    public FromString setWindow(final JavaScriptObject window) {
+      this.window = window;
       return this;
     }
 
@@ -52,39 +52,60 @@ public class ScriptInjector {
       return this;
     }
 
-    public Object inject() {
-      final HTMLDocument document = HTMLDocument.current();
-      final HTMLElement script = document.createElement("script");
-      script.setAttribute("type", "text/javascript");
-      script.setInnerHTML(scriptText);
-      document.getHead().appendChild((Node) script);
-      if (removeTag) {
-        document.getHead().removeChild((Node) script);
-      }
-      return script;
+    public JavaScriptObject inject() {
+      JSObject target = window == null ? currentWindow() : window.unwrap();
+      JSObject script = createScript(target);
+      setText(script, scriptText);
+      attach(target, script);
+      if (removeTag) remove(script);
+      return JavaScriptObject.of(script);
     }
   }
 
-  /** Builder for injecting an external script URL. */
-  public static class FromUrl {
-
+  public static final class FromUrl {
     private final String scriptUrl;
+    private boolean removeTag;
+    private JavaScriptObject window;
+    private Callback<Void, Exception> callback;
 
-    FromUrl(final String scriptUrl) {
+    private FromUrl(final String scriptUrl) {
       this.scriptUrl = scriptUrl;
     }
 
-    public FromUrl setWindow(final Object window) {
+    public FromUrl setWindow(final JavaScriptObject window) {
+      this.window = window;
       return this;
     }
 
-    public Object inject() {
-      final HTMLDocument document = HTMLDocument.current();
-      final HTMLElement script = document.createElement("script");
-      script.setAttribute("type", "text/javascript");
-      script.setAttribute("src", scriptUrl);
-      document.getHead().appendChild((Node) script);
-      return script;
+    public FromUrl setRemoveTag(final boolean removeTag) {
+      this.removeTag = removeTag;
+      return this;
+    }
+
+    public FromUrl setCallback(final Callback<Void, Exception> callback) {
+      this.callback = callback;
+      return this;
+    }
+
+    public JavaScriptObject inject() {
+      JSObject target = window == null ? currentWindow() : window.unwrap();
+      JSObject script = createScript(target);
+      // Capture this injection's settings: the builder can be reused before loading completes.
+      Callback<Void, Exception> completion = callback;
+      if (completion != null || removeTag) {
+        listen(
+            script,
+            removeTag,
+            success -> {
+              if (completion != null) {
+                if (success) completion.onSuccess(null);
+                else completion.onFailure(new CodeDownloadException("onerror() called."));
+              }
+            });
+      }
+      setSource(script, scriptUrl);
+      attach(target, script);
+      return JavaScriptObject.of(script);
     }
   }
 
@@ -97,4 +118,44 @@ public class ScriptInjector {
   }
 
   private ScriptInjector() {}
+
+  @JSFunctor
+  private interface Completion extends JSObject {
+    void complete(boolean success);
+  }
+
+  @JSBody(script = "return window;")
+  private static native JSObject currentWindow();
+
+  @JSBody(
+      params = "target",
+      script =
+          "var doc=target.document; var script=doc.createElement('script'); var source=doc.querySelector('script[nonce]'); if(source) script.setAttribute('nonce', source.nonce || source.getAttribute('nonce')); return script;")
+  private static native JSObject createScript(JSObject target);
+
+  @JSBody(
+      params = {"script", "text"},
+      script = "script.text=text;")
+  private static native void setText(JSObject script, String text);
+
+  @JSBody(
+      params = {"script", "url"},
+      script = "script.src=url;")
+  private static native void setSource(JSObject script, String url);
+
+  @JSBody(
+      params = {"target", "script"},
+      script = "target.document.head.appendChild(script);")
+  private static native void attach(JSObject target, JSObject script);
+
+  @JSBody(
+      params = "script",
+      script = "if(script.parentNode) script.parentNode.removeChild(script);")
+  private static native void remove(JSObject script);
+
+  @JSBody(
+      params = {"script", "removeTag", "completion"},
+      script =
+          "var finished=false; function done(success) { if(finished) return; finished=true; script.onload=script.onerror=null; if(removeTag && script.parentNode) script.parentNode.removeChild(script); completion(success); } script.onload=function(){done(true);}; script.onerror=function(){done(false);};")
+  private static native void listen(JSObject script, boolean removeTag, Completion completion);
 }

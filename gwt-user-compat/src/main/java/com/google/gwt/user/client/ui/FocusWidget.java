@@ -123,4 +123,39 @@ public class FocusWidget extends Widget implements HasEnabled, Focusable {
       final com.google.gwt.event.dom.client.MouseWheelHandler handler) {
     return addDomHandler(handler, com.google.gwt.event.dom.client.MouseWheelEvent.getType());
   }
+
+  public com.google.gwt.event.shared.HandlerRegistration addTouchStartHandler(
+      com.google.gwt.event.dom.client.TouchStartHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.TouchStartEvent.getType());
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addTouchMoveHandler(
+      com.google.gwt.event.dom.client.TouchMoveHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.TouchMoveEvent.getType());
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addTouchEndHandler(
+      com.google.gwt.event.dom.client.TouchEndHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.TouchEndEvent.getType());
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addTouchCancelHandler(
+      com.google.gwt.event.dom.client.TouchCancelHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.TouchCancelEvent.getType());
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addGestureStartHandler(
+      com.google.gwt.event.dom.client.GestureStartHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.GestureStartEvent.getType());
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addGestureChangeHandler(
+      com.google.gwt.event.dom.client.GestureChangeHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.GestureChangeEvent.getType());
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addGestureEndHandler(
+      com.google.gwt.event.dom.client.GestureEndHandler handler) {
+    return addDomHandler(handler, com.google.gwt.event.dom.client.GestureEndEvent.getType());
+  }
 }

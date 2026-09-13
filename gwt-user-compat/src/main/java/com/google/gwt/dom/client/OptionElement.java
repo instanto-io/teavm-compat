@@ -6,6 +6,44 @@ import org.teavm.jso.dom.html.HTMLElement;
 
 /** Typed option view; identity follows the DOM node, not the wrapper. */
 public class OptionElement extends Element {
+  public static final String TAG = "option";
+
+  public int getIndex() {
+    return getPropertyInt("index");
+  }
+
+  public String getLabel() {
+    return getPropertyString("label");
+  }
+
+  public void setLabel(String value) {
+    setPropertyString("label", value);
+  }
+
+  public String getText() {
+    return getPropertyString("text");
+  }
+
+  public void setText(String value) {
+    setPropertyString("text", value);
+  }
+
+  public boolean isDefaultSelected() {
+    return getPropertyBoolean("defaultSelected");
+  }
+
+  public void setDefaultSelected(boolean value) {
+    setPropertyBoolean("defaultSelected", value);
+  }
+
+  public boolean isDisabled() {
+    return getPropertyBoolean("disabled");
+  }
+
+  public void setDisabled(boolean value) {
+    setPropertyBoolean("disabled", value);
+  }
+
   private static final JSObject IDENTITIES = identities();
   private static int nextIdentity;
 

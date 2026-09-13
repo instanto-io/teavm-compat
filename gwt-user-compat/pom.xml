@@ -9,7 +9,7 @@
   <name>TeaVM GWT Compatibility Runtime</name>
   <packaging>jar</packaging>
   <description>Minimal GWT client API subset backed by TeaVM DOM APIs, so the widget sources compile unchanged on both backends.</description>
-  <dependencies>
+  <dependencies><dependency><groupId>io.instanto</groupId><artifactId>teavm-classlib-compat</artifactId><version>${project.version}</version></dependency>
     <dependency>
       <groupId>org.teavm</groupId>
       <artifactId>teavm-jso</artifactId>
@@ -34,11 +34,10 @@
       <resource>
         <directory>..</directory>
         <targetPath>META-INF</targetPath>
-        <includes>
-          <include>LICENSE</include>
-          <include>NOTICE</include>
-          <include>upstream/provenance.json</include>
-        </includes>
+          <includes>
+            <include>LICENSE</include>
+            <include>NOTICE</include><include>provenance/gwt-*-provenance.json</include>
+          </includes>
       </resource>
     </resources>
   </build>

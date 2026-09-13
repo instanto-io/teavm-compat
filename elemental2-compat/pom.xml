@@ -26,12 +26,10 @@
       <resource>
         <directory>..</directory>
         <targetPath>META-INF</targetPath>
-        <includes>
-          <include>LICENSE</include>
-          <include>NOTICE</include>
-          <include>upstream/provenance.json</include>
-          <include>upstream/bindings-lock.json</include>
-        </includes>
+          <includes>
+            <include>LICENSE</include>
+            <include>NOTICE</include>
+          </includes>
       </resource>
     </resources>
     <plugins>

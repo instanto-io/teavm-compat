@@ -27,7 +27,7 @@ package com.google.gwt.resources.client;
 /** A packaged image, exposed as a URL plus its intrinsic geometry. */
 public interface ImageResource extends ResourcePrototype {
 
-  String getSafeUri();
+  com.google.gwt.safehtml.shared.SafeUri getSafeUri();
 
   String getURL();
 

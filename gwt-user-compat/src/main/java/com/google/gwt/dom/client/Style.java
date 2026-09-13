@@ -59,7 +59,22 @@ public final class Style {
     NONE("none"),
     BLOCK("block"),
     INLINE("inline"),
-    INLINE_BLOCK("inline-block");
+    INLINE_BLOCK("inline-block"),
+    INLINE_TABLE("inline-table"),
+    LIST_ITEM("list-item"),
+    RUN_IN("run-in"),
+    TABLE("table"),
+    TABLE_CAPTION("table-caption"),
+    TABLE_COLUMN_GROUP("table-column-group"),
+    TABLE_HEADER_GROUP("table-header-group"),
+    TABLE_FOOTER_GROUP("table-footer-group"),
+    TABLE_ROW_GROUP("table-row-group"),
+    TABLE_CELL("table-cell"),
+    TABLE_COLUMN("table-column"),
+    TABLE_ROW("table-row"),
+    INITIAL("initial"),
+    FLEX("flex"),
+    INLINE_FLEX("inline-flex");
 
     private final String cssName;
 
@@ -124,11 +139,23 @@ public final class Style {
   }
 
   public String getProperty(final String name) {
-    return element.getStyle().getPropertyValue(name);
+    return element.getStyle().getPropertyValue(cssProperty(name));
   }
 
   public void setProperty(final String name, final String value) {
-    element.getStyle().setProperty(name, value == null ? "" : value);
+    element.getStyle().setProperty(cssProperty(name), value == null ? "" : value);
+  }
+
+  private static String cssProperty(String name) {
+    if (name.startsWith("--")) return name;
+    if (name.equals("cssFloat") || name.equals("styleFloat")) return "float";
+    StringBuilder result = new StringBuilder();
+    for (int i = 0; i < name.length(); i++) {
+      char c = name.charAt(i);
+      if (c >= 'A' && c <= 'Z') result.append('-').append((char) (c + 'a' - 'A'));
+      else result.append(c);
+    }
+    return result.toString();
   }
 
   public void setProperty(final String name, final double value, final Unit unit) {
@@ -241,5 +268,264 @@ public final class Style {
 
   public String getWhiteSpace() {
     return getProperty("white-space");
+  }
+
+  public enum Float implements HasCssName {
+    LEFT("left"),
+    RIGHT("right"),
+    NONE("none");
+    private final String cssName;
+
+    Float(String cssName) {
+      this.cssName = cssName;
+    }
+
+    public String getCssName() {
+      return cssName;
+    }
+  }
+
+  public void setFloat(Float value) {
+    setProperty("float", value.getCssName());
+  }
+
+  public enum FontWeight implements HasCssName {
+    NORMAL("normal"),
+    BOLD("bold"),
+    BOLDER("bolder"),
+    LIGHTER("lighter");
+    private final String cssName;
+
+    FontWeight(String cssName) {
+      this.cssName = cssName;
+    }
+
+    public String getCssName() {
+      return cssName;
+    }
+  }
+
+  public void setFontWeight(FontWeight value) {
+    setProperty("font-weight", value.getCssName());
+  }
+
+  public enum VerticalAlign implements HasCssName {
+    BASELINE("baseline"),
+    SUB("sub"),
+    SUPER("super"),
+    TOP("top"),
+    TEXT_TOP("text-top"),
+    MIDDLE("middle"),
+    BOTTOM("bottom"),
+    TEXT_BOTTOM("text-bottom");
+    private final String cssName;
+
+    VerticalAlign(String cssName) {
+      this.cssName = cssName;
+    }
+
+    public String getCssName() {
+      return cssName;
+    }
+  }
+
+  public void setVerticalAlign(VerticalAlign value) {
+    setProperty("vertical-align", value.getCssName());
+  }
+
+  public enum Visibility implements HasCssName {
+    VISIBLE("visible"),
+    HIDDEN("hidden");
+    private final String cssName;
+
+    Visibility(String cssName) {
+      this.cssName = cssName;
+    }
+
+    public String getCssName() {
+      return cssName;
+    }
+  }
+
+  public void setVisibility(Visibility value) {
+    setProperty("visibility", value.getCssName());
+  }
+
+  public enum Overflow implements HasCssName {
+    VISIBLE("visible"),
+    HIDDEN("hidden"),
+    SCROLL("scroll"),
+    AUTO("auto");
+    private final String cssName;
+
+    Overflow(String cssName) {
+      this.cssName = cssName;
+    }
+
+    public String getCssName() {
+      return cssName;
+    }
+  }
+
+  public void setOverflow(Overflow value) {
+    setProperty("overflow", value.getCssName());
+  }
+
+  public enum Cursor implements HasCssName {
+    DEFAULT("default"),
+    AUTO("auto"),
+    CROSSHAIR("crosshair"),
+    POINTER("pointer"),
+    MOVE("move"),
+    E_RESIZE("e-resize"),
+    NE_RESIZE("ne-resize"),
+    NW_RESIZE("nw-resize"),
+    N_RESIZE("n-resize"),
+    SE_RESIZE("se-resize"),
+    SW_RESIZE("sw-resize"),
+    S_RESIZE("s-resize"),
+    W_RESIZE("w-resize"),
+    TEXT("text"),
+    WAIT("wait"),
+    HELP("help"),
+    COL_RESIZE("col-resize"),
+    ROW_RESIZE("row-resize");
+    private final String cssName;
+
+    Cursor(String cssName) {
+      this.cssName = cssName;
+    }
+
+    public String getCssName() {
+      return cssName;
+    }
+  }
+
+  public void setCursor(Cursor value) {
+    setProperty("cursor", value.getCssName());
+  }
+
+  public void clearFloat() {
+    clearProperty("float");
+  }
+
+  public String getFontWeight() {
+    return getProperty("font-weight");
+  }
+
+  public void clearFontWeight() {
+    clearProperty("font-weight");
+  }
+
+  public String getVerticalAlign() {
+    return getProperty("vertical-align");
+  }
+
+  public void clearVerticalAlign() {
+    clearProperty("vertical-align");
+  }
+
+  public String getVisibility() {
+    return getProperty("visibility");
+  }
+
+  public void clearVisibility() {
+    clearProperty("visibility");
+  }
+
+  public String getOverflow() {
+    return getProperty("overflow");
+  }
+
+  public void clearOverflow() {
+    clearProperty("overflow");
+  }
+
+  public String getCursor() {
+    return getProperty("cursor");
+  }
+
+  public void clearCursor() {
+    clearProperty("cursor");
+  }
+
+  public String getOpacity() {
+    return getProperty("opacity");
+  }
+
+  public void clearOpacity() {
+    clearProperty("opacity");
+  }
+
+  public String getPosition() {
+    return getProperty("position");
+  }
+
+  public void clearPosition() {
+    clearProperty("position");
+  }
+
+  public String getFontSize() {
+    return getProperty("font-size");
+  }
+
+  public void clearFontSize() {
+    clearProperty("font-size");
+  }
+
+  public String getMargin() {
+    return getProperty("margin");
+  }
+
+  public void clearMargin() {
+    clearProperty("margin");
+  }
+
+  public String getPadding() {
+    return getProperty("padding");
+  }
+
+  public void clearPadding() {
+    clearProperty("padding");
+  }
+
+  public String getLineHeight() {
+    return getProperty("line-height");
+  }
+
+  public void clearLineHeight() {
+    clearProperty("line-height");
+  }
+
+  public String getBackgroundColor() {
+    return getProperty("background-color");
+  }
+
+  public void clearBackgroundColor() {
+    clearProperty("background-color");
+  }
+
+  public void clearDisplay() {
+    clearProperty("display");
+  }
+
+  public void setMargin(double value, Unit unit) {
+    setProperty("margin", value, unit);
+  }
+
+  public void setPadding(double value, Unit unit) {
+    setProperty("padding", value, unit);
+  }
+
+  public void setLineHeight(double value, Unit unit) {
+    setProperty("line-height", value, unit);
+  }
+
+  public void setOpacity(double value) {
+    setProperty("opacity", Double.toString(value));
+  }
+
+  public void setBackgroundColor(String value) {
+    setProperty("background-color", value);
   }
 }

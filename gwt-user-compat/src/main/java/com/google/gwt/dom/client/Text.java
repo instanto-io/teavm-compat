@@ -76,7 +76,7 @@ public class Text extends com.google.gwt.dom.client.Node {
    * only for attach and removal.
    */
   @SuppressWarnings("unchecked")
-  public <T> T cast() {
+  public <T extends com.google.gwt.core.client.JavaScriptObject> T cast() {
     return (T) new Element(asElement(node));
   }
 

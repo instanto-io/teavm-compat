@@ -25,17 +25,59 @@
 package com.google.gwt.user.client.ui;
 
 import com.google.gwt.dom.client.Document;
+import com.google.gwt.i18n.client.HasDirection.Direction;
+import com.google.gwt.i18n.shared.DirectionEstimator;
+import com.google.gwt.safehtml.shared.SafeHtml;
 
 /** A mutually exclusive selection control with an associated label. */
 public class RadioButton extends CheckBox {
 
   public RadioButton(final String name) {
     super(Document.get().createRadioInputElement(name));
+    setStyleName("gwt-RadioButton");
   }
 
   public RadioButton(final String name, final String label) {
     this(name);
     setText(label);
+  }
+
+  public static final DirectionEstimator DEFAULT_DIRECTION_ESTIMATOR =
+      DirectionalTextHelper.DEFAULT_DIRECTION_ESTIMATOR;
+
+  public RadioButton(final String name, final SafeHtml label) {
+    this(name, label.asString(), true);
+  }
+
+  public RadioButton(final String name, final SafeHtml label, final Direction direction) {
+    this(name);
+    setHTML(label, direction);
+  }
+
+  public RadioButton(final String name, final SafeHtml label, final DirectionEstimator estimator) {
+    this(name);
+    setDirectionEstimator(estimator);
+    setHTML(label.asString());
+  }
+
+  public RadioButton(final String name, final String label, final Direction direction) {
+    this(name);
+    setText(label, direction);
+  }
+
+  public RadioButton(final String name, final String label, final DirectionEstimator estimator) {
+    this(name);
+    setDirectionEstimator(estimator);
+    setText(label);
+  }
+
+  public RadioButton(final String name, final String label, final boolean asHTML) {
+    this(name);
+    if (asHTML) {
+      setHTML(label);
+    } else {
+      setText(label);
+    }
   }
 
   @Override

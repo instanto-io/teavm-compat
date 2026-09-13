@@ -18,6 +18,31 @@
       <artifactId>javaparser-core</artifactId>
       <version>3.28.2</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.elemental2</groupId>
+      <artifactId>elemental2-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.elemental2</groupId>
+      <artifactId>elemental2-dom</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.elemental2</groupId>
+      <artifactId>elemental2-promise</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.elemental2</groupId>
+      <artifactId>elemental2-svg</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.elemental2</groupId>
+      <artifactId>elemental2-webstorage</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
   <build>
     <resources>
@@ -27,15 +52,27 @@
       <resource>
         <directory>..</directory>
         <targetPath>META-INF</targetPath>
-        <includes>
-          <include>LICENSE</include>
-          <include>NOTICE</include>
-          <include>upstream/provenance.json</include>
-          <include>upstream/bindings-lock.json</include>
-        </includes>
+          <includes>
+            <include>LICENSE</include>
+            <include>NOTICE</include>
+          </includes>
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.9.0</version>
+        <executions>
+          <execution>
+            <id>locate-binding-inputs</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>properties</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -50,28 +87,14 @@
               <mainClass>io.instanto.compat.GenerateBindings</mainClass>
               <arguments>
                 <argument>${project.basedir}/../target/compat/elemental2</argument>
-                <argument>${project.basedir}/../upstream/elemental2-core-1.2.3.jar</argument>
-                <argument>${project.basedir}/../upstream/elemental2-dom-1.2.3.jar</argument>
-                <argument>${project.basedir}/../upstream/elemental2-promise-1.2.3.jar</argument>
-                <argument>${project.basedir}/../upstream/elemental2-svg-1.2.3.jar</argument>
-                <argument>${project.basedir}/../upstream/elemental2-webstorage-1.2.3.jar</argument>
+                <argument>${com.google.elemental2:elemental2-core:jar}</argument>
+                <argument>${com.google.elemental2:elemental2-dom:jar}</argument>
+                <argument>${com.google.elemental2:elemental2-promise:jar}</argument>
+                <argument>${com.google.elemental2:elemental2-svg:jar}</argument>
+                <argument>${com.google.elemental2:elemental2-webstorage:jar}</argument>
               </arguments>
             </configuration>
             <id>elemental2-bindings</id>
-          </execution>
-          <execution>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>java</goal>
-            </goals>
-            <configuration>
-              <mainClass>io.instanto.compat.GenerateBindings</mainClass>
-              <arguments>
-                <argument>${project.basedir}/../target/compat/services</argument>
-                <argument>${project.basedir}/../upstream/modular-services</argument>
-              </arguments>
-            </configuration>
-            <id>modular-bindings</id>
           </execution>
         </executions>
       </plugin>

@@ -1,0 +1,15 @@
+{
+  "artifact": "org.gwtproject:gwt-user:2.13.1",
+  "jar_sha256": "35109b8c4eb2a72809b45c496e6b508c5d0e7229e8737ae7211b2097470cead4",
+  "source_files": {
+    "com/google/gwt/geolocation/client/Position.java": "69af0d547816901bb633abc8f47d435edab6452320302134176a4b58cfdbda3b",
+    "com/google/gwt/geolocation/client/PositionError.java": "711fc644c38283a67cec51c03964cfc41c8ba4ae05a9446032401f5c6e77eb9c",
+    "com/google/gwt/typedarrays/shared/ArrayBuffer.java": "16877ba83abefe733ee4dffcd18a0be79572092c199a815dfe05ce414b786714",
+    "com/google/gwt/typedarrays/shared/ArrayBufferView.java": "e8fda6d9517971f8f714820973896cd553d3632350622c3ac9e18805f1a722fc",
+    "com/google/gwt/typedarrays/shared/Uint8Array.java": "394e368068ad29e2b93bec2c8c357df0ff6e3a1510099cd1249f4ff7c4bce8e9"
+  },
+  "adaptations": {
+    "Position.java": "Removes GWT SingleJsoImpl annotations; browser values are wrapped by Geolocation.",
+    "typedarrays/shared/*.java": "Adds TeaVM JSObject, JSProperty and JSIndexer declarations; retains the upstream public methods and documentation."
+  }
+}

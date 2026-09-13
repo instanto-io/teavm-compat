@@ -32,7 +32,27 @@ public final class GenerateBindings {
 
   public static String transform(String source) {
     CompilationUnit cu = StaticJavaParser.parse(source);
-    if (!source.contains("jsinterop.annotations")) return source;
+    boolean eventFactory = false;
+    if (source.contains("com.google.gwt.event.dom.client.DomEvent")) {
+      for (ClassOrInterfaceDeclaration owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
+        if (owner.getExtendedTypes().stream()
+            .noneMatch(t -> t.getNameAsString().equals("DomEvent"))) continue;
+        for (ObjectCreationExpr creation : owner.findAll(ObjectCreationExpr.class)) {
+          if (creation.getType().getNameAsString().equals("Type")
+              && creation.getArguments().size() == 2
+              && creation.getArgument(1).isObjectCreationExpr()) {
+            creation.setArgument(
+                1, StaticJavaParser.parseExpression("() -> " + creation.getArgument(1)));
+            eventFactory = true;
+          }
+        }
+      }
+    }
+    if (!source.contains("jsinterop.annotations")) {
+      if (!source.contains("@JSBody")) return eventFactory ? cu.toString() : source;
+      GwtNativeBoundary.adapt(cu);
+      return cu.toString();
+    }
     cu.addImport("org.teavm.jso.*");
     for (ClassOrInterfaceDeclaration c : cu.findAll(ClassOrInterfaceDeclaration.class)) {
       var jsType = c.getAnnotationByName("JsType");
@@ -62,7 +82,9 @@ public final class GenerateBindings {
             global
                 ? "globalThis"
                 : "globalThis."
-                    + ((!namespace.isEmpty() && !namespace.equals("JsPackage.GLOBAL"))
+                    + ((!namespace.isEmpty()
+                            && !Set.of("JsPackage.GLOBAL", "GLOBAL", "<global>")
+                                .contains(namespace))
                         ? namespace + "."
                         : "")
                     + name;
@@ -70,9 +92,20 @@ public final class GenerateBindings {
         annotate(c, "@JSClass(name = \"" + qualified + "\")");
       }
       if (functor) annotate(c, "@JSFunctor");
+      for (MethodDeclaration m : new ArrayList<>(c.getMethodsByName("cast"))) {
+        if (m.getAnnotationByName("JsOverlay").isPresent()
+            && m.getParameters().isEmpty()
+            && m.getTypeParameters().size() == 1
+            && m.getBody()
+                .map(Object::toString)
+                .orElse("")
+                .replaceAll("\\s", "")
+                .equals("{return(T)this;}")) m.remove();
+      }
       for (FieldDeclaration f : c.getFields()) {
         if (f.getAnnotationByName("JsOverlay").isPresent()) continue;
-        if (f.isStatic()) annotate(f, "@JSProperty");
+        if (f.isStatic() && f.getAnnotationByName("JsProperty").isEmpty())
+          annotate(f, "@JSProperty");
         for (var v : f.getVariables()) v.removeInitializer();
       }
     }
@@ -116,6 +149,39 @@ public final class GenerateBindings {
       if (n.equals("JsProperty") || n.equals("JsMethod")) {
         var owner = (NodeWithAnnotations<?>) a.getParentNode().orElseThrow();
         String name = value(a, "name", "");
+        String ns = value(a, "namespace", "");
+        if (n.equals("JsMethod")
+            && !ns.isEmpty()
+            && !Set.of("JsPackage.GLOBAL", "GLOBAL", "<global>").contains(ns)
+            && owner instanceof MethodDeclaration method
+            && method.isStatic()) {
+          String member = name.isEmpty() ? method.getNameAsString() : name;
+          NodeList<Expression> parameters = new NodeList<>();
+          List<String> arguments = new ArrayList<>();
+          for (Parameter parameter : method.getParameters()) {
+            parameters.add(new StringLiteralExpr(parameter.getNameAsString()));
+            arguments.add((parameter.isVarArgs() ? "..." : "") + parameter.getNameAsString());
+          }
+          String script =
+              (method.getType().isVoidType() ? "" : "return ")
+                  + "globalThis."
+                  + ns
+                  + "["
+                  + new StringLiteralExpr(member)
+                  + "]("
+                  + String.join(",", arguments)
+                  + ");";
+          method.addAnnotation(
+              new NormalAnnotationExpr(
+                  new Name("JSBody"),
+                  NodeList.nodeList(
+                      new MemberValuePair("params", new ArrayInitializerExpr(parameters)),
+                      new MemberValuePair("script", new StringLiteralExpr().setString(script)))));
+          a.remove();
+          continue;
+        }
+        if (n.equals("JsMethod") && (ns.equals("JsPackage.GLOBAL") || ns.equals("GLOBAL")))
+          annotate(owner, "@JSTopLevel");
         annotate(
             owner,
             "@"
@@ -160,6 +226,7 @@ public final class GenerateBindings {
         }
       }
     }
+    GwtNativeBoundary.adapt(cu);
     int varargIndex = 0;
     for (MethodDeclaration m : new ArrayList<>(cu.findAll(MethodDeclaration.class))) {
       if (!m.isNative() || m.getParameters().isEmpty()) continue;

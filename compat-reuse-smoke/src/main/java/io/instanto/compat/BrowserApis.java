@@ -1,10 +1,15 @@
 package io.instanto.compat;
 
 import elemental2.core.JsArray;
+import elemental2.core.JsDate;
 import elemental2.dom.*;
 import elemental2.promise.Promise;
 import elemental2.webstorage.WebStorageWindow;
 import jsinterop.base.JsPropertyMap;
+import org.gwtproject.i18n.shared.browser.JsIntlDateTimeFormat;
+import org.gwtproject.i18n.shared.browser.JsIntlDateTimeFormatOptions;
+import org.gwtproject.i18n.shared.browser.JsIntlNumberFormat;
+import org.gwtproject.i18n.shared.browser.JsIntlNumberFormatOptions;
 import org.gwtproject.i18n.shared.cldr.impl.BrowserDateTimeFormatInfo;
 
 /** Browser contracts exercise the compatibility layer beyond reachable widget declarations. */
@@ -27,6 +32,24 @@ public final class BrowserApis {
     }
     BindingContracts.check(rejected, "invalid calendar date rejected");
     root.setAttribute("data-date-parse", "passed");
+    var intlDate =
+        new JsIntlDateTimeFormat(
+            new JsArray<>("en-GB"),
+            JsIntlDateTimeFormatOptions.forDateStyle("long").set("timeZone", "UTC"));
+    var leapDate = new JsDate("2024-02-29T12:00:00Z");
+    BindingContracts.check(
+        "29 February 2024".equals(intlDate.format(leapDate)), "Intl date format");
+    var dateParts = intlDate.formatToParts(leapDate);
+    BindingContracts.check("day".equals(dateParts.getAt(0).type), "Intl date part type");
+    BindingContracts.check("29".equals(dateParts.getAt(0).value), "Intl date part value");
+    var numberOptions = JsIntlNumberFormatOptions.decimal();
+    numberOptions.useGrouping = false;
+    numberOptions.minimumFractionDigits = 2;
+    var intlNumber = new JsIntlNumberFormat(new JsArray<>("en-GB"), numberOptions);
+    BindingContracts.check("1234.50".equals(intlNumber.format(1234.5)), "Intl number format");
+    BindingContracts.check(
+        "integer".equals(intlNumber.formatToParts(1234.5).getAt(0).type), "Intl number parts");
+    root.setAttribute("data-intl", "passed");
     for (var storage :
         new elemental2.webstorage.Storage[] {
           WebStorageWindow.of(DomGlobal.window).localStorage,

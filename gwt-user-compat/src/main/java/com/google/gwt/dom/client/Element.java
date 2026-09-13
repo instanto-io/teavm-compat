@@ -58,7 +58,7 @@ public class Element extends com.google.gwt.dom.client.Node {
     if (!is(value)) {
       throw new IllegalArgumentException("value is not a DOM element");
     }
-    return new Element((HTMLElement) value.unwrap());
+    return value instanceof Element ? (Element) value : wrap(value.unwrap().cast());
   }
 
   public static boolean is(final JavaScriptObject value) {
@@ -97,6 +97,14 @@ public class Element extends com.google.gwt.dom.client.Node {
     return scrollWidth(element);
   }
 
+  public int getClientWidth() {
+    return element.getClientWidth();
+  }
+
+  public int getClientHeight() {
+    return element.getClientHeight();
+  }
+
   @JSBody(
       params = {"e"},
       script = "return e.scrollLeft | 0;")
@@ -127,12 +135,71 @@ public class Element extends com.google.gwt.dom.client.Node {
       script = "return e.scrollWidth | 0;")
   private static native int scrollWidth(HTMLElement e);
 
-  @SuppressWarnings("unchecked")
-  public <T extends Element> T cast() {
-    return (T) this;
+  /** Chooses a typed wrapper while preserving the original browser node. */
+  public static Element wrap(HTMLElement nativeElement) {
+    if (nativeElement == null) return null;
+    return switch (nativeElement.getTagName().toLowerCase()) {
+      case "select" -> new SelectElement(nativeElement);
+      case "video" -> new VideoElement(nativeElement);
+      case "div" -> new DivElement(nativeElement);
+      case "optgroup" -> new OptGroupElement(nativeElement);
+      case "label" -> new LabelElement(nativeElement);
+      case "span" -> new SpanElement(nativeElement);
+      case "option" -> new OptionElement(nativeElement);
+      case "img" -> new ImageElement(nativeElement);
+      case "source" -> new SourceElement(nativeElement);
+      case "body" -> new BodyElement(nativeElement);
+      case "button" -> new ButtonElement(nativeElement);
+      case "link" -> new LinkElement(nativeElement);
+      case "meta" -> new MetaElement(nativeElement);
+      case "input" -> new InputElement(nativeElement);
+      case "head" -> new HeadElement(nativeElement);
+      case "form" -> new FormElement(nativeElement);
+      case "a" -> new AnchorElement(nativeElement);
+      case "p" -> new ParagraphElement(nativeElement);
+      case "iframe" -> new IFrameElement(nativeElement);
+      case "textarea" -> new TextAreaElement(nativeElement);
+      case "style" -> new StyleElement(nativeElement);
+      default -> new Element(nativeElement);
+    };
   }
 
+  public void setPropertyDouble(String name, double value) {
+    propertyDouble(unwrap(), name, value);
+  }
+
+  @JSBody(
+      params = {"element", "name", "value"},
+      script = "element[name]=value;")
+  private static native void propertyDouble(HTMLElement element, String name, double value);
+
+  public void setPropertyObject(String name, Object value) {
+    if (value instanceof Boolean) {
+      setPropertyBoolean(name, (Boolean) value);
+      return;
+    }
+    if (value instanceof String) {
+      setPropertyString(name, (String) value);
+      return;
+    }
+    if (value instanceof Number) {
+      setPropertyDouble(name, ((Number) value).doubleValue());
+      return;
+    }
+    Object raw =
+        value instanceof com.google.gwt.core.client.JavaScriptObject
+            ? ((com.google.gwt.core.client.JavaScriptObject) value).unwrap()
+            : value;
+    propertyObject(unwrap(), name, raw);
+  }
+
+  @JSBody(
+      params = {"element", "name", "value"},
+      script = "element[name] = value;")
+  private static native void propertyObject(HTMLElement element, String name, Object value);
+
   public Style getStyle() {
+
     return style;
   }
 
@@ -157,7 +224,8 @@ public class Element extends com.google.gwt.dom.client.Node {
   }
 
   public String getAttribute(final String name) {
-    return element.getAttribute(name);
+    String value = element.getAttribute(name);
+    return value == null ? "" : value;
   }
 
   public void removeAttribute(final String name) {

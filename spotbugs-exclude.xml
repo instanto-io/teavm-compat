@@ -1,1 +1,12 @@
-<FindBugsFilter><!-- GWT intentionally names both the legacy and DOM classes Element. --><Match><Class name="com.google.gwt.user.client.Element"/><Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/></Match></FindBugsFilter>
+<FindBugsFilter>
+  <!-- These public GWT compatibility aliases deliberately retain the upstream
+       simple name while extending the implementation in its newer package. -->
+  <Match>
+    <Or>
+      <Class name="com.google.gwt.user.client.Element"/>
+      <Class name="com.google.gwt.event.shared.EventBus"/>
+      <Class name="com.google.gwt.event.shared.UmbrellaException"/>
+    </Or>
+    <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
+  </Match>
+</FindBugsFilter>

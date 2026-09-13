@@ -27,7 +27,7 @@ package com.google.gwt.user.client.ui;
 import com.google.gwt.dom.client.Document;
 
 /** Push button rendered as a {@code button} element. */
-public class Button extends FocusWidget implements HasHTML {
+public class Button extends ButtonBase {
 
   public Button() {
     super(Document.get().createPushButtonElement());

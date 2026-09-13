@@ -118,4 +118,34 @@ public class NativeEvent {
       params = {"e", "name"},
       script = "return !!e[name];")
   private static native boolean modifier(Event e, String name);
+
+  public com.google.gwt.core.client.JsArray<Touch> getTouches() {
+    return new com.google.gwt.core.client.JsArray<>(touches(event, "touches"), Touch::new);
+  }
+
+  public com.google.gwt.core.client.JsArray<Touch> getChangedTouches() {
+    return new com.google.gwt.core.client.JsArray<>(touches(event, "changedTouches"), Touch::new);
+  }
+
+  public com.google.gwt.core.client.JsArray<Touch> getTargetTouches() {
+    return new com.google.gwt.core.client.JsArray<>(touches(event, "targetTouches"), Touch::new);
+  }
+
+  public double getScale() {
+    return gesture(event, "scale");
+  }
+
+  public double getRotation() {
+    return gesture(event, "rotation");
+  }
+
+  @org.teavm.jso.JSBody(
+      params = {"e", "name"},
+      script = "return e[name];")
+  private static native org.teavm.jso.JSObject touches(Event event, String name);
+
+  @org.teavm.jso.JSBody(
+      params = {"e", "name"},
+      script = "return e[name];")
+  private static native double gesture(Event event, String name);
 }

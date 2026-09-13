@@ -39,7 +39,7 @@ public class IconCellDecorator<C> implements Cell<C> {
 
   public IconCellDecorator(final ImageResource icon, final Cell<C> cell) {
     this.cell = cell;
-    this.iconUrl = icon == null ? null : icon.getSafeUri();
+    this.iconUrl = icon == null ? null : icon.getSafeUri().asString();
   }
 
   public IconCellDecorator(final String iconUrl, final Cell<C> cell) {

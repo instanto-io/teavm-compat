@@ -24,4 +24,11 @@
  */
 package com.google.gwt.editor.client;
 
-public interface Editor<T> {}
+public interface Editor<T> {
+  @java.lang.annotation.Target({
+    java.lang.annotation.ElementType.FIELD,
+    java.lang.annotation.ElementType.METHOD
+  })
+  @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+  @interface Ignore {}
+}

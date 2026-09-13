@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class KeyUpEvent extends DomEvent<KeyUpHandler> {
+public class KeyUpEvent extends HumanInputEvent<KeyUpHandler> {
 
   private static final Type<KeyUpHandler> TYPE = new Type<>("keyup", KeyUpEvent::new);
 
@@ -40,5 +40,9 @@ public class KeyUpEvent extends DomEvent<KeyUpHandler> {
   @Override
   protected void dispatch(final KeyUpHandler handler) {
     handler.onKeyUp(this);
+  }
+
+  public int getNativeKeyCode() {
+    return getNativeEvent().getKeyCode();
   }
 }

@@ -31,6 +31,10 @@ public final class DOM {
 
   private DOM() {}
 
+  public static Element createFieldSet() {
+    return Element.as(Document.get().createFieldSetElement());
+  }
+
   public static void appendChild(
       final com.google.gwt.dom.client.Element parent,
       final com.google.gwt.dom.client.Element child) {
@@ -52,6 +56,14 @@ public final class DOM {
 
   public static Element createLabel() {
     return Element.as(Document.get().createElement("label"));
+  }
+
+  public static Element createElement(String tag) {
+    return Element.as(Document.get().createElement(tag));
+  }
+
+  public static Element getChild(com.google.gwt.dom.client.Element parent, int index) {
+    return Element.as(childAt(parent, index));
   }
 
   public static Element createDiv() {

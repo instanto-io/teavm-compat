@@ -25,6 +25,8 @@
 package com.google.gwt.user.client.ui;
 
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.editor.client.IsEditor;
+import com.google.gwt.editor.ui.client.adapters.ValueBoxEditor;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.HasChangeHandlers;
@@ -33,6 +35,9 @@ import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.i18n.client.AutoDirectionHandler;
+import com.google.gwt.i18n.shared.DirectionEstimator;
+import com.google.gwt.i18n.shared.HasDirectionEstimator;
 import com.google.gwt.text.shared.Parser;
 import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.user.client.ui.impl.TextBoxImpl;
@@ -46,7 +51,24 @@ import java.text.ParseException;
  * a handler sees one event per committed edit rather than one per keystroke, matching GWT.
  */
 public class ValueBoxBase<T> extends FocusWidget
-    implements HasValue<T>, HasName, HasChangeHandlers {
+    implements HasValue<T>,
+        HasName,
+        HasChangeHandlers,
+        HasText,
+        AutoDirectionHandler.Target,
+        HasDirectionEstimator,
+        IsEditor<ValueBoxEditor<T>> {
+
+  public enum TextAlignment {
+    CENTER,
+    JUSTIFY,
+    LEFT,
+    RIGHT
+  }
+
+  private final AutoDirectionHandler directionHandler;
+  private ValueBoxEditor<T> editor;
+  private com.google.gwt.user.client.Event currentKeyEvent;
 
   private static final TextBoxImpl IMPL = new TextBoxImpl();
 
@@ -59,6 +81,7 @@ public class ValueBoxBase<T> extends FocusWidget
     super(element);
     this.renderer = renderer;
     this.parser = parser;
+    directionHandler = AutoDirectionHandler.addTo(this, false);
   }
 
   protected TextBoxImpl getImpl() {
@@ -79,19 +102,89 @@ public class ValueBoxBase<T> extends FocusWidget
 
   public void setText(final String text) {
     setValueAsString(text);
+    directionHandler.refreshDirection();
   }
 
   @Override
   public T getValue() {
-    final String text = getValueAsString();
-    if (parser == null) {
-      return null;
-    }
     try {
-      return parser.parse(text);
+      return getValueOrThrow();
     } catch (final ParseException e) {
       return null;
     }
+  }
+
+  public T getValueOrThrow() throws ParseException {
+    String text = getText();
+    T parsed = parser.parse(text);
+    return text.isEmpty() ? null : parsed;
+  }
+
+  public ValueBoxEditor<T> asEditor() {
+    if (editor == null) editor = ValueBoxEditor.of(this);
+    return editor;
+  }
+
+  public Direction getDirection() {
+    String direction = getElement().getAttribute("dir");
+    return "rtl".equalsIgnoreCase(direction)
+        ? Direction.RTL
+        : "ltr".equalsIgnoreCase(direction) ? Direction.LTR : Direction.DEFAULT;
+  }
+
+  public void setDirection(Direction direction) {
+    if (direction == Direction.DEFAULT) getElement().removeAttribute("dir");
+    else getElement().setAttribute("dir", direction == Direction.RTL ? "rtl" : "ltr");
+  }
+
+  public DirectionEstimator getDirectionEstimator() {
+    return directionHandler.getDirectionEstimator();
+  }
+
+  public void setDirectionEstimator(boolean enabled) {
+    directionHandler.setDirectionEstimator(enabled);
+  }
+
+  public void setDirectionEstimator(DirectionEstimator estimator) {
+    directionHandler.setDirectionEstimator(estimator);
+  }
+
+  public void setAlignment(TextAlignment alignment) {
+    getElement()
+        .getStyle()
+        .setProperty("textAlign", alignment.name().toLowerCase(java.util.Locale.ROOT));
+  }
+
+  public String getSelectedText() {
+    int start = getCursorPos();
+    return getText().substring(start, start + getSelectionLength());
+  }
+
+  public void setCursorPos(int position) {
+    setSelectionRange(position, 0);
+  }
+
+  public void cancelKey() {
+    if (currentKeyEvent != null) currentKeyEvent.preventDefault();
+  }
+
+  @Override
+  public void onBrowserEvent(com.google.gwt.user.client.Event event) {
+    com.google.gwt.user.client.Event previous = currentKeyEvent;
+    if (event.getType().equals("keydown")
+        || event.getType().equals("keyup")
+        || event.getType().equals("keypress")) currentKeyEvent = event;
+    try {
+      super.onBrowserEvent(event);
+    } finally {
+      currentKeyEvent = previous;
+    }
+  }
+
+  @Override
+  protected void onLoad() {
+    super.onLoad();
+    directionHandler.refreshDirection();
   }
 
   @Override
@@ -102,7 +195,7 @@ public class ValueBoxBase<T> extends FocusWidget
   @Override
   public void setValue(final T value, final boolean fireEvents) {
     final T oldValue = fireEvents ? getValue() : null;
-    setValueAsString(renderer == null ? String.valueOf(value) : renderer.render(value));
+    setText(renderer == null ? String.valueOf(value) : renderer.render(value));
     if (fireEvents) {
       ValueChangeEvent.fireIfNotEqual(this, oldValue, getValue());
     }
@@ -117,6 +210,9 @@ public class ValueBoxBase<T> extends FocusWidget
   }
 
   public void setSelectionRange(final int pos, final int length) {
+    if (!isAttached()) return;
+    if (pos < 0 || length < 0 || pos > getText().length() - length)
+      throw new IndexOutOfBoundsException();
     getImpl().setSelectionRange(getElement(), pos, length);
   }
 

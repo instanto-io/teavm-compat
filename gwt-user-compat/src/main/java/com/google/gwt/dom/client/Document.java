@@ -24,6 +24,8 @@
  */
 package com.google.gwt.dom.client;
 
+import org.teavm.jso.JSBody;
+import org.teavm.jso.JSObject;
 import org.teavm.jso.dom.html.HTMLDocument;
 import org.teavm.jso.dom.html.HTMLElement;
 
@@ -34,6 +36,36 @@ public final class Document {
 
   public static Document get() {
     return INSTANCE;
+  }
+
+  /** A live view of matching elements in the host document. */
+  public NodeList<Element> getElementsByTagName(final String tagName) {
+    return new NodeList<>(elementsByTagName(tagName));
+  }
+
+  @JSBody(params = "tagName", script = "return document.getElementsByTagName(tagName);")
+  private static native JSObject elementsByTagName(String tagName);
+
+  public void setTitle(String title) {
+    setDocumentTitle(title);
+  }
+
+  public String getTitle() {
+    return getDocumentTitle();
+  }
+
+  @JSBody(params = "title", script = "document.title=title;")
+  private static native void setDocumentTitle(String title);
+
+  @JSBody(script = "return document.title;")
+  private static native String getDocumentTitle();
+
+  public VideoElement createVideoElement() {
+    return VideoElement.as(createElement("video"));
+  }
+
+  public MetaElement createMetaElement() {
+    return MetaElement.as(createElement("meta"));
   }
 
   public Element createElement(final String tagName) {
@@ -72,8 +104,8 @@ public final class Document {
     return createElement("fieldset");
   }
 
-  public Element createImageElement() {
-    return createElement("img");
+  public ImageElement createImageElement() {
+    return ImageElement.as(createElement("img"));
   }
 
   public LabelElement createLabelElement() {
@@ -110,8 +142,24 @@ public final class Document {
     return TextAreaElement.as(createElement("textarea"));
   }
 
-  public Element createOptGroupElement() {
-    return createElement("optgroup");
+  public OptGroupElement createOptGroupElement() {
+    return OptGroupElement.as(createElement("optgroup"));
+  }
+
+  public LinkElement createLinkElement() {
+    return LinkElement.as(createElement("link"));
+  }
+
+  public StyleElement createStyleElement() {
+    return StyleElement.as(createElement("style"));
+  }
+
+  public SourceElement createSourceElement() {
+    return SourceElement.as(createElement("source"));
+  }
+
+  public IFrameElement createIFrameElement() {
+    return IFrameElement.as(createElement("iframe"));
   }
 
   public SelectElement createSelectElement() {

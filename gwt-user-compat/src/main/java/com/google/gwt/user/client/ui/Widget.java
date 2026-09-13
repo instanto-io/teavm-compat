@@ -46,7 +46,11 @@ import org.teavm.jso.dom.events.Registration;
  * Element-backed widget with GWT's handler-registration surface, implemented over TeaVM DOM events.
  */
 public class Widget extends UIObject
-    implements IsWidget, HasHandlers, HasClickHandlers, HasDoubleClickHandlers {
+    implements IsWidget,
+        HasHandlers,
+        HasClickHandlers,
+        HasDoubleClickHandlers,
+        com.google.gwt.event.logical.shared.HasAttachHandlers {
 
   private Widget parent;
   private HandlerManager handlerManager;

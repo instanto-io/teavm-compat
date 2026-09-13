@@ -1,83 +1,38 @@
 # TeaVM compatibility libraries
 
-Use familiar Java browser APIs — Elemental2, JsInterop base, and GWT — in a TeaVM
-application.
+This project provides TeaVM implementations of selected Java browser APIs from
+Elemental2, JsInterop base, and GWT.
 
-TeaVM has its own browser bindings (JSO) and does not understand JsInterop
-annotations. Code written against Elemental2 or GWT therefore does not compile under
-TeaVM. These libraries republish those APIs, under their original package names,
-implemented against JSO. Existing code compiles unchanged; the classpath decides
-which implementation it gets.
+The compatibility JARs use the original Java package and class names. Source
+that imports those APIs can therefore be compiled by TeaVM without being
+rewritten to TeaVM JSO types. At run time, the implementation delegates to
+TeaVM's browser APIs or directly to JavaScript.
 
-This is an independent project under `io.instanto`, not an official Google, GWT or
-TeaVM distribution. Original Java packages and attribution are retained; see
-[NOTICE](NOTICE).
+These are focused compatibility layers, not complete reimplementations of every
+upstream library.
 
-## 1. Choose the artifacts you need
+## Choose the library
 
-| Artifact | Replaces | Use it when your code imports |
-| --- | --- | --- |
-| `elemental2-compat` | Elemental2 1.2.3 | `elemental2.dom`, `.core`, `.svg`, `.promise`, `.webstorage` |
-| `jsinterop-base-compat` | `jsinterop-base` | `jsinterop.base.Js`, `JsPropertyMap`, `JsArrayLike` |
-| `gwt-user-compat` | `gwt-user` (client subset) | `com.google.gwt.*`, `com.google.web.bindery.*` |
-| `gwt-modular-services-compat` | the `org.gwtproject` modules | `org.gwtproject.safehtml`, `.i18n`, `.editor` |
-
-`elemental2-compat` brings JsInterop base in automatically.
-
-### What "modular services" means
-
-GWT 2 shipped one large `gwt-user` jar. The GWT project later split parts of it into
-standalone, J2CL-compatible libraries published under the `org.gwtproject` groupId —
-`gwt-safehtml`, `gwt-i18n`, `gwt-editor` and others. Those are the modules this
-artifact covers, and it is named for them rather than for any one of them.
-
-They are a different lineage from `com.google.gwt`, not a newer version of it: the
-packages differ, and an application may legitimately use both. `gwt-user-compat`
-covers the old packages; `gwt-modular-services-compat` covers the new ones.
-
-Everything here is a subset — enough for the applications driving this work, not a
-claim of complete upstream compatibility.
-
-## 2. What it is compatible with
-
-Every input is pinned by version and checksum in
-[`upstream/bindings-lock.json`](upstream/bindings-lock.json) and
-[`upstream/provenance.json`](upstream/provenance.json). The build verifies those
-checksums, so the bindings cannot drift without the change being visible.
-
-| Upstream | Pinned at |
+| Artifact | Provides |
 | --- | --- |
-| Elemental2 | **1.2.3** — core, dom, promise, svg, webstorage |
-| GWT | **2.13.1** API level, for the `com.google.gwt` subset |
-| TeaVM | **0.15.0** |
-| JDK | **21** |
+| `jsinterop-base-compat` | TeaVM implementations of `Js`, `JsPropertyMap`, and `JsArrayLike` |
+| `elemental2-compat` | TeaVM bindings for the supported `elemental2.core`, `dom`, `promise`, `svg`, and `webstorage` APIs |
+| `gwt-user-compat` | A TeaVM implementation of the supported legacy `com.google.gwt.*` and `com.google.web.bindery.*` client APIs |
+| `gwt-modular-services-compat` | TeaVM implementations of the supported `org.gwtproject.safehtml`, `i18n`, and `editor` APIs |
+| `gwt-uibinder-processor` | A javac annotation processor for supported UiBinder templates, ClientBundle text resources and default string constants |
+| `jsinterop-binding-generator` | A build tool that adapts supported JsInterop declarations and JSNI bodies to TeaVM JSO |
+| `teavm-classlib-compat` | The TeaVM 0.15 exception workaround brought in by `gwt-user-compat` |
 
-The Elemental2 jars are vendored under `upstream/` and checked:
+`elemental2-compat` brings in `jsinterop-base-compat` automatically.
 
-| Artifact | SHA-256 |
-| --- | --- |
-| `com.google.elemental2:elemental2-core:1.2.3` | `e76b5bb0b13c…` |
-| `com.google.elemental2:elemental2-dom:1.2.3` | `bc17f3c057f7…` |
-| `com.google.elemental2:elemental2-svg:1.2.3` | `b1b8ce2fbaca…` |
-| `com.google.elemental2:elemental2-webstorage:1.2.3` | `86b0b185e06a…` |
-| `com.google.elemental2:elemental2-promise:1.2.3` | `ca0dc3c374be…` |
+`gwt-user-compat` and `gwt-modular-services-compat` cover different package
+names and can be used together. The first covers the packages historically
+shipped in `gwt-user`; the second covers newer modular `org.gwtproject`
+packages.
 
-The `org.gwtproject` module sources are pinned differently, and it is worth being
-precise about it. They are not taken from a published `org.gwtproject` release: they
-are a subset extracted from [a recorded fork](https://github.com/cstainton/domino-ui)
-at commit `31404a554cda`, with the archive's own checksum recorded alongside. So this artifact tracks the API level that
-fork uses, not a version number you can look up upstream.
+## Add a dependency
 
-Nothing here claims complete upstream compatibility. Each artifact covers the surface
-the driving applications need. If a class or member you use is missing, that is a gap
-to fill rather than a deliberate exclusion — see chapter 6 for how the generated ones
-are widened.
-
-## 3. Add the dependencies
-
-Use JDK 21 and TeaVM 0.15.0. Add the package repository and authenticate the
-`github-teavm-compat` server in your Maven settings with a token that can read
-packages:
+Artifacts are published from this repository's GitHub Packages registry:
 
 ```xml
 <repository>
@@ -86,7 +41,18 @@ packages:
 </repository>
 ```
 
-Import the BOM so versions stay aligned:
+Add only the compatibility library your TeaVM module uses:
+
+```xml
+<dependency>
+  <groupId>io.instanto</groupId>
+  <artifactId>elemental2-compat</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+If a project uses several compatibility libraries, the optional BOM keeps their
+versions aligned:
 
 ```xml
 <dependencyManagement>
@@ -102,66 +68,101 @@ Import the BOM so versions stay aligned:
 </dependencyManagement>
 ```
 
-Then declare only what you need:
+With the BOM imported, omit the version from individual
+`io.instanto` compatibility dependencies.
+
+## Use the compatibility JAR instead of the upstream JAR
+
+A compatibility library and the upstream library it replaces define classes in
+the same Java packages. Do not put both implementations on the TeaVM classpath.
+Classpath order would decide which class TeaVM sees, producing fragile builds
+and confusing linkage failures.
+
+In particular:
+
+- replace `com.google.elemental2:*` and `com.google.jsinterop:base` with
+  `elemental2-compat` in a TeaVM module;
+- replace `org.gwtproject:gwt-user` with `gwt-user-compat`; and
+- exclude upstream SafeHtml, editor, or i18n implementations when using
+  `gwt-modular-services-compat`.
+
+`com.google.jsinterop:jsinterop-annotations` contains annotations rather than
+a competing run-time implementation and is safe to retain.
+
+Modules that are compiled with GWT or J2CL should continue to use the upstream
+libraries. These compatibility artifacts are the TeaVM side of that dependency
+choice.
+
+## What compatibility means
+
+The primary goal is source compatibility: application and library source keeps
+its existing imports while the build selects a TeaVM implementation.
+
+Coverage is driven by real TeaVM consumers and is intentionally incremental. A
+class or method not present in a compatibility JAR is currently unsupported; it
+is not an intentional statement that the upstream API should behave
+differently.
+
+The project includes browser contracts for the behavior it supports. Those
+contracts compile with TeaVM and run in a browser, covering both API shape and
+observable browser behavior.
+
+UiBinder processing runs during Java compilation. Add the processor to your
+TeaVM module's compiler configuration:
 
 ```xml
-<dependency>
-  <groupId>io.instanto</groupId>
-  <artifactId>elemental2-compat</artifactId>
-</dependency>
+<annotationProcessorPaths>
+  <path>
+    <groupId>io.instanto</groupId>
+    <artifactId>gwt-uibinder-processor</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </path>
+</annotationProcessorPaths>
 ```
 
-## 4. Remove the upstream artifacts
+Copy `.ui.xml` templates and bundle resources into the compiler output directory
+before compilation, as with Maven's normal `process-resources` phase. Generated
+providers are discovered by the compatibility runtime's `GWT.create` support.
+See the [processor guide](gwt-uibinder-processor/README.md) for supported features
+and limits.
 
-This is the rule that matters most. A compat artifact and the library it replaces
-declare the same Java packages, so both on one classpath is undefined: which class
-wins depends on order, and the failure is confusing.
+Current build baselines are:
 
-Remove `com.google.elemental2:*` from any module that depends on
-`elemental2-compat`. The build enforces this for its own modules with a
-`backend-boundary` enforcer rule, and the same rule is worth adding downstream.
+| Component | Version |
+| --- | --- |
+| TeaVM | 0.15.0 |
+| Elemental2 inputs | 1.2.3 |
+| legacy GWT API | 2.13.1 |
+| JUnit contracts | 4.13.2 |
 
-`gwt-user-compat` and `gwt-modular-services-compat` cover different packages from
-each other, so they coexist. The GWT client adapter uses the official JsInterop
-annotations artifact, which is annotations only and safe to keep.
+## How the project is built
 
-An application that still targets GWT or J2CL should depend on the upstream
-libraries directly. These adapters are for TeaVM.
+Upstream binaries and source snapshots are not stored in this repository.
+Versions are declared in the parent Maven build.
 
-## 5. Build and verify
+For generated Elemental2 bindings, Maven resolves the declared upstream
+artifacts into the local repository and supplies their resolved paths to
+`jsinterop-binding-generator`. The generator reads the Java declarations from
+those JARs, converts their JsInterop annotations to TeaVM JSO annotations, and
+writes generated sources under `target/compat/elemental2`.
 
-```sh
+The GWT compatibility modules contain maintained TeaVM implementations under
+their own `src/main/java` trees. Those files are product code rather than
+captures of upstream repositories.
+
+No sibling checkout, downloaded source archive, or committed input JAR is
+required.
+
+## Build
+
+Use JDK 21:
+
+```bash
 mvn clean verify
 ```
 
-JDK 21 and Chrome are required. The build formats maintained Java, verifies
-checksums of the immutable inputs, runs the transformer tests and the
-`TeaVMTestRunner` browser contracts, and gates on SpotBugs findings. Use
-`-Dteavm.junit.js.runner=browser-firefox` for the Firefox contracts, and
-`mvn -Pproduction clean verify` to enable advanced optimisation for the reuse app.
+The browser contracts use Chrome by default. Set
+`-Dteavm.junit.js.runner=browser-firefox` to use Firefox.
 
-No widget checkout is needed. `compat-reuse-smoke` exercises the published Domino
-console logger through the compatibility APIs, and the browser contracts drive one
-shared document through both the GWT client and Elemental2 APIs.
-
-## 6. How the bindings are produced
-
-Most of this library is generated rather than written.
-
-`jsinterop-binding-generator` reads the upstream artifacts and rewrites their
-JsInterop annotations into TeaVM's equivalents — `@JsType` becomes `@JSClass`,
-`@JsProperty` becomes `@JSProperty`, `@JsFunction` becomes `@JSBody` — preserving
-package names, signatures and JS names.
-
-| Source | Input | Output |
-| --- | --- | --- |
-| Elemental2 | the five upstream jars, pinned at 1.2.3 | `target/compat/elemental2` |
-| GWT modules | pinned sources under `upstream/modular-services` | `target/compat/services` |
-
-The generated sources become each module's source directory, so the jars contain
-compiled bindings and no checked-in transcription. Widening coverage means adding an
-input, not writing classes by hand.
-
-Publication is a manually triggered GitHub Actions workflow, after verification.
-
-See [design and provenance](docs/DESIGN.md) and [artifact migration](docs/MIGRATION.md).
+See [design notes](docs/DESIGN.md) and
+[artifact migration](docs/MIGRATION.md) for repository-level details.

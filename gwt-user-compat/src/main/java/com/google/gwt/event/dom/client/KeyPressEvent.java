@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class KeyPressEvent extends DomEvent<KeyPressHandler> {
+public class KeyPressEvent extends HumanInputEvent<KeyPressHandler> {
 
   private static final Type<KeyPressHandler> TYPE = new Type<>("keypress", KeyPressEvent::new);
 
@@ -40,5 +40,9 @@ public class KeyPressEvent extends DomEvent<KeyPressHandler> {
   @Override
   protected void dispatch(final KeyPressHandler handler) {
     handler.onKeyPress(this);
+  }
+
+  public char getCharCode() {
+    return (char) getNativeEvent().getCharCode();
   }
 }

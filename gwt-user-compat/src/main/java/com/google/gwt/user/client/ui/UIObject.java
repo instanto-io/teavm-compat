@@ -33,10 +33,15 @@ import com.google.gwt.dom.client.Style;
  */
 public abstract class UIObject {
 
-  /** Style name applied to the primary element, kept first in the class list like GWT. */
-  private String primaryStyleName = "";
-
   private Element element;
+
+  public int getAbsoluteLeft() {
+    return getElement().getAbsoluteLeft();
+  }
+
+  public int getAbsoluteTop() {
+    return getElement().getAbsoluteTop();
+  }
 
   public Element getElement() {
     return element;
@@ -109,23 +114,26 @@ public abstract class UIObject {
       return;
     }
     final String primary = getStylePrimaryName();
-    if (primary == null || primary.isEmpty()) {
-      throw new IllegalStateException(
-          "A primary style name is required before adding a dependent style");
-    }
     setStyleName(primary + "-" + styleSuffix, add);
   }
 
   public void setStylePrimaryName(final String styleName) {
-    if (primaryStyleName != null && !primaryStyleName.isEmpty()) {
-      removeStyleName(primaryStyleName);
+    String replacement = styleName.trim();
+    if (replacement.isEmpty()) throw new IllegalArgumentException("Style name must not be empty");
+    String primary = getStylePrimaryName();
+    String[] names = getStyleName().split("\\s+");
+    names[0] = replacement;
+    for (int i = 1; i < names.length; i++) {
+      if (names[i].startsWith(primary + "-"))
+        names[i] = replacement + names[i].substring(primary.length());
     }
-    primaryStyleName = styleName == null ? "" : styleName;
-    addStyleName(primaryStyleName);
+    setStyleName(String.join(" ", names));
   }
 
   public String getStylePrimaryName() {
-    return primaryStyleName;
+    String names = getStyleName();
+    int space = names.indexOf(' ');
+    return space < 0 ? names : names.substring(0, space);
   }
 
   public void setVisible(final boolean visible) {

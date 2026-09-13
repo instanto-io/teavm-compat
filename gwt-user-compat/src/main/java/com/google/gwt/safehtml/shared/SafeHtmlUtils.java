@@ -3,11 +3,12 @@
  * GWT Bootstrap
  * %%
  * Copyright (C) 2026 Carl Stainton
+ * Copyright 2010 Google Inc.
  * %%
  * Reimplements, over TeaVM's JSO libraries, part of the GWT client API. Class,
  * method and package names follow GWT (https://github.com/gwtproject/gwt),
  * Copyright (C) The GWT Project Authors, licensed under the Apache License,
- * Version 2.0. No GWT source is included.
+ * Version 2.0. Entity escaping below retains the upstream implementation.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,12 +55,38 @@ public final class SafeHtmlUtils {
   }
 
   /** Escapes markup but leaves existing character entities such as {@code &amp;} intact. */
-  public static String htmlEscapeAllowEntities(final String text) {
-    if (text == null) {
-      return "";
+  public static String htmlEscapeAllowEntities(String text) {
+    StringBuilder escaped = new StringBuilder();
+
+    boolean firstSegment = true;
+    for (String segment : text.split("&", -1)) {
+      if (firstSegment) {
+        /*
+         * The first segment is never part of an entity reference, so we always
+         * escape it.
+         * Note that if the input starts with an ampersand, we will get an empty
+         * segment before that.
+         */
+        firstSegment = false;
+        escaped.append(htmlEscape(segment));
+        continue;
+      }
+
+      int entityEnd = segment.indexOf(';');
+      if (entityEnd > 0
+          && segment.substring(0, entityEnd).matches("[a-z]+|#[0-9]+|#x[0-9a-fA-F]+")) {
+        // Append the entity without escaping.
+        escaped.append("&").append(segment.substring(0, entityEnd + 1));
+
+        // Append the rest of the segment, escaped.
+        escaped.append(htmlEscape(segment.substring(entityEnd + 1)));
+      } else {
+        // The segment did not start with an entity reference, so escape the
+        // whole segment.
+        escaped.append("&amp;").append(htmlEscape(segment));
+      }
     }
-    return text.replaceAll("&(?!([a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);)", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;");
+
+    return escaped.toString();
   }
 }

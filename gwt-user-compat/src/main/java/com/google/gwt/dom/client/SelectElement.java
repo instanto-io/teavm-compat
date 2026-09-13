@@ -21,6 +21,15 @@ public class SelectElement extends Element {
     return getPropertyBoolean("multiple");
   }
 
+  public void add(OptionElement option, OptionElement before) {
+    addOption(unwrap(), option.unwrap(), before == null ? null : before.unwrap());
+  }
+
+  @JSBody(
+      params = {"select", "option", "before"},
+      script = "select.add(option, before);")
+  private static native void addOption(JSObject select, JSObject option, JSObject before);
+
   public void setMultiple(boolean value) {
     setPropertyBoolean("multiple", value);
   }

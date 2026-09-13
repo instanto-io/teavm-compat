@@ -57,6 +57,10 @@ public final class RootPanel extends ComplexPanel {
     onAttach();
   }
 
+  public static com.google.gwt.user.client.Element getBodyElement() {
+    return com.google.gwt.user.client.Element.as(Document.get().getBody());
+  }
+
   /** The panel wrapping the document body. */
   public static RootPanel get() {
     if (bodyRoot == null) {

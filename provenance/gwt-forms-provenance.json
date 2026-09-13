@@ -1,0 +1,31 @@
+{
+  "artifact": "org.gwtproject:gwt-user:2.13.1",
+  "jar_sha256": "35109b8c4eb2a72809b45c496e6b508c5d0e7229e8737ae7211b2097470cead4",
+  "source_files": {
+    "com/google/gwt/editor/client/EditorDelegate.java": "921cc412be2122830cead458050b631168ee22ff16b9a090133ab1e248e53950",
+    "com/google/gwt/editor/client/HasEditorDelegate.java": "58ec79a453f29e4c4dbf4264d89bd7bcd3c8042665c4e8d680ea1a73a97fd279",
+    "com/google/gwt/editor/ui/client/adapters/ValueBoxEditor.java": "dd1a675cc4a9528de89613aa0adcd9a68848691d3b0810aaf0003d3a0e8dcfee",
+    "com/google/gwt/i18n/client/AutoDirectionHandler.java": "67208f1b458f7aaeecd50d1c18f309334c429de98c4c9a052e5cb0039b3109f3",
+    "com/google/gwt/i18n/shared/DirectionEstimator.java": "aaf230ce7859c773ed52e2eba3f81611c416465fdda2c080231c446fef1c1509",
+    "com/google/gwt/i18n/shared/BidiUtils.java": "588462ff978c41bb8276e47fcddacc17d45df35bb0babb515690752fe2f27e8a",
+    "com/google/gwt/i18n/shared/WordCountDirectionEstimator.java": "ed0c4852d2ad01ad83b4bf34b568caf9fbcadc402958904d1a67b92fea5406c0",
+    "com/google/gwt/i18n/client/BidiUtils.java": "4bd0dcb8a5e2a4c2ef409c9515b11797c84f62bd3bdae38db546011c50f68014",
+    "com/google/gwt/i18n/shared/BidiFormatter.java": "ab7e4d4150df9bc7e5f0124c07e39764d5bb6fd21f2b1b25124c6fd171008300",
+    "com/google/gwt/i18n/shared/BidiFormatterBase.java": "6b15029db840be787c684d1027bddc516220805c2cfe5db300ca6309653caf99",
+    "com/google/gwt/user/client/ui/DirectionalTextHelper.java": "15187af6451b8b464daaa84fb9bd5f6cd59f566dea7658269903c9b86f7a97dd",
+    "com/google/gwt/safehtml/client/HasSafeHtml.java": "ec6f6eaf202f21d5e2c8a734b77ad4fa7aed0888b4d7ac01ef2d869c336afe64",
+    "com/google/gwt/user/client/ui/HasDirectionalSafeHtml.java": "ea85061a9ae732548207584d77422b367acd1230857473d8d9e5a1c9826d4fb9"
+  },
+  "adaptations": {
+    "com/google/gwt/i18n/shared/BidiFormatter.java": "getInstanceForCurrentLocale uses GWT's default LTR locale. GWT-generated locale permutations are not available; explicit context directions retain the upstream implementation."
+  },
+  "partial_source_files": {
+    "com/google/gwt/user/client/ui/ListBox.java": {
+      "sha256": "1d010d4d99a85fe40724bcef3756786a84291e56f84dfcd6695266b1db0c1f1a",
+      "methods": [
+        "getOptionText(OptionElement)",
+        "setOptionText(OptionElement,String,Direction)"
+      ]
+    }
+  }
+}

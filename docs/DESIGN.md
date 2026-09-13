@@ -6,11 +6,11 @@ APIs they adapt, never on a widget library or JavaParser. The separate
 explicit source directories or JARs and writes deterministic source hash manifests.
 Widget-specific input selection stays in each widget repository.
 
-Immutable Elemental2 JARs and an extracted modular service subset live in `upstream/`.
-Source commits, archive provenance and per-file hashes are in `upstream/provenance.json`;
-the build verifies them. No Domino source archive or sibling checkout is required.
-GWT client emulation and portable contracts were extracted from the recorded
-Bootstrap commit. Existing contract Java packages and module names remain compatible
+Elemental2 input coordinates and versions are declared in the parent POM. Maven
+resolves those artifacts and exposes their local paths to the generator; upstream
+JARs and source snapshots are not committed to this repository. The modular GWT and
+GWT client modules contain maintained TeaVM implementations rather than copies of
+upstream binaries. Existing contract Java packages and module names remain compatible
 with native GWT reference test consumers.
 
 Seven duplicate JsInterop annotation declarations were replaced by the official
@@ -18,8 +18,27 @@ annotations dependency. A mixed browser contract caught `Js.asString` mishandlin
 already-Java strings from property maps; that conversion now preserves them.
 
 Spotless applies formatting at validate. Immutable inputs are excluded. SpotBugs
-rejects high-priority findings with one explicit exception: GWT's legacy
-`com.google.gwt.user.client.Element` intentionally extends a DOM class named `Element`.
+rejects high-priority findings, with narrowly named exceptions for GWT's public
+`Element`, `EventBus` and `UmbrellaException` compatibility aliases. Each deliberately
+extends an implementation with the same simple class name in another GWT package.
+
+The `gwt-uibinder-processor` was extracted from the processor developed for Bootstrap
+Widgets. It remains a javac annotation processor rather than a runtime dependency.
+Material's templates extend its coverage with inherited generic setters, preserved
+preformatted text and default string constants; both widget libraries can use the
+same processor. Import provenance is recorded under `provenance/`.
+
+Material's compatibility contributions live below the widget layer: native GWT
+handles are wrapped at generated JSO boundaries, DOM attributes and primary styles
+retain GWT semantics, and browser services use native typed arrays, frames, media
+elements and geolocation. The generator rejects unsupported JSNI Java-member
+references and Java receiver access instead of silently emitting invalid code.
+Portable contracts remain in `gwt-api-contracts`; TeaVM-specific browser fixtures
+and regressions live in `gwt-user-compat-tests`.
+
+`teavm-classlib-compat` applies the TeaVM 0.15 suppressed-exception initialisation
+workaround during compilation. It is transitive from `gwt-user-compat`, pending
+adoption of an upstream TeaVM release containing the fix.
 
 These adapters do not certify every upstream API. Named contracts and widget
 consumer tests provide evidence for the behavior they exercise.

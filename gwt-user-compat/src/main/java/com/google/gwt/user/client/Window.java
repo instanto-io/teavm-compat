@@ -3,11 +3,12 @@
  * GWT Bootstrap
  * %%
  * Copyright (C) 2026 Carl Stainton
+ * Copyright 2008 Google Inc.
  * %%
  * Reimplements, over TeaVM's JSO libraries, part of the GWT client API. Class,
  * method and package names follow GWT (https://github.com/gwtproject/gwt),
  * Copyright (C) The GWT Project Authors, licensed under the Apache License,
- * Version 2.0. No GWT source is included.
+ * Version 2.0. Scroll event types retain the upstream implementation.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +25,13 @@
  */
 package com.google.gwt.user.client;
 
-/** Browser window geometry and scrolling. */
+import com.google.gwt.event.shared.EventHandler;
+import com.google.gwt.event.shared.GwtEvent;
+import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.event.shared.SimpleEventBus;
+import org.teavm.jso.JSBody;
+
+/** Browser window geometry, location and scrolling. */
 public final class Window {
 
   private Window() {}
@@ -91,4 +98,138 @@ public final class Window {
       params = {"left", "top"},
       script = "window.scrollTo(left, top);")
   private static native void scrollWindowTo(int left, int top);
+
+  /** Browser location operations; values retain their native URL encoding. */
+  public static final class Location {
+    private Location() {}
+
+    @JSBody(script = "return window.location.hash;")
+    public static native String getHash();
+
+    @JSBody(script = "return window.location.host;")
+    public static native String getHost();
+
+    @JSBody(script = "return window.location.hostname;")
+    public static native String getHostName();
+
+    @JSBody(script = "return window.location.href;")
+    public static native String getHref();
+
+    @JSBody(script = "return window.location.pathname;")
+    public static native String getPath();
+
+    @JSBody(script = "return window.location.port;")
+    public static native String getPort();
+
+    @JSBody(script = "return window.location.protocol;")
+    public static native String getProtocol();
+
+    @JSBody(script = "return window.location.search;")
+    public static native String getQueryString();
+
+    @JSBody(params = "url", script = "window.location.assign(url);")
+    public static native void assign(String url);
+
+    @JSBody(params = "url", script = "window.location.replace(url);")
+    public static native void replace(String url);
+
+    @JSBody(script = "window.location.reload();")
+    public static native void reload();
+  }
+
+  /** Browser identification used by upstream feature checks. */
+  public static final class Navigator {
+    private Navigator() {}
+
+    @JSBody(script = "return window.navigator.appCodeName;")
+    public static native String getAppCodeName();
+
+    @JSBody(script = "return window.navigator.appName;")
+    public static native String getAppName();
+
+    @JSBody(script = "return window.navigator.appVersion;")
+    public static native String getAppVersion();
+
+    @JSBody(script = "return window.navigator.platform;")
+    public static native String getPlatform();
+
+    @JSBody(script = "return window.navigator.userAgent;")
+    public static native String getUserAgent();
+  }
+
+  public static class ScrollEvent extends GwtEvent<Window.ScrollHandler> {
+    /** The event type. */
+    static final Type<Window.ScrollHandler> TYPE = new Type<Window.ScrollHandler>();
+
+    static Type<Window.ScrollHandler> getType() {
+      return TYPE;
+    }
+
+    private int scrollLeft;
+    private int scrollTop;
+
+    /**
+     * Construct a new {@link Window.ScrollEvent}.
+     *
+     * @param scrollLeft the left scroll position
+     * @param scrollTop the top scroll position
+     */
+    private ScrollEvent(int scrollLeft, int scrollTop) {
+      this.scrollLeft = scrollLeft;
+      this.scrollTop = scrollTop;
+    }
+
+    @Override
+    public final Type<ScrollHandler> getAssociatedType() {
+      return TYPE;
+    }
+
+    /**
+     * Gets the window's scroll left.
+     *
+     * @return window's scroll left
+     */
+    public int getScrollLeft() {
+      return scrollLeft;
+    }
+
+    /**
+     * Get the window's scroll top.
+     *
+     * @return the window's scroll top
+     */
+    public int getScrollTop() {
+      return scrollTop;
+    }
+
+    @Override
+    protected void dispatch(ScrollHandler handler) {
+      handler.onWindowScroll(this);
+    }
+  }
+
+  /** Handler for {@link Window.ScrollEvent} events. */
+  public interface ScrollHandler extends EventHandler {
+    /**
+     * Fired when the browser window is scrolled.
+     *
+     * @param event the event
+     */
+    void onWindowScroll(Window.ScrollEvent event);
+  }
+
+  private static final SimpleEventBus SCROLL_HANDLERS = new SimpleEventBus();
+  private static boolean scrollInitialized;
+
+  /** Registers a window scroll handler; disposal removes it from future delivery. */
+  public static HandlerRegistration addWindowScrollHandler(ScrollHandler handler) {
+    if (!scrollInitialized) {
+      org.teavm.jso.browser.Window.current()
+          .onEvent(
+              "scroll",
+              event -> SCROLL_HANDLERS.fireEvent(new ScrollEvent(getScrollLeft(), getScrollTop())));
+      scrollInitialized = true;
+    }
+    return SCROLL_HANDLERS.addHandler(ScrollEvent.TYPE, handler);
+  }
 }

@@ -99,6 +99,11 @@ public class CheckBox extends ButtonBase
   }
 
   @Override
+  public void setHTML(final com.google.gwt.safehtml.shared.SafeHtml html) {
+    setHTML(html.asString());
+  }
+
+  @Override
   public void setHTML(
       final com.google.gwt.safehtml.shared.SafeHtml html, final Direction direction) {
     directionalTextHelper.setTextOrHtml(html == null ? "" : html.asString(), direction, true);

@@ -34,7 +34,8 @@ public class ImageResourceCell extends AbstractCell<ImageResource> {
   @Override
   public void render(final Context context, final ImageResource value, final SafeHtmlBuilder sb) {
     if (value != null && value.getSafeUri() != null) {
-      sb.appendHtmlConstant("<img src=\"" + SafeHtmlUtils.htmlEscape(value.getSafeUri()) + "\"/>");
+      sb.appendHtmlConstant(
+          "<img src=\"" + SafeHtmlUtils.htmlEscape(value.getSafeUri().asString()) + "\"/>");
     }
   }
 }

@@ -45,8 +45,16 @@ public class JavaScriptObject {
 
   /** Wraps a JavaScript value, or null. */
   public static JavaScriptObject of(final JSObject value) {
-    return value == null ? null : new JavaScriptObject(value);
+    if (value == null || isAbsent(value)) return null;
+    if (isNode(value)) return com.google.gwt.dom.client.Node.wrap(value.cast());
+    return new JavaScriptObject(value);
   }
+
+  @org.teavm.jso.JSBody(params = "value", script = "return typeof value.nodeType === 'number';")
+  private static native boolean isNode(JSObject value);
+
+  @org.teavm.jso.JSBody(params = "value", script = "return value == null;")
+  private static native boolean isAbsent(JSObject value);
 
   @SuppressWarnings("unchecked")
   public <T extends JavaScriptObject> T cast() {
