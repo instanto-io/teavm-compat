@@ -158,19 +158,30 @@ public final class GenerateBindings {
           String member = name.isEmpty() ? method.getNameAsString() : name;
           NodeList<Expression> parameters = new NodeList<>();
           List<String> arguments = new ArrayList<>();
+          String variableArguments = null;
           for (Parameter parameter : method.getParameters()) {
-            parameters.add(new StringLiteralExpr(parameter.getNameAsString()));
-            arguments.add((parameter.isVarArgs() ? "..." : "") + parameter.getNameAsString());
+            // Java permits names such as "function", which are reserved in JavaScript.
+            String argument = "arg" + parameters.size();
+            parameters.add(new StringLiteralExpr(argument));
+            if (parameter.isVarArgs()) variableArguments = argument;
+            else arguments.add(argument);
           }
-          String script =
-              (method.getType().isVoidType() ? "" : "return ")
-                  + "globalThis."
-                  + ns
-                  + "["
-                  + new StringLiteralExpr(member)
-                  + "]("
-                  + String.join(",", arguments)
-                  + ");";
+          String receiver = "globalThis." + ns;
+          String invocation = receiver + "[" + new StringLiteralExpr(member) + "]";
+          if (variableArguments == null) {
+            invocation += "(" + String.join(",", arguments) + ")";
+          } else {
+            // JSBody uses TeaVM's JavaScript parser; avoid unsupported spread syntax.
+            invocation +=
+                ".apply("
+                    + receiver
+                    + ",["
+                    + String.join(",", arguments)
+                    + "].concat("
+                    + variableArguments
+                    + "))";
+          }
+          String script = (method.getType().isVoidType() ? "" : "return ") + invocation + ";";
           method.addAnnotation(
               new NormalAnnotationExpr(
                   new Name("JSBody"),
@@ -250,7 +261,7 @@ public final class GenerateBindings {
                           : m.getNameAsString())
               .orElse(m.getNameAsString());
       bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals("JSMethod"));
-      annotate(bridge, "@JSMethod(\"" + jsName + "\")");
+      if (!bridge.isAnnotationPresent("JSBody")) annotate(bridge, "@JSMethod(\"" + jsName + "\")");
       owner.addMember(bridge);
       String args = last.getNameAsString();
       String prefix =
@@ -260,7 +271,7 @@ public final class GenerateBindings {
       if (!prefix.isEmpty()) prefix += ",";
       m.setNative(false);
       m.getAnnotations()
-          .removeIf(a -> Set.of("JSTopLevel", "JSMethod").contains(a.getNameAsString()));
+          .removeIf(a -> Set.of("JSTopLevel", "JSMethod", "JSBody").contains(a.getNameAsString()));
       m.setBody(
           StaticJavaParser.parseBlock(
               "{JSObject[] nativeArgs=new JSObject["

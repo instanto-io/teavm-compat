@@ -80,6 +80,37 @@ public class GenerateBindingsTest {
   }
 
   @Test
+  public void usesSafeJavascriptParametersAndArrayApplicationForNamespacedVarargs() {
+    String result =
+        GenerateBindings.transform(
+            "import jsinterop.annotations.*; @JsType(isNative=true,name=\"Object\") class Query {"
+                + " @JsMethod(namespace=\"$\") public static native Object proxy(Object function, Object... arguments); }");
+    var owner = StaticJavaParser.parse(result).getClassByName("Query").orElseThrow();
+    var wrapper = owner.getMethodsByName("proxy").get(0);
+    assertFalse(wrapper.isAnnotationPresent("JSBody"));
+    var bridge = owner.getMethodsByName("$nativeVarargs0").get(0);
+    assertFalse(bridge.isAnnotationPresent("JSMethod"));
+    var body = bridge.getAnnotationByName("JSBody").orElseThrow().asNormalAnnotationExpr();
+    String script =
+        body.getPairs().stream()
+            .filter(p -> p.getNameAsString().equals("script"))
+            .findFirst()
+            .orElseThrow()
+            .getValue()
+            .asStringLiteralExpr()
+            .asString();
+    assertEquals("return globalThis.$[\"proxy\"].apply(globalThis.$,[arg0].concat(arg1));", script);
+    assertEquals(
+        "{ \"arg0\", \"arg1\" }",
+        body.getPairs().stream()
+            .filter(p -> p.getNameAsString().equals("params"))
+            .findFirst()
+            .orElseThrow()
+            .getValue()
+            .toString());
+  }
+
+  @Test
   public void preservesFunctorTypeBeforeUnionErasure() {
     String result =
         GenerateBindings.transform(
