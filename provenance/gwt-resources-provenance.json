@@ -1,0 +1,20 @@
+{
+  "artifact": "org.gwtproject:gwt-user:2.13.1",
+  "jar_sha256": "35109b8c4eb2a72809b45c496e6b508c5d0e7229e8737ae7211b2097470cead4",
+  "source_files": {
+    "com/google/gwt/core/client/CodeDownloadException.java": "4de2886f40f12e21090a3f627a0b53da32b8e52dbf0cadc618239e87ba269f06",
+    "com/google/gwt/dom/client/StyleInjector.java": "b387864b39ff922d3aa80fc42afe17906e3781ae1225473d5435662a3cf56049"
+  },
+  "adaptations": {
+    "com/google/gwt/dom/client/StyleInjector.java": "Native string arrays become Java lists, deferred binding becomes direct construction, and the head uses an Element wrapper. Batching, flushing and insertion order retain the upstream logic. Null queue entries become empty strings as in JavaScript Array.join."
+  },
+  "partial_source_files": {
+    "com/google/gwt/user/client/Window.java": {
+      "sha256": "7bf7dd67f1773d234714cf75e853c4325ad49dfab0e5793679064394d45a1907",
+      "members": [
+        "ScrollEvent",
+        "ScrollHandler"
+      ]
+    }
+  }
+}

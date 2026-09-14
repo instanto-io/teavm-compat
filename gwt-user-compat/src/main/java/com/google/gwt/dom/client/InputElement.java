@@ -1,0 +1,102 @@
+/*
+ * #%L
+ * GWT Bootstrap
+ * %%
+ * Copyright (C) 2026 Carl Stainton
+ * %%
+ * Reimplements, over TeaVM's JSO libraries, part of the GWT client API. Class,
+ * method and package names follow GWT (https://github.com/gwtproject/gwt),
+ * Copyright (C) The GWT Project Authors, licensed under the Apache License,
+ * Version 2.0. No GWT source is included.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+package com.google.gwt.dom.client;
+
+import org.teavm.jso.dom.html.HTMLElement;
+
+/** Typed view of a {@code <Input>}-family element. */
+public class InputElement extends Element {
+
+  public InputElement(final HTMLElement element) {
+    super(element);
+  }
+
+  public static InputElement as(final Element element) {
+    return element == null ? null : new InputElement(element.unwrap());
+  }
+
+  public String getValue() {
+    return getPropertyString("value");
+  }
+
+  public void setValue(final String value) {
+    setPropertyString("value", value);
+  }
+
+  public boolean isChecked() {
+    return getPropertyBoolean("checked");
+  }
+
+  public void setChecked(final boolean checked) {
+    setPropertyBoolean("checked", checked);
+  }
+
+  public boolean isDefaultChecked() {
+    return getPropertyBoolean("defaultChecked");
+  }
+
+  public void setDefaultChecked(final boolean checked) {
+    setPropertyBoolean("defaultChecked", checked);
+  }
+
+  public String getName() {
+    return getPropertyString("name");
+  }
+
+  public void setName(final String name) {
+    setPropertyString("name", name);
+  }
+
+  public boolean isDisabled() {
+    return getPropertyBoolean("disabled");
+  }
+
+  public void setDisabled(final boolean disabled) {
+    setPropertyBoolean("disabled", disabled);
+  }
+
+  public boolean isReadOnly() {
+    return getPropertyBoolean("readOnly");
+  }
+
+  public void setReadOnly(final boolean readOnly) {
+    setPropertyBoolean("readOnly", readOnly);
+  }
+
+  public String getType() {
+    return getPropertyString("type");
+  }
+
+  public static final String TAG = "input";
+
+  /** True when the element is a {@code <input>}. */
+  public static boolean is(final Element element) {
+    if (element == null) {
+      return false;
+    }
+    final String tag = element.getTagName();
+    return "input".equalsIgnoreCase(tag);
+  }
+}

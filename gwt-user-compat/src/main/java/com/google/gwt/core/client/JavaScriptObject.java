@@ -1,0 +1,104 @@
+/*
+ * #%L
+ * GWT Bootstrap
+ * %%
+ * Copyright (C) 2026 Carl Stainton
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+package com.google.gwt.core.client;
+
+import org.teavm.jso.JSObject;
+
+/**
+ * An opaque handle to a JavaScript value.
+ *
+ * <p>In GWT this is a JavaScript overlay type: the Java reference <em>is</em> the JavaScript value.
+ * TeaVM has no overlay types, so as everywhere else in this compatibility layer the value is
+ * wrapped and reached through {@link #unwrap()}. Widget code that only passes one of these between
+ * native methods -- which is what the extras do with a noUiSlider, a Quill instance or a date
+ * picker -- does not notice the difference.
+ */
+public class JavaScriptObject {
+
+  private static final JSObject IDENTITIES = identities();
+
+  private final JSObject value;
+
+  public JavaScriptObject(final JSObject value) {
+    this.value = value;
+  }
+
+  /** The underlying JavaScript value. */
+  public JSObject unwrap() {
+    return value;
+  }
+
+  /** GWT overlays compare the underlying browser value, not an intermediate Java wrapper. */
+  @Override
+  public boolean equals(Object other) {
+    return other instanceof JavaScriptObject && same(unwrap(), ((JavaScriptObject) other).unwrap());
+  }
+
+  @Override
+  public int hashCode() {
+    return identity(IDENTITIES, unwrap());
+  }
+
+  @org.teavm.jso.JSBody(
+      params = {"left", "right"},
+      script = "return left === right;")
+  private static native boolean same(JSObject left, JSObject right);
+
+  @org.teavm.jso.JSBody(script = "return {objects:new WeakMap(), next:1};")
+  private static native JSObject identities();
+
+  @org.teavm.jso.JSBody(
+      params = {"state", "value"},
+      script =
+          "if(value == null) return 0; if(typeof value !== 'object' && typeof value !== 'function') { var s=String(value), h=0; for(var i=0;i<s.length;i++) h=(31*h+s.charCodeAt(i))|0; return h; } var id=state.objects.get(value); if(id === undefined) { id=state.next++; state.objects.set(value,id); } return id;")
+  private static native int identity(JSObject state, JSObject value);
+
+  /** Wraps a JavaScript value, or null. */
+  public static JavaScriptObject of(final JSObject value) {
+    if (value == null || isAbsent(value)) return null;
+    if (isNode(value)) return com.google.gwt.dom.client.Node.wrap(value.cast());
+    return new JavaScriptObject(value);
+  }
+
+  @org.teavm.jso.JSBody(params = "value", script = "return typeof value.nodeType === 'number';")
+  private static native boolean isNode(JSObject value);
+
+  @org.teavm.jso.JSBody(params = "value", script = "return value == null;")
+  private static native boolean isAbsent(JSObject value);
+
+  @SuppressWarnings("unchecked")
+  public <T extends JavaScriptObject> T cast() {
+    return (T) this;
+  }
+
+  public static JavaScriptObject createObject() {
+    return of(newObject());
+  }
+
+  public static JavaScriptObject createArray() {
+    return of(newArray());
+  }
+
+  @org.teavm.jso.JSBody(script = "return {};")
+  private static native JSObject newObject();
+
+  @org.teavm.jso.JSBody(script = "return [];")
+  private static native JSObject newArray();
+}

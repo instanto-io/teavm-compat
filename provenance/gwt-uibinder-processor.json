@@ -1,0 +1,15 @@
+{
+  "source_repository": "https://github.com/cstainton/bootstrap-widgets",
+  "base_commit": "04bb79680d5d2b4ac45b065fa39fc9f4338b3ae0",
+  "adaptations": "Extracted the existing UiBinder and text-bundle processor. Material additions resolve inherited generic setters, preserve preformatted text and generate default-locale string constants. Runtime and annotation processor packages are unchanged.",
+  "imported_files": {
+    "gwt-uibinder-processor/src/main/java/io/instanto/widgets/processor/Emitter.java": "69d65cfa5aa5934011b887a4d74bc94e33ef9dac54c92e2af5fd50e16ddbeec9",
+    "gwt-uibinder-processor/src/main/java/io/instanto/widgets/processor/Handlers.java": "2e2a5a1f9f126855dc150138a7c4c9e18d6c47386217462e85f1582646f7b03f",
+    "gwt-uibinder-processor/src/main/java/io/instanto/widgets/processor/StringConstantsGenerator.java": "1011a14d4625c2ca5c11ba3db3b0d4994eecff6cbac98beb0df62517b6bcc103",
+    "gwt-uibinder-processor/src/main/java/io/instanto/widgets/processor/TextBundleGenerator.java": "d8a5eacefbb6d9b176da1ac24c43c9fb34d5fa785f644b6737ae23fc600217c0",
+    "gwt-uibinder-processor/src/main/java/io/instanto/widgets/processor/UiBinderProcessor.java": "639c08f26cae17d1d4a799e9daf3bae42500260a5360b98a8072b1a00dd070fa",
+    "gwt-uibinder-processor/src/main/resources/META-INF/services/javax.annotation.processing.Processor": "d394685ca3c6b25e43ae10e4a762fbb19783bb169e0453e77390c314e470b54e",
+    "gwt-uibinder-processor/src/test/java/io/instanto/widgets/processor/UiBinderProcessorTest.java": "887636e6cde0d1851952f5b64348c678b4cb768315f74750a72653ec5f08b86e"
+  },
+  "hash_scope": "Imported source snapshot before repository formatting; implementation retains its original copyright headers."
+}

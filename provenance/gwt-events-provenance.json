@@ -1,0 +1,24 @@
+{
+  "artifact": "org.gwtproject:gwt-user:2.13.1",
+  "jar_sha256": "35109b8c4eb2a72809b45c496e6b508c5d0e7229e8737ae7211b2097470cead4",
+  "source_files": {
+    "com/google/web/bindery/event/shared/EventBus.java": "48b5fcb60652cceab5bd0202f23adcba04f1910da3374df363dfaca41d3deeac",
+    "com/google/web/bindery/event/shared/SimpleEventBus.java": "92eb92b492683125b0dc4e215d8e09a523363133017e0d7d80870fe2e3eb2458",
+    "com/google/web/bindery/event/shared/UmbrellaException.java": "1184e6968732f817e1d30db87e253b5dea44b33fc07680e02e5cffe8e2ff0f32",
+    "com/google/gwt/event/shared/EventBus.java": "e2d16dbcb3af462f51e85bfac92d1c8d09fa0ef4bab1a68b83695eabc78528a8",
+    "com/google/gwt/event/shared/SimpleEventBus.java": "d5e453bdfea3bf6a564195027f22f9d9847bc94524fd6181c985438274e7e119",
+    "com/google/gwt/event/shared/UmbrellaException.java": "f5f8446bbc7ef200d3737e55b45d1b08a18ea34a8d2d8151f582eb2c66083ec5",
+    "com/google/gwt/event/shared/LegacyHandlerWrapper.java": "dbaa7726d4f31cd191a98c2cf93b32fdaf32f9229ae37354de1cbb9397380d30",
+    "com/google/gwt/safehtml/shared/SimpleHtmlSanitizer.java": "60167d991986c86c9e9daa50222c6fd4512bc047cd76b073669e3dadcdd75067",
+    "com/google/gwt/safehtml/shared/SafeHtmlString.java": "7f76d1e39d12e6746a628d09d9604de3a50796064b21e751a76eb2c8d52604dc",
+    "com/google/gwt/safehtml/shared/annotations/IsSafeHtml.java": "d71bd98e5b2ec099fc0e9d72f3302921e9bc82d3d6f2ba9a696ff7e5b4d4be20",
+    "com/google/gwt/safehtml/shared/annotations/SuppressIsSafeHtmlCastCheck.java": "ebd65721530fd66621927c7adbb62a6bbe87ee3c13ee59879c5943cc35e36237",
+    "com/google/gwt/event/logical/shared/HasAttachHandlers.java": "eb487e5b66ee8b35d0f99a82c148c4404314d20e7aee5a8cffd620f319c36b53",
+    "com/google/gwt/safehtml/shared/SafeHtmlUtils.java": "41074314aa0803e16050e04d078af495d27921ab1e9dc4b7f285a9fbf3bdbc7f"
+  },
+  "partial_sources": {
+    "com/google/gwt/safehtml/shared/SafeHtmlUtils.java": [
+      "htmlEscapeAllowEntities(String)"
+    ]
+  }
+}

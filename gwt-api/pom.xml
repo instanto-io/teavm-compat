@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.instanto</groupId>
+    <artifactId>teavm-compat</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>gwt-api</artifactId>
+  <name>Shared GWT API Tests</name>
+  <description>Portable GWT API assertions executed against gwt-user and gwt-user-compat.</description>
+  <dependencies>
+    <dependency>
+      <groupId>org.gwtproject</groupId>
+      <artifactId>gwt-user</artifactId>
+      <version>${gwt.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.java</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>..</directory>
+        <targetPath>META-INF</targetPath>
+          <includes>
+            <include>LICENSE</include>
+            <include>NOTICE</include>
+          </includes>
+      </resource>
+    </resources>
+  </build>
+</project>

@@ -1,0 +1,27 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.instanto</groupId>
+    <artifactId>teavm-compat</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>teavm-classlib-compat</artifactId>
+  <description>Compiler-side repairs for the pinned TeaVM class library</description>
+  <dependencies>
+    <dependency>
+      <groupId>org.teavm</groupId>
+      <artifactId>teavm-core</artifactId>
+      <version>${teavm.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <resources>
+      <resource><directory>src/main/resources</directory></resource>
+      <resource>
+        <directory>..</directory><targetPath>META-INF</targetPath>
+        <includes><include>LICENSE</include><include>NOTICE</include></includes>
+      </resource>
+    </resources>
+  </build>
+</project>

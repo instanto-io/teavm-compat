@@ -1,0 +1,15 @@
+{
+  "source_repository": "https://github.com/cstainton/bootstrap-widgets",
+  "base_commit": "6b579d42ee7f4e274bcb91febb68fb987d1a04f8",
+  "adaptations": "Moved the resource generator and asset stager into the shared compatibility build. Renamed the Maven artifact and project name; made resource-loader configuration independent of Bootstrap. Replaced the test requiring a sibling Bootstrap checkout with a self-contained fixture. Java packages and goal names are retained.",
+  "imported_files": {
+    "teavm-module-plugin/README.md": "dd9b5d6eaec79a0a7a5f4ce80916d776dc1f9178eb5cf630287b997e78a7bb1c",
+    "teavm-module-plugin/pom.xml": "0bfa501141484bae778a1f6839e08fb68f9c6a9c50203e651fdc74f1a246fcea",
+    "teavm-module-plugin/src/main/java/io/instanto/teavm/modules/AssetStager.java": "3bc177cd2b4d06da8e0b746bc90004b1a2394d446756909bf5dfdba649fd7500",
+    "teavm-module-plugin/src/main/java/io/instanto/teavm/modules/GenerateModulesMojo.java": "adc5d83c3d3edc0f21e1b26f0d30be245a9a6324cc992a18ad1a412a63b8e13c",
+    "teavm-module-plugin/src/main/java/io/instanto/teavm/modules/StageAssetsMojo.java": "2077da25d343d25e60541bf5682a6c259ff14d321c971586132907e3d8343e8d",
+    "teavm-module-plugin/src/test/java/io/instanto/teavm/modules/AssetStagerTest.java": "39467bd17616a01b563dc1b0d4c5fbbf0f9cbbe999e76532deaf5847bf7daaa9",
+    "teavm-module-plugin/src/test/java/io/instanto/teavm/modules/GenerateModulesMojoTest.java": "848fe6e707c231d28083fa3f28c45bb0286aab0c2e609caa59e8277ba529bf11"
+  },
+  "hash_scope": "Original imported files before adaptation and repository formatting."
+}
