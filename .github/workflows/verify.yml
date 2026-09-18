@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, instanto-container]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -21,7 +21,7 @@ jobs:
         run: mvn -B -ntp -f .build/instanto-poms/pom.xml install
       - run: mvn -B -ntp -DskipTests install
       - name: Install browser engines for native API checks
-        run: mvn -B -ntp -f compat-reuse-smoke/pom.xml org.codehaus.mojo:exec-maven-plugin:3.6.3:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test -Dexec.args="install --with-deps chromium firefox webkit"
+        run: mvn -B -ntp -f compat-reuse-smoke/pom.xml org.codehaus.mojo:exec-maven-plugin:3.6.3:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test -Dexec.args="install chromium firefox webkit"
       - run: mvn -B -ntp clean install
       - run: mvn -B -ntp -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test
       - run: mvn -B -ntp -Pproduction verify
