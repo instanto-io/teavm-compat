@@ -38,6 +38,10 @@ public final class Document {
     return INSTANCE;
   }
 
+  public CanvasElement createCanvasElement() {
+    return CanvasElement.as(createElement("canvas"));
+  }
+
   /** A live view of matching elements in the host document. */
   public NodeList<Element> getElementsByTagName(final String tagName) {
     return new NodeList<>(elementsByTagName(tagName));
@@ -196,6 +200,10 @@ public final class Document {
 
   public InputElement createTextInputElement() {
     return createInputElement("text");
+  }
+
+  public InputElement createFileInputElement() {
+    return createInputElement("file");
   }
 
   public InputElement createCheckInputElement() {

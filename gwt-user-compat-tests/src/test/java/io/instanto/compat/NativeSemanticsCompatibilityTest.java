@@ -15,7 +15,7 @@ import org.teavm.junit.*;
 
 @RunWith(TeaVMTestRunner.class)
 @SkipJVM
-public class MaterialNativeCompatibilityTest {
+public class NativeSemanticsCompatibilityTest {
   @Test
   public void absentAttributesUseGwtEmptyStrings() {
     Element element = Document.get().createDivElement();

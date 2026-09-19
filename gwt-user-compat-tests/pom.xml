@@ -9,6 +9,7 @@
   <artifactId>gwt-user-compat-tests</artifactId>
   <name>TeaVM GWT Compatibility Contract Tests</name>
   <dependencies>
+    <dependency><groupId>io.instanto</groupId><artifactId>gwt-modular-services-compat</artifactId><version>${project.version}</version><scope>test</scope></dependency>
     <dependency>
       <groupId>io.instanto</groupId>
       <artifactId>gwt-user-compat</artifactId>

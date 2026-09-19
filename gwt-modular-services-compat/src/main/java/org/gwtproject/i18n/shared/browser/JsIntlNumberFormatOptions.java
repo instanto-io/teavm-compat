@@ -40,6 +40,9 @@ public class JsIntlNumberFormatOptions implements JSObject {
    */
   public String style;
 
+  /** ISO 4217 code used when style is currency. */
+  public String currency;
+
   /** Minimum number of integer digits: 1–21. */
   public int minimumIntegerDigits;
 

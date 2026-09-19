@@ -44,6 +44,22 @@ import org.junit.Test;
 /** Compiler-level contracts for the UiBinder annotation processor. */
 public class UiBinderProcessorTest {
   @Test
+  public void implementsTheDeclaredBinderName() throws Exception {
+    Compilation compiled =
+        compile(
+            sampleOwner("com.google.gwt.event.dom.client.ClickEvent")
+                .replace("interface Binder", "interface SampleUiBinder"),
+            validTemplate());
+    assertTrue(compiled.diagnostics(), compiled.success);
+    assertTrue(
+        compiled
+            .generated("fixture/Sample_BinderImpl.java")
+            .contains("implements Sample.SampleUiBinder"));
+    assertTrue(
+        Files.exists(compiled.classes.resolve("META-INF/services/fixture.Sample$SampleUiBinder")));
+  }
+
+  @Test
   public void bindsProvidedWidgetWithoutReplacingItsConfiguration() throws Exception {
     Compilation compiled =
         compile(

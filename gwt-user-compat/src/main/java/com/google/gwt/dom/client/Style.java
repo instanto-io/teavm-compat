@@ -469,6 +469,10 @@ public final class Style {
     clearProperty("height");
   }
 
+  public void clearWidth() {
+    clearProperty("width");
+  }
+
   public void clearZIndex() {
     clearProperty("z-index");
   }

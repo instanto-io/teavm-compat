@@ -158,7 +158,9 @@ public class UiBinderProcessor extends AbstractProcessor {
         .append(impl)
         .append(" implements ")
         .append(simple)
-        .append(".Binder {\n\n");
+        .append(".")
+        .append(binder.getSimpleName())
+        .append(" {\n\n");
     source.append("    @Override\n");
     source
         .append("    public ")

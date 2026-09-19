@@ -5,6 +5,10 @@ import org.teavm.jso.JSObject;
 
 /** Typed wrapper for a JavaScript array. */
 public class JsArrayString extends JavaScriptObject {
+  public static JsArrayString createArray() {
+    return of(JavaScriptObject.createArray().unwrap());
+  }
+
   public JsArrayString(JSObject value) {
     super(value);
   }

@@ -4,6 +4,20 @@ import org.teavm.jso.dom.html.HTMLElement;
 
 /** A typed view of an HTML video element; media loading remains browser-owned. */
 public class VideoElement extends Element {
+  public void play() {
+    playNative(unwrap());
+  }
+
+  public void pause() {
+    pauseNative(unwrap());
+  }
+
+  @org.teavm.jso.JSBody(params = "video", script = "video.play();")
+  private static native void playNative(org.teavm.jso.dom.html.HTMLElement video);
+
+  @org.teavm.jso.JSBody(params = "video", script = "video.pause();")
+  private static native void pauseNative(org.teavm.jso.dom.html.HTMLElement video);
+
   public static final String TAG = "video";
 
   public VideoElement(HTMLElement element) {

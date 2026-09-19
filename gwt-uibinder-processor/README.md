@@ -36,7 +36,8 @@ The application depends on `io.instanto:gwt-user-compat:0.1.0-SNAPSHOT` and
 Place `GreetingView.java` in `src/main/java/example/uibinder/` and its template
 `GreetingView.ui.xml` in `src/main/resources/example/uibinder/`. Maven copies the
 template before javac runs. Use the owner class's name and package for the template,
-and declare its nested interface as `Binder`:
+and declare a nested interface extending `UiBinder`. It can have any name; this
+example uses `Binder`:
 
 ```java
 public class GreetingView extends Composite {

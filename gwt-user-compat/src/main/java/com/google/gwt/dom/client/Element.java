@@ -144,6 +144,7 @@ public class Element extends com.google.gwt.dom.client.Node {
       case "td", "th" -> new TableCellElement(nativeElement);
       case "select" -> new SelectElement(nativeElement);
       case "video" -> new VideoElement(nativeElement);
+      case "canvas" -> new CanvasElement(nativeElement);
       case "div" -> new DivElement(nativeElement);
       case "optgroup" -> new OptGroupElement(nativeElement);
       case "label" -> new LabelElement(nativeElement);
@@ -466,6 +467,10 @@ public class Element extends com.google.gwt.dom.client.Node {
 
   public int getOffsetWidth() {
     return offsetWidth(element);
+  }
+
+  public int getOffsetTop() {
+    return getPropertyInt("offsetTop");
   }
 
   public int getOffsetHeight() {

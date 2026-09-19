@@ -42,3 +42,9 @@ mvn -Pnative-gwt-baseline -pl gwt-api-browser-baseline -am verify
 
 This builds a test application, not a GWT compatibility distribution. The default
 reactor remains the TeaVM libraries and their tests.
+
+The TeaVM-specific tests also exercise canvas sizing, scaling and image export,
+typed string-array factories and file-input creation. Currency tests cover
+format/parse round trips, negative amounts, zero- and three-decimal currencies,
+and invalid input. They use `gwt-modular-services-compat` and do not imply full
+GWT number-pattern or canvas compatibility.

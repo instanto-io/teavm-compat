@@ -32,6 +32,7 @@ public class NumberFormat {
   private final JsIntlNumberFormat intlFormat;
   private final NumberConstants numberConstants;
   private final boolean isDecimal;
+  private boolean currency;
 
   private NumberFormat(JsIntlNumberFormat intlFormat, boolean isDecimal) {
     this.intlFormat = intlFormat;
@@ -58,6 +59,19 @@ public class NumberFormat {
   /** Returns a {@link NumberFormat} using the locale's default decimal format. */
   public static NumberFormat getDecimalFormat() {
     return new NumberFormat(JsIntlNumberFormat.decimal(), true);
+  }
+
+  /** Formats the requested currency using the browser's locale and currency precision. */
+  public static NumberFormat getCurrencyFormat(String currencyCode) {
+    if (currencyCode == null || !currencyCode.matches("[A-Za-z]{3}")) {
+      throw new IllegalArgumentException("Expected a three-letter currency code");
+    }
+    JsIntlNumberFormatOptions options = JsIntlNumberFormatOptions.create();
+    options.style = "currency";
+    options.currency = currencyCode.toUpperCase(java.util.Locale.ROOT);
+    NumberFormat result = new NumberFormat(JsIntlNumberFormat.create(options), false);
+    result.currency = true;
+    return result;
   }
 
   // ---- formatting ----
@@ -100,6 +114,17 @@ public class NumberFormat {
     String minusSign = numberConstants.minusSign();
 
     String result = text.trim();
+    if (currency) {
+      // Currency symbols and spacing come from the same formatter as format().
+      // Do not strip arbitrary letters: malformed input must still fail parsing.
+      var parts = intlFormat.formatToParts(-12345.6);
+      for (int i = 0; i < parts.length; i++) {
+        var part = parts.getAt(i);
+        if ("currency".equals(part.type) || "literal".equals(part.type)) {
+          result = result.replace(part.value, "");
+        }
+      }
+    }
     // Replace locale minus sign with ASCII hyphen-minus
     if (!"-".equals(minusSign)) {
       result = result.replace(minusSign, "-");

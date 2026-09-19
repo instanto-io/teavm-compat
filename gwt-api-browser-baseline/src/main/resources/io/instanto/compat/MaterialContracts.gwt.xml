@@ -1,6 +1,0 @@
-<module rename-to="contracts">
-  <inherits name="io.instanto.gwt.testing.api.GwtApi"/>
-  <source path="client"/>
-  <set-property name="user.agent" value="safari"/>
-  <entry-point class="io.instanto.compat.client.MaterialContracts"/>
-</module>

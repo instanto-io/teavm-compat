@@ -59,3 +59,15 @@ Adding a contract is how you record a piece of GWT behaviour the widgets have co
 depend on. That is more useful than it sounds: several real defects in this layer were
 found that way, including `Composite` never telling the widget it wraps that it had
 been attached, so nothing below one ever started.
+
+## Canvas and native arrays
+
+`Canvas.createIfSupported()` creates an HTML canvas when the browser supports a
+2D context. The current API covers coordinate dimensions, `Context2d.scale`, drawing
+a video frame with `drawImage`, and PNG or explicitly typed data-URL export.
+It is a limited canvas API, not the full GWT drawing surface. `CanvasElement.as`
+keeps the underlying DOM element when obtaining a typed wrapper.
+
+`JsArrayString.createArray()` returns a string-array wrapper, including when called
+as `JsArrayString.createArray().cast()`. Its values remain in a native JavaScript
+array. Browser tests cover creation, mutation and reading through that wrapper.

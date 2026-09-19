@@ -216,7 +216,7 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.9.6.0</version>
+        <version>4.10.3.0</version>
         <configuration>
           <effort>Max</effort>
           <threshold>Low</threshold>
@@ -316,7 +316,7 @@
       </plugin>
     </plugins>
   </build>
-  <profiles><profile><id>native-gwt-baseline</id><modules><module>gwt-api-browser-baseline</module></modules></profile>
+  <profiles>
     <profile>
       <id>production</id>
       <properties>
