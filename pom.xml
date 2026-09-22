@@ -26,19 +26,19 @@
     <developerConnection>scm:git:ssh://git@github.com/instanto-io/teavm-compat.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
-  <!-- Where this reactor publishes. The default is the organisation's GitHub
-       Packages registry; -Partifacts sends the same build to the Nexus at
-       artifacts.instanto.io instead. -->
-  <distributionManagement>
+
+
+  <!-- Bootstrap the published parent and consume Instanto snapshots by Maven coordinate. -->
+  <repositories>
     <repository>
-      <id>github</id>
-      <url>https://maven.pkg.github.com/instanto-io/teavm-compat</url>
+      <id>forgejo</id>
+      <name>Instanto snapshots</name>
+      <url>https://packages.instanto.io/api/packages/instanto-io/maven</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
     </repository>
-    <snapshotRepository>
-      <id>github</id>
-      <url>https://maven.pkg.github.com/instanto-io/teavm-compat</url>
-    </snapshotRepository>
-  </distributionManagement>
+  </repositories>
+
   <properties>
     <spotbugs.skip>false</spotbugs.skip>
     <maven.compiler.release>17</maven.compiler.release>
@@ -324,19 +324,6 @@
     </plugins>
   </build>
   <profiles>
-    <profile>
-      <id>artifacts</id>
-      <distributionManagement>
-        <repository>
-          <id>artifacts</id>
-          <url>https://artifacts.instanto.io/repository/maven-releases/</url>
-        </repository>
-        <snapshotRepository>
-          <id>artifacts</id>
-          <url>https://artifacts.instanto.io/repository/maven-snapshots/</url>
-        </snapshotRepository>
-      </distributionManagement>
-    </profile>
     <profile>
       <id>production</id>
       <properties>
