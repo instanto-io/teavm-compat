@@ -122,7 +122,6 @@
           <targetFileName>showcase.js</targetFileName>
           <optimizationLevel>${teavm.optimization}</optimizationLevel>
           <minifying>${teavm.minify}</minifying>
-          <sourceMapsGenerated>true</sourceMapsGenerated>
           <debugInformationGenerated>true</debugInformationGenerated>
         </configuration>
         <dependencies>
