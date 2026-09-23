@@ -37,7 +37,8 @@ public class SourceAdapterTest {
   public void legacyJsniBecomesJsBodyOnlyWhenAsked() throws Exception {
     Path in = folder.newFolder("in").toPath();
     Path out = folder.getRoot().toPath().resolve("out");
-    String jsni = "package p;\nclass A {\n  static native boolean ready() /*-{ return !!$wnd.x; }-*/;\n}\n";
+    String jsni =
+        "package p;\nclass A {\n  static native boolean ready() /*-{ return !!$wnd.x; }-*/;\n}\n";
     write(in, "p/A.java", jsni);
     SourceAdapter.adapt(in, out, false);
     assertEquals(jsni, Files.readString(out.resolve("p/A.java")));

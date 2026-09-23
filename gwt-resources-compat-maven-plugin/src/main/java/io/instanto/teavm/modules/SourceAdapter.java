@@ -13,10 +13,10 @@ import java.util.stream.Stream;
 /**
  * Rewrites GWT client sources so TeaVM compiles them unchanged in meaning.
  *
- * <p>JsInterop declarations become TeaVM JSO, and GWT DOM wrappers are bridged where they
- * cross into JavaScript. With {@code legacyJsni}, JSNI bodies become {@code @JSBody} first;
- * a body that calls into Java through {@code @Class::member} cannot be translated and fails
- * the build rather than being dropped. Only {@code .java} files are written.
+ * <p>JsInterop declarations become TeaVM JSO, and GWT DOM wrappers are bridged where they cross
+ * into JavaScript. With {@code legacyJsni}, JSNI bodies become {@code @JSBody} first; a body that
+ * calls into Java through {@code @Class::member} cannot be translated and fails the build rather
+ * than being dropped. Only {@code .java} files are written.
  */
 final class SourceAdapter {
   private SourceAdapter() {}
@@ -38,7 +38,8 @@ final class SourceAdapter {
       String text = Files.readString(source, StandardCharsets.UTF_8);
       String adapted;
       try {
-        adapted = GenerateBindings.transform(legacyJsni ? LegacyNativeBodies.transform(text) : text);
+        adapted =
+            GenerateBindings.transform(legacyJsni ? LegacyNativeBodies.transform(text) : text);
       } catch (RuntimeException failure) {
         throw new IllegalArgumentException(relative + ": " + failure.getMessage(), failure);
       }

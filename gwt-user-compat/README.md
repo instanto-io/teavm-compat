@@ -1,11 +1,9 @@
 # TeaVM GWT Compatibility
 
-An implementation of the parts of `com.google.gwt.*` that the Bootstrap widgets use,
-written against TeaVM's browser APIs.
+An implementation of selected `com.google.gwt.*` APIs against TeaVM's browser APIs.
 
-You do not normally depend on this directly. Depend on
-[`teavm-bootstrap3`](https://github.com/cstainton/bootstrap-widgets) or
-[`teavm-bootstrap5`](https://github.com/cstainton/bootstrap-widgets) and this comes with it.
+Applications normally receive it through a TeaVM widget library, but may use it
+directly when porting their own GWT code.
 
 ## What it is for
 
@@ -13,12 +11,12 @@ GWT widget code is written against `RootPanel`, `Widget`, `Element`, `HandlerMan
 and so on. Those classes are part of the GWT compiler's own library, so they are not
 available when TeaVM compiles the same source. This module supplies them.
 
-That is the whole trick behind the TeaVM port: one set of widget sources, two
-compilers, and this layer standing where `gwt-user` stands on the other side.
+The compatibility classes let code written for the GWT API compile and run under
+TeaVM, subject to the tested surface described below.
 
 ## What it covers
 
-Enough for the widgets, not all of GWT. Roughly:
+The implemented surface includes:
 
 - `com.google.gwt.user.client.ui` — the widget and panel hierarchy, `RootPanel`,
   `Composite`, `UIObject`
@@ -71,3 +69,8 @@ keeps the underlying DOM element when obtaining a typed wrapper.
 `JsArrayString.createArray()` returns a string-array wrapper, including when called
 as `JsArrayString.createArray().cast()`. Its values remain in a native JavaScript
 array. Browser tests cover creation, mutation and reading through that wrapper.
+`jsinterop.base.Js.asAny(Object[])` also converts Java argument arrays to native
+JavaScript arrays, including wrapped DOM values and primitive elements. This lets
+native widget methods receive the argument shape expected by browser plugins.
+`JavaScriptObject.toString()` uses the wrapped browser value's string form, including
+for numeric results.

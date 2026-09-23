@@ -4,12 +4,8 @@ permissions:
   contents: read
 jobs:
   verify:
-    # GitHub withholds package credentials from fork pull requests.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, instanto-container]
     env:
-      FORGEJO_PACKAGE_USER: ${{ secrets.FORGEJO_PACKAGE_USER }}
-      FORGEJO_PACKAGE_TOKEN: ${{ secrets.FORGEJO_PACKAGE_TOKEN }}
       # The runner image ships the browsers read-only at this path. Without this,
       # Playwright tries to install them again and fails writing its lock file.
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
@@ -20,9 +16,13 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-          server-id: forgejo
-          server-username: FORGEJO_PACKAGE_USER
-          server-password: FORGEJO_PACKAGE_TOKEN
+      - name: Check out the shared development parent
+        uses: actions/checkout@v4
+        with:
+          repository: instanto-io/instanto-poms
+          path: .build/instanto-poms
+      - name: Install the shared development parent
+        run: mvn -B -ntp -f .build/instanto-poms/pom.xml install
       - run: mvn -B -ntp -DskipTests install
       - run: mvn -B -ntp clean install
       - run: mvn -B -ntp -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test

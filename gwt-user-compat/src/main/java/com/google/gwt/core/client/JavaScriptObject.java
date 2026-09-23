@@ -45,6 +45,15 @@ public class JavaScriptObject implements io.instanto.compat.NativeHandle {
     return value;
   }
 
+  /** GWT overlays use the browser value's string form, including for numeric results. */
+  @Override
+  public String toString() {
+    return stringify(unwrap());
+  }
+
+  @org.teavm.jso.JSBody(params = "value", script = "return String(value);")
+  private static native String stringify(JSObject value);
+
   /** GWT overlays compare the underlying browser value, not an intermediate Java wrapper. */
   @Override
   public boolean equals(Object other) {

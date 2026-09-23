@@ -45,5 +45,10 @@
   </dependencyManagement>
   <groupId>io.instanto</groupId>
   <version>0.1.0-SNAPSHOT</version>
-
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/instanto-io/teavm-compat</url>
+    </repository>
+  </distributionManagement>
 </project>

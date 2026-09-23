@@ -18,7 +18,12 @@ public final class Js {
     String type = typeof(value);
     if ("undefined".equals(type)) return null;
     if ("string".equals(type)) return asString(value);
-    if ("number".equals(type)) return asDouble(value);
+    if ("number".equals(type)) {
+      double number = asDouble(value);
+      if (number >= Integer.MIN_VALUE && number <= Integer.MAX_VALUE && number == (int) number)
+        return (int) number;
+      return number;
+    }
     if ("boolean".equals(type)) return asBoolean(value);
     return value;
   }
@@ -143,11 +148,20 @@ public final class Js {
   public static Any asAny(Object value) {
     if (value instanceof io.instanto.compat.NativeHandle)
       return objectValue(((io.instanto.compat.NativeHandle) value).unwrap());
+    if (value instanceof Object[]) {
+      Object[] values = (Object[]) value;
+      Any array = newArray();
+      for (int i = 0; i < values.length; i++) arraySet(array, i, asAny(values[i]));
+      return array;
+    }
     if (value instanceof String) return stringValue((String) value);
     if (value instanceof Number) return numberValue(((Number) value).doubleValue());
     if (value instanceof Boolean) return booleanValue((Boolean) value);
     return objectValue(value);
   }
+
+  @JSBody(script = "return [];")
+  private static native Any newArray();
 
   @JSBody(params = "v", script = "return v;")
   private static native Any stringValue(String v);

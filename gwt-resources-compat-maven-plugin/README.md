@@ -32,15 +32,14 @@ For a local build, use JDK 21 and run this from the `teavm-compat` root:
 mvn -pl gwt-resources-compat-maven-plugin -am install
 ```
 
-To use a published snapshot, add the Instanto registry to the application's POM:
+To use a published version from GitHub Packages, add this to the application's
+POM and configure Maven credentials for `github-teavm-compat`:
 
 ```xml
 <pluginRepositories>
   <pluginRepository>
-    <id>forgejo</id>
-    <url>https://packages.instanto.io/api/packages/instanto-io/maven</url>
-    <releases><enabled>false</enabled></releases>
-    <snapshots><enabled>true</enabled></snapshots>
+    <id>github-teavm-compat</id>
+    <url>https://maven.pkg.github.com/instanto-io/teavm-compat</url>
   </pluginRepository>
 </pluginRepositories>
 ```

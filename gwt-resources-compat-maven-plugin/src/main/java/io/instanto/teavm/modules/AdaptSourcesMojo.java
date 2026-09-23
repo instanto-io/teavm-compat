@@ -11,9 +11,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 /**
  * Adapts unpacked GWT client sources for a TeaVM compile.
  *
- * <p>Libraries shared between GWT and TeaVM keep one source: JsInterop, and optionally JSNI
- * without Java callbacks, is rewritten for TeaVM here rather than maintained twice. Point the
- * compiler at {@code outputRoot} instead of {@code sourceRoot}.
+ * <p>Libraries shared between GWT and TeaVM keep one source: JsInterop, and optionally JSNI without
+ * Java callbacks, is rewritten for TeaVM here rather than maintained twice. Point the compiler at
+ * {@code outputRoot} instead of {@code sourceRoot}.
  */
 @Mojo(name = "adapt-sources", defaultPhase = LifecyclePhase.PROCESS_SOURCES, threadSafe = true)
 public final class AdaptSourcesMojo extends AbstractMojo {

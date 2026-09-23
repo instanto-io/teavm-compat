@@ -42,14 +42,12 @@ packages.
 
 ## Add a dependency
 
-Snapshots are published in the Instanto Maven registry:
+Artifacts are published from this repository's GitHub Packages registry:
 
 ```xml
 <repository>
-  <id>forgejo</id>
-  <url>https://packages.instanto.io/api/packages/instanto-io/maven</url>
-  <releases><enabled>false</enabled></releases>
-  <snapshots><enabled>true</enabled></snapshots>
+  <id>github-teavm-compat</id>
+  <url>https://maven.pkg.github.com/instanto-io/teavm-compat</url>
 </repository>
 ```
 
