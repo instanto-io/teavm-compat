@@ -10,6 +10,9 @@
   <packaging>jar</packaging>
   <description>Minimal GWT client API subset backed by TeaVM DOM APIs, so the widget sources compile unchanged on both backends.</description>
   <dependencies><dependency><groupId>io.instanto</groupId><artifactId>teavm-classlib-compat</artifactId><version>${project.version}</version></dependency>
+    <!-- JavaScriptObject is a NativeHandle, so jsinterop-base's Js.asAny passes the wrapped
+         value to JavaScript as GWT does. -->
+    <dependency><groupId>io.instanto</groupId><artifactId>jsinterop-base-compat</artifactId><version>${project.version}</version></dependency>
     <dependency>
       <groupId>org.teavm</groupId>
       <artifactId>teavm-jso</artifactId>

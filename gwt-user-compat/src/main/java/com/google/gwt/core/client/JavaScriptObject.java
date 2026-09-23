@@ -30,7 +30,7 @@ import org.teavm.jso.JSObject;
  * native methods -- which is what the extras do with a noUiSlider, a Quill instance or a date
  * picker -- does not notice the difference.
  */
-public class JavaScriptObject {
+public class JavaScriptObject implements io.instanto.compat.NativeHandle {
 
   private static final JSObject IDENTITIES = identities();
 

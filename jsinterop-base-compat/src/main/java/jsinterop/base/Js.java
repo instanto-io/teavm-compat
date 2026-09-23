@@ -141,6 +141,8 @@ public final class Js {
   public static native double asDouble(Object value);
 
   public static Any asAny(Object value) {
+    if (value instanceof io.instanto.compat.NativeHandle)
+      return objectValue(((io.instanto.compat.NativeHandle) value).unwrap());
     if (value instanceof String) return stringValue((String) value);
     if (value instanceof Number) return numberValue(((Number) value).doubleValue());
     if (value instanceof Boolean) return booleanValue((Boolean) value);
@@ -159,10 +161,17 @@ public final class Js {
   @JSBody(params = "v", script = "return v;")
   private static native Any objectValue(Object v);
 
+  public static JsPropertyMap<Object> asPropertyMap(Object value) {
+    return propertyMap(
+        value instanceof io.instanto.compat.NativeHandle
+            ? ((io.instanto.compat.NativeHandle) value).unwrap()
+            : value);
+  }
+
   @JSBody(
       params = {"value"},
       script = "return value;")
-  public static native JsPropertyMap<Object> asPropertyMap(Object value);
+  private static native JsPropertyMap<Object> propertyMap(Object value);
 
   @JSBody(
       params = {"value"},
