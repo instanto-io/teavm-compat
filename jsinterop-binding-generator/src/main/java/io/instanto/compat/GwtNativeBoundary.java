@@ -177,16 +177,23 @@ public final class GwtNativeBoundary {
             "com.google.gwt.dom.client.Node",
             "com.google.gwt.core.client.JavaScriptObject",
             "com.google.gwt.core.client.JsDate",
-            "com.google.gwt.dom.client.NativeEvent")
+            "com.google.gwt.dom.client.NativeEvent",
+            "com.google.gwt.user.client.Event",
+            "com.google.gwt.user.client.Element",
+            "com.google.gwt.core.client.JsArrayNumber",
+            "com.google.gwt.core.client.JsArrayString",
+            "com.google.gwt.core.client.JsArrayMixed")
         .contains(qualified(type, imports));
   }
 
   private static String nativeType(String type, Map<String, String> imports) {
     String base =
         switch (qualified(type, imports)) {
-          case "com.google.gwt.dom.client.Element" -> "org.teavm.jso.dom.html.HTMLElement";
+          case "com.google.gwt.dom.client.Element", "com.google.gwt.user.client.Element" ->
+              "org.teavm.jso.dom.html.HTMLElement";
           case "com.google.gwt.dom.client.Node" -> "org.teavm.jso.dom.xml.Node";
-          case "com.google.gwt.dom.client.NativeEvent" -> "org.teavm.jso.dom.events.Event";
+          case "com.google.gwt.dom.client.NativeEvent", "com.google.gwt.user.client.Event" ->
+              "org.teavm.jso.dom.events.Event";
           default -> "org.teavm.jso.JSObject";
         };
     return base + (type.endsWith("[]") ? "[]" : "");
@@ -205,6 +212,19 @@ public final class GwtNativeBoundary {
       case "com.google.gwt.dom.client.Node" -> "com.google.gwt.dom.client.Node.wrap(" + value + ")";
       case "com.google.gwt.dom.client.NativeEvent" ->
           "com.google.gwt.dom.client.NativeEvent.wrap(" + value + ")";
+      case "com.google.gwt.user.client.Event" ->
+          "com.google.gwt.user.client.Event.as(com.google.gwt.dom.client.NativeEvent.wrap("
+              + value
+              + "))";
+      case "com.google.gwt.user.client.Element" ->
+          "com.google.gwt.user.client.Element.as(com.google.gwt.dom.client.Element.as("
+              + "com.google.gwt.core.client.JavaScriptObject.of("
+              + value
+              + ")))";
+      case "com.google.gwt.core.client.JsArrayNumber",
+              "com.google.gwt.core.client.JsArrayString",
+              "com.google.gwt.core.client.JsArrayMixed" ->
+          qualified(type, imports) + ".of(" + value + ")";
       default -> throw new IllegalArgumentException("Unsupported native GWT return: " + type);
     };
   }

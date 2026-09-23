@@ -42,6 +42,23 @@ public class GenerateBindingsTest {
   }
 
   @Test
+  public void bridgesGwtArraysEventsAndUserElementsInJsniBodies() {
+    String result =
+        GenerateBindings.transform(
+            LegacyNativeBodies.transform(
+                "import com.google.gwt.core.client.JsArrayNumber;"
+                    + " import com.google.gwt.user.client.Element;"
+                    + " import com.google.gwt.user.client.Event;"
+                    + " class Slider {"
+                    + " static native JsArrayNumber values(Element e) /*-{ return e.v; }-*/;"
+                    + " static native Element handle(Event event) /*-{ return event.target; }-*/; }"));
+    assertTrue(result, result.contains("JsArrayNumber.of("));
+    assertTrue(result, result.contains("com.google.gwt.user.client.Element.as("));
+    assertTrue(result, result.contains("event == null ? null : event.unwrap()"));
+    assertTrue(result, result.contains("e == null ? null : e.unwrap()"));
+  }
+
+  @Test
   public void preservesJavaWidgetLogic() {
     String source =
         "package demo; public class Counter { private int value; public int next(){return ++value;}"
