@@ -189,3 +189,37 @@ files are split into Java string chunks to fit Java's class-file limits.
 The plugin does not rewrite CSS, combine images into sprites or implement GWT's
 rules for choosing generated implementations. Applications must also choose
 compatible versions when several libraries need the same browser script.
+
+## Compile a GWT library's own source with TeaVM
+
+A widget library shared between GWT and TeaVM can keep one source. Write its browser
+calls with JsInterop, and `adapt-sources` rewrites them for TeaVM before the TeaVM module
+compiles: native `@JsType`s become TeaVM JSO types, `@JsFunction`s become functors, and GWT
+DOM wrappers are passed to JavaScript as the DOM nodes they stand for.
+
+```xml
+<plugin>
+  <groupId>io.instanto</groupId>
+  <artifactId>gwt-resources-compat-maven-plugin</artifactId>
+  <executions>
+    <execution>
+      <id>adapt-shared-sources</id>
+      <goals>
+        <goal>adapt-sources</goal>
+      </goals>
+      <configuration>
+        <sourceRoot>${project.build.directory}/shared-sources</sourceRoot>
+        <outputRoot>${project.build.directory}/teavm-sources</outputRoot>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+It runs in `process-sources` and writes only `.java` files, so compile `outputRoot` (for
+example with `build-helper-maven-plugin`'s `add-source`) instead of `sourceRoot`.
+
+Older code that still uses JSNI can set `<legacyJsni>true</legacyJsni>`: JSNI bodies become
+`@JSBody` first. A body that calls into Java through `@Class::member` cannot be translated,
+so the build fails naming the file; give that callback a `@JsFunction` type and call it as a
+function instead.
