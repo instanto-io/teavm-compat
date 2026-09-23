@@ -46,15 +46,14 @@ public class NativeHandleCompatibilityTest {
   }
 
   @Test
-  public void nativeNumbersKeepJavaScriptIntegerText() {
+  public void nativeNumbersRemainCompatibleWithDoubleBindings() {
     Object slide = Js.cast(integralSlide());
-    assertTrue(slide instanceof Number);
-    assertEquals("1", slide.toString());
-    assertEquals(1, ((Number) slide).intValue());
+    assertTrue(slide instanceof Double);
+    assertEquals(1.0, ((Number) slide).doubleValue(), 0.0);
 
     Object fractional = Js.cast(fractionalSlide());
-    assertTrue(fractional instanceof Number);
-    assertEquals("1.5", fractional.toString());
+    assertTrue(fractional instanceof Double);
+    assertEquals(1.5, ((Number) fractional).doubleValue(), 0.0);
     assertEquals("1", JavaScriptObject.of(integralSlide()).toString());
     assertEquals("1.5", JavaScriptObject.of(fractionalSlide()).toString());
   }

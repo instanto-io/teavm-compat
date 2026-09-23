@@ -18,12 +18,7 @@ public final class Js {
     String type = typeof(value);
     if ("undefined".equals(type)) return null;
     if ("string".equals(type)) return asString(value);
-    if ("number".equals(type)) {
-      double number = asDouble(value);
-      if (number >= Integer.MIN_VALUE && number <= Integer.MAX_VALUE && number == (int) number)
-        return (int) number;
-      return number;
-    }
+    if ("number".equals(type)) return asDouble(value);
     if ("boolean".equals(type)) return asBoolean(value);
     return value;
   }

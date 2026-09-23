@@ -150,9 +150,17 @@ public final class BrowserApis {
         elemental2.webgl.WebGLRenderingContext.RGBA,
         elemental2.webgl.WebGLRenderingContext.UNSIGNED_BYTE,
         pixel);
-    BindingContracts.check(
-        pixel.getAt(0) == 255 && pixel.getAt(1) == 0 && pixel.getAt(3) == 255,
-        "WebGL clear and pixel readback");
+    double red = pixel.getAt(0), green = pixel.getAt(1), alpha = pixel.getAt(3);
+    if (red != 255 || green != 0 || alpha != 255)
+      throw new IllegalStateException(
+          "Binding contract: WebGL clear and pixel readback "
+              + red
+              + ","
+              + green
+              + ","
+              + alpha
+              + " error="
+              + gl.getError());
     BindingContracts.check(gl.getError() == 0, "WebGL error state");
     root.setAttribute("data-webgl", "passed");
   }

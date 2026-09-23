@@ -64,7 +64,12 @@ public class ReuseIT {
         List<String> errors = new ArrayList<>();
         page.onPageError(errors::add);
         page.navigate("http://127.0.0.1:" + server.getAddress().getPort() + "/");
-        page.waitForFunction("document.body.getAttribute('data-reuse') === 'ready'");
+        try {
+          page.waitForFunction("document.body.getAttribute('data-reuse') === 'ready'");
+        } catch (RuntimeException failure) {
+          throw new AssertionError(
+              engine + " did not start the reuse smoke page; browser errors: " + errors, failure);
+        }
         for (String[] expected :
             new String[][] {
               {"data-storage", "passed"},
