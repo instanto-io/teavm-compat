@@ -24,6 +24,24 @@ public class GenerateBindingsTest {
   }
 
   @Test
+  public void bridgesNativeEventsAtNativeBoundaries() {
+    String result =
+        GenerateBindings.transform(
+            "import com.google.gwt.dom.client.NativeEvent; import jsinterop.annotations.*;"
+                + " @JsType(isNative=true,namespace=JsPackage.GLOBAL,name=\"Object\") class Events {"
+                + " static native NativeEvent assign(Object value);"
+                + " native void dispatch(NativeEvent event); }");
+    assertTrue(result, result.contains("com.google.gwt.dom.client.NativeEvent.wrap("));
+    assertTrue(result, result.contains("event == null ? null : event.unwrap()"));
+    assertTrue(
+        StaticJavaParser.parse(result).findAll(MethodDeclaration.class).stream()
+            .anyMatch(
+                method ->
+                    method.isNative()
+                        && method.getTypeAsString().equals("org.teavm.jso.dom.events.Event")));
+  }
+
+  @Test
   public void preservesJavaWidgetLogic() {
     String source =
         "package demo; public class Counter { private int value; public int next(){return ++value;}"

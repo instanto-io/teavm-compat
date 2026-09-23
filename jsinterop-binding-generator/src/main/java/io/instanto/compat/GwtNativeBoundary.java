@@ -176,7 +176,8 @@ public final class GwtNativeBoundary {
             "com.google.gwt.dom.client.Element",
             "com.google.gwt.dom.client.Node",
             "com.google.gwt.core.client.JavaScriptObject",
-            "com.google.gwt.core.client.JsDate")
+            "com.google.gwt.core.client.JsDate",
+            "com.google.gwt.dom.client.NativeEvent")
         .contains(qualified(type, imports));
   }
 
@@ -185,6 +186,7 @@ public final class GwtNativeBoundary {
         switch (qualified(type, imports)) {
           case "com.google.gwt.dom.client.Element" -> "org.teavm.jso.dom.html.HTMLElement";
           case "com.google.gwt.dom.client.Node" -> "org.teavm.jso.dom.xml.Node";
+          case "com.google.gwt.dom.client.NativeEvent" -> "org.teavm.jso.dom.events.Event";
           default -> "org.teavm.jso.JSObject";
         };
     return base + (type.endsWith("[]") ? "[]" : "");
@@ -201,6 +203,8 @@ public final class GwtNativeBoundary {
       case "com.google.gwt.core.client.JsDate" ->
           "com.google.gwt.core.client.JsDate.of(" + value + ")";
       case "com.google.gwt.dom.client.Node" -> "com.google.gwt.dom.client.Node.wrap(" + value + ")";
+      case "com.google.gwt.dom.client.NativeEvent" ->
+          "com.google.gwt.dom.client.NativeEvent.wrap(" + value + ")";
       default -> throw new IllegalArgumentException("Unsupported native GWT return: " + type);
     };
   }

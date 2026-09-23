@@ -28,7 +28,7 @@ import org.teavm.jso.dom.events.Event;
 import org.teavm.jso.dom.events.MouseEvent;
 
 /** Wraps the browser event behind the GWT {@code NativeEvent} surface. */
-public class NativeEvent {
+public class NativeEvent implements io.instanto.compat.NativeHandle {
 
   private final Event event;
 
@@ -38,6 +38,11 @@ public class NativeEvent {
 
   public Event unwrap() {
     return event;
+  }
+
+  /** The event as GWT sees it, or null; used where native code returns an event. */
+  public static NativeEvent wrap(final Event event) {
+    return event == null ? null : new NativeEvent(event);
   }
 
   public String getType() {
