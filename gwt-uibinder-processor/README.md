@@ -1,43 +1,19 @@
 # UiBinder on TeaVM
 
-`io.instanto:gwt-uibinder-processor:0.1.0-SNAPSHOT` generates Java implementations
+`gwt-uibinder-processor` generates Java implementations
 of supported GWT UiBinder templates during javac compilation. Use it with
 `gwt-user-compat` and retain your existing UiBinder interfaces and `.ui.xml` files.
 
 ## Use it in an application
 
-Use JDK 21 and Maven with the matching `teavm-compat` artifacts installed or
-available from your configured Maven repository. Copy the
-[standalone UiBinder example](../examples/uibinder) for a complete application.
-It uses the basic widgets supplied by `gwt-user-compat`.
-
-The application depends on `io.instanto:gwt-user-compat:0.1.0-SNAPSHOT` and
-`org.teavm:teavm-classlib:0.15.0`. Add the processor to javac's processor path:
-
-```xml
-<plugin>
-  <groupId>org.apache.maven.plugins</groupId>
-  <artifactId>maven-compiler-plugin</artifactId>
-  <version>3.14.1</version>
-  <configuration>
-    <release>17</release>
-    <proc>full</proc>
-    <annotationProcessorPaths>
-      <path>
-        <groupId>io.instanto</groupId>
-        <artifactId>gwt-uibinder-processor</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-      </path>
-    </annotationProcessorPaths>
-  </configuration>
-</plugin>
-```
+Put the processor on javac's annotation-processor path and use it with
+`gwt-user-compat`. The [standalone UiBinder example](../examples/uibinder)
+shows a complete application using basic GWT-compatible widgets.
 
 Place `GreetingView.java` in `src/main/java/example/uibinder/` and its template
 `GreetingView.ui.xml` in `src/main/resources/example/uibinder/`. Maven copies the
 template before javac runs. Use the owner class's name and package for the template,
-and declare a nested interface extending `UiBinder`. It can have any name; this
-example uses `Binder`:
+and declare a nested interface named `Binder` extending `UiBinder`:
 
 ```java
 public class GreetingView extends Composite {
@@ -75,10 +51,6 @@ implementation can access them. The template constructs those widgets:
 The launcher attaches `new GreetingView()` through `RootPanel.get().add(...)`.
 The [example POM](../examples/uibinder/pom.xml) compiles that launcher with TeaVM
 and copies an HTML host which loads `app.js` and calls `main()`.
-
-From the example directory, run `mvn clean package`, then
-`jwebserver -b 127.0.0.1 -p 8080 -d target/site`. Open
-[the application](http://127.0.0.1:8080/) and press **Greet**.
 
 To use another widget library, change the template's widget imports to its packages
 and include its TeaVM artifact, assets and initialisation. The processor resolves

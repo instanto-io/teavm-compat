@@ -11,68 +11,44 @@ widgets need in the browser. It handles two parts of the build:
   JARs into the folder your web server serves. Each library supplies a small
   configuration file that says where its files belong.
 
-For example, the Bootstrap library build packages its stylesheets, scripts and
-fonts once. An application that uses Bootstrap can then run `mvn package` to copy
-them into `target/site/assets/bootstrap5/`, alongside its compiled application
-and HTML page. You can serve the completed website folder locally or upload it
-to your server.
+A library packages its stylesheets, scripts and fonts once. An application
+then stages those files beside its compiled code and HTML page, ready for a
+web server to serve.
 
 If you are using a widget library, start with **Stage assets for an application**
 below. If you maintain a library, see
 [Include browser files in a library](#include-browser-files-in-a-library) and
 [Generate resource loaders for a library](#generate-resource-loaders-for-a-library).
 
-The Maven artifact is `io.instanto:gwt-resources-compat-maven-plugin:0.1.0-SNAPSHOT`.
-Its project name is **GWT Resources Compatibility Maven Plugin**. It is built
-and maintained in `teavm-compat`.
-
-For a local build, use JDK 21 and run this from the `teavm-compat` root:
-
-```sh
-mvn -pl gwt-resources-compat-maven-plugin -am install
-```
-
-To use a published version from GitHub Packages, add this to the application's
-POM and configure Maven credentials for `github-teavm-compat`:
-
-```xml
-<pluginRepositories>
-  <pluginRepository>
-    <id>github-teavm-compat</id>
-    <url>https://maven.pkg.github.com/instanto-io/teavm-compat</url>
-  </pluginRepository>
-</pluginRepositories>
-```
-
 ## Stage assets for an application
 
 The `stage-assets` goal copies the files needed by your application's widget
 libraries into the folder your web server serves. Each library includes a file
 named `META-INF/teavm-assets.properties` telling the plugin which files to copy
-and where to put them. For Bootstrap 5, it contains:
+and where to put them. For example, it can contain:
 
 ```properties
-source=META-INF/bootstrap5-assets
-target=assets/bootstrap5
+source=META-INF/example-assets
+target=assets/example
 ```
 
 When the widget library is built, Maven includes this file in its JAR alongside
 the CSS, scripts and fonts. Later, when your application is built, `stage-assets`
 reads it and copies the contents of `source` into `target` inside your website
-folder. With the default settings, that means `target/site/assets/bootstrap5/`.
+folder. With the default settings, that means `target/site/assets/example/`.
 Application authors do not need to create this file.
 
 The plugin checks the libraries Maven uses to build and run your application,
 including their dependencies. It can read JARs and compiled library folders from
 the same Maven build.
 
-Add this to your application's POM:
+Add this to your application's POM, using the plugin version selected for your build:
 
 ```xml
 <plugin>
   <groupId>io.instanto</groupId>
   <artifactId>gwt-resources-compat-maven-plugin</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>YOUR_PLUGIN_VERSION</version>
   <executions>
     <execution><goals><goal>stage-assets</goal></goals></execution>
   </executions>
@@ -84,32 +60,11 @@ Add this to your application's POM:
 
 Running `mvn package` copies the files during Maven's `prepare-package` step.
 The default destination is `target/site`. Put the compiled application and its
-HTML page in the same folder. The [standalone example](https://github.com/instanto-io/bootstrap-widgets/tree/main/examples/hello-bootstrap5)
-uses one setting, `site.directory`, for all of these files.
+HTML page in the same folder. Set the destination to the website folder your server will use.
 
-To copy just the libraries' browser files, run this from your application:
-
-```sh
-mvn io.instanto:gwt-resources-compat-maven-plugin:0.1.0-SNAPSHOT:stage-assets \
-  -Dteavm.assets.outputDirectory=/path/to/webroot
-```
-
-If your POM already sets `<outputDirectory>`, change that setting instead.
-In the standalone example, use `-Dsite.directory=/path/to/webroot`.
-
-The Bootstrap libraries put their files in these folders:
-
-| Library | Folder inside the website |
-| --- | --- |
-| `teavm-bootstrap3` | `assets/bootstrap3/` |
-| `teavm-bootstrap5` | `assets/bootstrap5/` |
-
-Tell the widget library where the browser can find these files before starting
-it. For Bootstrap 5, use
-`Bootstrap5Resources.setAssetBase("assets/bootstrap5/")`. With this setting, an
-application at `https://example.com/my-app/` loads its files from
-`https://example.com/my-app/assets/bootstrap5/`. If you serve the files elsewhere,
-use that address instead.
+Tell your library where the browser can find its staged files before starting
+it. For example, if the browser loads `assets/example/` beside the host page,
+set that as the library's asset base.
 
 The goal prepares files on disk. Your deployment process uploads them or makes
 the folder available through your web server. Maven's `deploy` command publishes
@@ -119,7 +74,7 @@ The plugin keeps the folder structure intact so stylesheets can still find their
 fonts and images. It replaces existing copies of the library files and leaves
 other application files alone. It does not remove old files left by a library
 upgrade. Use `mvn clean package` for a fresh `target/site`, or an empty destination
-folder when preparing a release elsewhere.
+folder for a fresh deployment.
 
 If two libraries supply different files for the same destination, the build
 stops before copying. Identical copies are accepted. The build also stops if a

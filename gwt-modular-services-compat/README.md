@@ -1,8 +1,7 @@
 # GWT modular services for TeaVM
 
 This library provides the `org.gwtproject` service APIs used by applications compiled
-with TeaVM. Add `io.instanto:gwt-modular-services-compat` to your Maven dependencies,
-using the version selected by the compatibility BOM.
+with TeaVM. Use it when TeaVM code imports the modular SafeHtml, i18n or editor APIs.
 
 ## Currency formatting
 
