@@ -13,7 +13,7 @@ run twice:
 
 | against | by |
 |---|---|
-| the real `gwt-user` | [`gwt-user-jvm-contract-tests`](https://github.com/instanto-io/bootstrap-widgets), [`gwt-bootstrap-widget-tests`](https://github.com/instanto-io/bootstrap-widgets) |
+| the real `gwt-user` | [`gwt-user-jvm-contract-tests`](https://github.com/instanto-io/bootstrap-widgets/tree/main/gwt/gwt-user-jvm-contract-tests), [`gwt-bootstrap-widget-tests`](https://github.com/instanto-io/bootstrap-widgets/tree/main/gwt/gwt-bootstrap-widget-tests) |
 | this compatibility layer | this module |
 
 That is the point. A contract passing against GWT and failing here is a divergence,

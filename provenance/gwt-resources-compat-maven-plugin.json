@@ -1,6 +1,6 @@
 {
-  "source_repository": "https://github.com/cstainton/bootstrap-widgets",
-  "base_commit": "6b579d42ee7f4e274bcb91febb68fb987d1a04f8",
+  "source_repository": "https://github.com/instanto-io/bootstrap-widgets",
+  "source_note": "Imported before bootstrap-widgets was published; the file hashes below identify the imported content.",
   "adaptations": "Moved the resource generator and asset stager into the shared compatibility build. Renamed the Maven artifact and project name; made resource-loader configuration independent of Bootstrap. Replaced the test requiring a sibling Bootstrap checkout with a self-contained fixture. Java packages and goal names are retained.",
   "imported_files": {
     "teavm-module-plugin/README.md": "dd9b5d6eaec79a0a7a5f4ce80916d776dc1f9178eb5cf630287b997e78a7bb1c",

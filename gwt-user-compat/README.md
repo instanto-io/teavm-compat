@@ -49,8 +49,8 @@ linked against this — which is exactly what the contract tests are.
 [`gwt-user-compat-tests`](../gwt-user-compat-tests) runs a shared set of
 assertions about GWT behaviour against this implementation. The same assertions run
 against the real `gwt-user` in
-[`gwt-bootstrap-widget-tests`](https://github.com/cstainton/bootstrap-widgets) and
-[`gwt-user-jvm-contract-tests`](https://github.com/cstainton/bootstrap-widgets). A contract
+[`gwt-bootstrap-widget-tests`](https://github.com/instanto-io/bootstrap-widgets/tree/main/gwt/gwt-bootstrap-widget-tests) and
+[`gwt-user-jvm-contract-tests`](https://github.com/instanto-io/bootstrap-widgets/tree/main/gwt/gwt-user-jvm-contract-tests). A contract
 that passes on one and fails on the other is a divergence, and it is reported as one.
 
 Adding a contract is how you record a piece of GWT behaviour the widgets have come to

@@ -1,6 +1,6 @@
 {
-  "source_repository": "https://github.com/cstainton/bootstrap-widgets",
-  "base_commit": "04bb79680d5d2b4ac45b065fa39fc9f4338b3ae0",
+  "source_repository": "https://github.com/instanto-io/bootstrap-widgets",
+  "source_note": "Imported before bootstrap-widgets was published; the file hashes below identify the imported content.",
   "adaptations": "Extracted the existing UiBinder and text-bundle processor. Material additions resolve inherited generic setters, preserve preformatted text and generate default-locale string constants. Runtime and annotation processor packages are unchanged.",
   "imported_files": {
     "gwt-uibinder-processor/src/main/java/io/instanto/widgets/processor/Emitter.java": "69d65cfa5aa5934011b887a4d74bc94e33ef9dac54c92e2af5fd50e16ddbeec9",

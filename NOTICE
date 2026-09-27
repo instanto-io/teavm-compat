@@ -8,7 +8,8 @@ The modular GWT service compatibility sources retain the original package names
 and copyright headers of the APIs they adapt.
 
 The GWT client compatibility implementation and portable contracts were extracted
-from cstainton/bootstrap-widgets at the recorded commit. Sources retain their Google,
+from the bootstrap-widgets project (https://github.com/instanto-io/bootstrap-widgets).
+Sources retain their Google,
 GWT and other original contributor headers. Independent TeaVM adaptations are
 maintained under io.instanto, without claiming upstream ownership or endorsement.
 
