@@ -17,7 +17,7 @@ rewriting its imports.
 | `gwt-uibinder-processor` | A javac annotation processor for supported UiBinder templates, ClientBundle text resources and default string constants |
 | `gwt-resources-compat-maven-plugin` | Packages widget CSS, scripts, fonts and images, generates code to load them, and copies them into an application's website folder |
 | `jsinterop-binding-generator` | A build tool that adapts supported JsInterop declarations and JSNI bodies to TeaVM JSO |
-| `teavm-classlib-compat` | The TeaVM 0.15 exception workaround brought in by `gwt-user-compat` |
+| `teavm-classlib-compat` | Relocation to `instanto-teavm-classlib`; the former TeaVM 0.15 exception repair is retired in the 0.16 baseline |
 
 `elemental2-compat` brings in `jsinterop-base-compat` automatically.
 

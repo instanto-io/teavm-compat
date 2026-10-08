@@ -1,16 +1,16 @@
-# TeaVM class library compatibility
+# TeaVM classlib support has moved
 
-A compiler plugin for the pinned TeaVM 0.15.0 class library. `gwt-user-compat`
-brings it in automatically; it requires no application initialization.
+General TeaVM class-library additions and regressions are maintained in
+[Instanto TeaVM](https://github.com/instanto-io/instanto-teavm), using
+`io.instanto:instanto-teavm-classlib:0.1.0-SNAPSHOT` and TeaVM 0.16.0.
 
-The plugin restores the empty suppressed-exception array omitted by TeaVM's
-replacement `Throwable` constructors. This permits GWT's event bus to retain
-multiple handler failures without crashing in `Throwable.addSuppressed`.
-Constructors that already assign the field are left alone.
+This module now builds a relocation POM only. The former suppressed-exception
+repair applied to TeaVM 0.15; 0.16 already fixes it. Its source is preserved in
+Instanto TeaVM's `legacy/teavm-0.15` directory and is not compiled or registered.
+Existing GWT event-bus tests remain in this repository; the shared classlib also
+tests suppressed exceptions. GWT, Elemental and JSInterop adaptation continues
+to live in `teavm-compat`.
 
-TeaVM discovers the plugin through `META-INF/services`. Its dependency on
-`teavm-core` is provided by the compiler and is not a transitive application
-dependency. [Shared browser contracts](../gwt-user-compat-tests/README.md) exercise
-the repair and compare the observable behavior with GWT.
-
-Review this workaround when changing TeaVM versions.
+Publish the shared artifact before merging and publishing this relocation.
+Consumers pinned to TeaVM 0.15 must keep their previous compatibility artifact
+until they upgrade.
