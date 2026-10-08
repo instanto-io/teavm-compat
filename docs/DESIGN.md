@@ -50,9 +50,10 @@ references and Java receiver access instead of silently emitting invalid code.
 Portable contracts remain in `gwt-api`; TeaVM-specific browser fixtures
 and regressions live in `gwt-user-compat-tests`.
 
-`teavm-classlib-compat` applies the TeaVM 0.15 suppressed-exception initialisation
-workaround during compilation. It is transitive from `gwt-user-compat`, pending
-adoption of an upstream TeaVM release containing the fix.
+`gwt-user-compat` brings in `instanto-teavm-classlib` from instanto-teavm, which
+adds missing class-library methods and corrects faulty ones during compilation.
+It replaced `teavm-classlib-compat`, whose suppressed-exception workaround
+TeaVM 0.16 made unnecessary.
 
 These adapters do not certify every upstream API. Named contracts and widget
 consumer tests provide evidence for the behavior they exercise.

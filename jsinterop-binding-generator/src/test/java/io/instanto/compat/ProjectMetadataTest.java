@@ -35,7 +35,7 @@ public class ProjectMetadataTest {
     assertEquals(
         "instanto-org-pom", parent.getElementsByTagName("artifactId").item(0).getTextContent());
     var dependencies = document.getElementsByTagName("dependency");
-    assertEquals(8, dependencies.getLength());
+    assertEquals(7, dependencies.getLength());
     for (int i = 0; i < dependencies.getLength(); i++) {
       var dependency = (org.w3c.dom.Element) dependencies.item(i);
       assertEquals(

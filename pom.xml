@@ -55,7 +55,6 @@
   </properties>
   <modules>
     <module>teavm-compat-bom</module>
-    <module>teavm-classlib-compat</module>
     <module>jsinterop-binding-generator</module>
     <module>gwt-uibinder-processor</module>
     <module>gwt-resources-compat-maven-plugin</module>

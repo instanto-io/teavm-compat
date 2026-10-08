@@ -18,7 +18,8 @@ coordinates rather than private `material-SNAPSHOT` builds.
 - `gwt-uibinder-processor` extracts the existing Bootstrap processor and includes
   the generic-setter, preformatted-text and default-string additions exercised
   by Material's original templates, plus subpackage-qualified widget names.
-- `teavm-classlib-compat` provides the pinned TeaVM 0.15 exception workaround.
+- `instanto-teavm-classlib`, through `gwt-user-compat`, supplies class-library
+  methods TeaVM lacks.
 - `gwt-api` contains portable assertions; the optional native GWT test
   application checks their reference behaviour.
 
