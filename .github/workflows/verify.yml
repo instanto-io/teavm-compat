@@ -38,10 +38,10 @@ jobs:
           </settings>
           XML
           echo "MAVEN_ARGS=--settings $settings" >> "$GITHUB_ENV"
-      - run: mvn -B -ntp -DskipTests install
-      - run: mvn -B -ntp clean install
-      - run: mvn -B -ntp -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test
-      - run: mvn -B -ntp -Pproduction verify
+      - run: mvn -U -B -ntp -DskipTests install
+      - run: mvn -U -B -ntp clean install
+      - run: mvn -U -B -ntp -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test
+      - run: mvn -U -B -ntp -Pproduction verify
       - uses: actions/upload-artifact@v4
         if: always()
         with:
