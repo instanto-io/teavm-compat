@@ -1,6 +1,7 @@
 package io.instanto.compat;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.nio.file.Path;
 import org.junit.Test;
@@ -25,21 +26,37 @@ public class ProjectMetadataTest {
   }
 
   @Test
-  public void publicBomDoesNotExportBuildDependencyPins() throws Exception {
-    var document =
-        javax.xml.parsers.DocumentBuilderFactory.newInstance()
-            .newDocumentBuilder()
-            .parse(Path.of("../teavm-compat-bom/pom.xml").toFile());
-    var parent = (org.w3c.dom.Element) document.getElementsByTagName("parent").item(0);
-    assertEquals("io.instanto", parent.getElementsByTagName("groupId").item(0).getTextContent());
-    assertEquals(
-        "instanto-org-pom", parent.getElementsByTagName("artifactId").item(0).getTextContent());
-    var dependencies = document.getElementsByTagName("dependency");
-    assertEquals(7, dependencies.getLength());
-    for (int i = 0; i < dependencies.getLength(); i++) {
-      var dependency = (org.w3c.dom.Element) dependencies.item(i);
-      assertEquals(
-          "io.instanto", dependency.getElementsByTagName("groupId").item(0).getTextContent());
+  public void publicBomManagesOnlyThisProjectsArtifacts() throws Exception {
+    var builder = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder();
+    var xpath = javax.xml.xpath.XPathFactory.newInstance().newXPath();
+    var bom = builder.parse(Path.of("../teavm-compat-bom/pom.xml").toFile());
+    assertEquals("io.instanto", xpath.evaluate("/project/parent/groupId", bom));
+    assertEquals("instanto-org-pom", xpath.evaluate("/project/parent/artifactId", bom));
+
+    var reactor = builder.parse(Path.of("../pom.xml").toFile());
+    var modules =
+        (org.w3c.dom.NodeList)
+            xpath.evaluate(
+                "/project/modules/module", reactor, javax.xml.xpath.XPathConstants.NODESET);
+    var ownArtifacts = new java.util.HashSet<String>();
+    for (int i = 0; i < modules.getLength(); i++) {
+      var module =
+          builder.parse(Path.of("..", modules.item(i).getTextContent(), "pom.xml").toFile());
+      ownArtifacts.add(xpath.evaluate("/project/artifactId", module));
+    }
+
+    var managed =
+        (org.w3c.dom.NodeList)
+            xpath.evaluate(
+                "/project/dependencyManagement/dependencies/dependency",
+                bom,
+                javax.xml.xpath.XPathConstants.NODESET);
+    for (int i = 0; i < managed.getLength(); i++) {
+      String groupId = xpath.evaluate("groupId", managed.item(i));
+      String artifactId = xpath.evaluate("artifactId", managed.item(i));
+      assertEquals(artifactId, "io.instanto", groupId);
+      assertTrue(
+          artifactId + " is not built by this project", ownArtifacts.contains(artifactId));
     }
   }
 }
