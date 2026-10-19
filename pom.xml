@@ -46,7 +46,6 @@
     <jsinterop.annotations.version>2.0.2</jsinterop.annotations.version>
     <jsinterop.base.version>1.0.1</jsinterop.base.version>
     <teavm.optimization>SIMPLE</teavm.optimization>
-    <teavm.minify>false</teavm.minify>
     <gwt.style>PRETTY</gwt.style>
     <google-java-format.version>1.35.0</google-java-format.version>
     <junit.version>4.13.2</junit.version>
@@ -331,7 +330,6 @@
       <id>production</id>
       <properties>
         <teavm.optimization>ADVANCED</teavm.optimization>
-        <teavm.minify>true</teavm.minify>
         <gwt.style>OBF</gwt.style>
       </properties>
     </profile>
