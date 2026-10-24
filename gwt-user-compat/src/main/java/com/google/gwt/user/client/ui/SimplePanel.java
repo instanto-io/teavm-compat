@@ -81,9 +81,15 @@ public class SimplePanel extends Panel implements HasOneWidget {
     if (child == null || child != widget) {
       return false;
     }
-    orphan(child);
-    child.getElement().removeFromParent();
-    widget = null;
+    try {
+      orphan(child);
+    } finally {
+      try {
+        child.getElement().removeFromParent();
+      } finally {
+        widget = null;
+      }
+    }
     return true;
   }
 

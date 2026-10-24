@@ -13,7 +13,7 @@ shows a complete application using basic GWT-compatible widgets.
 Place `GreetingView.java` in `src/main/java/example/uibinder/` and its template
 `GreetingView.ui.xml` in `src/main/resources/example/uibinder/`. Maven copies the
 template before javac runs. Use the owner class's name and package for the template,
-and declare a nested interface named `Binder` extending `UiBinder`:
+and declare a nested interface extending `UiBinder` (its name is unrestricted):
 
 ```java
 public class GreetingView extends Composite {
@@ -71,8 +71,8 @@ steps, generated file names, provider precedence, packaging and troubleshooting.
 ## Supported features and limits
 
 The processor supports widget construction, fields, handlers, setters (including
-inherited generic setters), text-only ClientBundle resources and annotated default
-string constants. It preserves whitespace in preformatted examples. Generated
+inherited generic setters), `@UiConstructor`, `@UiFactory`, typed styles, ClientBundle
+text/CSS/image/data resources, SafeHtmlTemplates and annotated default string constants. It preserves whitespace in preformatted examples. Generated
 providers participate in the compatibility runtime's `GWT.create` mechanism;
 explicit application providers take precedence.
 
@@ -91,12 +91,53 @@ permutations require explicit providers; full GWT deferred binding, arbitrary
 generators and every UiBinder feature are not implemented. Its compiler tests
 exercise generated source and report unsupported templates at compilation time.
 
-The current owner convention is a top-level class with a nested interface named
-`Binder` directly extending `UiBinder`; alternate interface names and
-`@UiTemplate` path overrides are not supported. Typed `ui:style` interfaces and
-`ui:msg`, `ui:image`, `ui:data` and `ui:attribute` are also unsupported. Keep the
-matching template at the conventional resource path; a missing template currently
-produces a compiler warning and no provider.
+The owner convention is a top-level class with one nested interface directly
+extending `UiBinder`. Annotate that interface with `@UiTemplate("Other.ui.xml")`
+to override the filename; a leading `/` makes the path classpath-relative,
+otherwise it is relative to the owner's package. Missing or malformed templates
+are compilation errors. Multiple binders per owner and inherited binder interfaces
+are not supported.
+
+`@UiFactory` methods on the owner can construct widgets instead of their constructors.
+Factory parameters consume matching XML attributes. A factory must be accessible
+to the generated class; ambiguous factories are errors. `ui:with` supports provided
+fields, constructible classes and interfaces obtained through `GWT.create`.
+Expressions can chain zero-argument methods or fields, for example
+`text="{resources.caption.getText}"` or `resource="{resources.icon}"`.
+
+A `ui:style` may declare `field`, `type` (a `CssResource` interface) and `src`.
+Class names are scoped using the owner's qualified name and style field, avoiding
+collisions between owners with the same simple name in different packages.
+CSS strings and whitespace are preserved. The generated style resource is shared
+between bindings and injected once. `@external` selectors keep their names.
+
+ClientBundle methods require `@Source`. Text and CSS may concatenate multiple
+sources; images and data take one. Resources and their text/URI values are cached.
+CSS class accessors support `@ClassName`; local CSS `url(...)` assets are embedded
+relative to the stylesheet. CSS `@import` is rejected: resolve imports before
+compilation. This is ordinary CSS plus `@external`, not the complete GWT CSS/GSS
+language: constants, conditional rules, sprites, resource-function substitutions,
+and escaped class identifiers are unsupported. `@NotStrict` is accepted as an
+annotation but does not relax missing-accessor validation.
+
+Images are embedded data URIs with intrinsic dimensions for PNG, JPEG, GIF and BMP;
+SVG/WebP images need an explicit provider or a DataResource. There is no image
+spriting, RTL flipping or external-resource size threshold. Data resources expose
+GWT's `SafeUri` return type. Large resources should use the resource staging plugin
+instead of increasing JavaScript bundle size. CSP must allow the generated data URIs
+and injected styles used by the application.
+
+SafeHtmlTemplates support text placeholders and quoted attribute values. Plain
+values are HTML-escaped, `SafeHtml` is inserted only in text context, and whole-value
+URI placeholders are sanitized (or accepted as `SafeUri`). Dynamic markup names,
+unquoted attributes, SVG/MathML, script/style and other active-content elements, event-handler
+attributes, `style`, `srcdoc`, and `srcset` placeholders are rejected. URI placeholders
+must occupy the entire attribute value. Unsupported contexts fail during compilation;
+this is deliberately a subset of GWT's template compiler.
+
+`ui:msg`, `ui:image`, `ui:data`, `ui:attribute`, and widget-specific directives other
+than `g:item` remain unsupported. Declare images/data in a ClientBundle and reference
+them through `ui:with` instead.
 
 ## Examples in widget ports
 

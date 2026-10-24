@@ -45,10 +45,9 @@ import org.w3c.dom.NodeList;
  * Turns a {@code .ui.xml} template into the Java a UiBinder implementation would be.
  *
  * <p>GWT answers {@code GWT.create(SomeBinder.class)} with a generator reached through deferred
- * binding. TeaVM has no generator SPI, which is the only thing that stopped UiBinder working there,
- * because what a generator emits is ordinary Java. Running the same step as an annotation processor
- * puts it somewhere both compilers can use, and puts it inside javac, which already knows the
- * types.
+ * binding. This processor replaces the supported generation steps at javac time and registers their
+ * ordinary Java implementations as ServiceLoader providers for the compatibility GWT.create. It
+ * does not implement GWT deferred-binding rules or TeaVM compiler plugins.
  *
  * <p>That last part matters. A UiBinder generator has to know whether a widget has a
  * {@code @UiConstructor} and what its parameters are, what type each setter takes, and whether that
@@ -70,7 +69,8 @@ public class UiBinderProcessor extends AbstractProcessor {
       return false;
     }
     for (final Element element : round.getRootElements()) {
-      new TextBundleGenerator(processingEnv).process(element);
+      new ResourceBundleGenerator(processingEnv).process(element);
+      new SafeHtmlTemplateGenerator(processingEnv).process(element);
       new StringConstantsGenerator(processingEnv).process(element);
       if (element.getKind() != ElementKind.CLASS) {
         continue;
@@ -129,7 +129,7 @@ public class UiBinderProcessor extends AbstractProcessor {
     final String pkg =
         processingEnv.getElementUtils().getPackageOf(owner).getQualifiedName().toString();
     final String simple = owner.getSimpleName().toString();
-    final Document template = readTemplate(pkg, simple, owner);
+    final Document template = readTemplate(pkg, simple, owner, binder);
     if (template == null) {
       return;
     }
@@ -161,6 +161,7 @@ public class UiBinderProcessor extends AbstractProcessor {
         .append(".")
         .append(binder.getSimpleName())
         .append(" {\n\n");
+    source.append(emitter.styleDeclarations());
     source.append("    @Override\n");
     source
         .append("    public ")
@@ -168,18 +169,7 @@ public class UiBinderProcessor extends AbstractProcessor {
         .append(" createAndBindUi(final ")
         .append(simple)
         .append(" owner) {\n");
-    if (emitter.styles() != null) {
-      source
-          .append("        com.google.gwt.dom.client.StyleInjector.inject(\"")
-          .append(
-              emitter
-                  .styles()
-                  .replace("\\", "\\\\")
-                  .replace("\"", "\\\"")
-                  .replaceAll("\\s+", " ")
-                  .trim())
-          .append("\");\n");
-    }
+    source.append(emitter.styleInitialization());
     source.append(emitter.body());
     source.append(emitter.fieldAssignments());
     source.append(emitter.handlerWiring());
@@ -194,7 +184,7 @@ public class UiBinderProcessor extends AbstractProcessor {
     // so the compatibility layer's GWT.create finds it without deferred binding
     // ServiceLoader looks the interface up by its binary name, so a nested
     // interface is Owner$Binder rather than Owner.Binder. Getting this wrong
-    // leaves GWT.create finding nothing and handing back null.
+    // leaves GWT.create unable to find its generated provider.
     final String binderBinary = processingEnv.getElementUtils().getBinaryName(binder).toString();
     final FileObject service =
         processingEnv
@@ -213,7 +203,8 @@ public class UiBinderProcessor extends AbstractProcessor {
    * failing offline and slowing it down otherwise. The entity is not needed to read the document,
    * so external entities are refused outright, which also closes the usual XXE exposure.
    */
-  private javax.xml.parsers.DocumentBuilder parser() throws Exception {
+  private javax.xml.parsers.DocumentBuilder parser()
+      throws javax.xml.parsers.ParserConfigurationException {
     final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     factory.setNamespaceAware(true);
     factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
@@ -227,27 +218,36 @@ public class UiBinderProcessor extends AbstractProcessor {
     return builder;
   }
 
-  private Document readTemplate(final String pkg, final String simple, final Element owner) {
-    final String name = simple + ".ui.xml";
+  private Document readTemplate(
+      final String pkg, final String simple, final Element owner, final TypeElement binder) {
+    String name =
+        SourceSupport.annotation(binder, "com.google.gwt.uibinder.client.UiTemplate", "value");
+    if (name == null) name = simple + ".ui.xml";
+    final String resourcePackage = name.startsWith("/") ? "" : pkg;
+    if (name.startsWith("/")) name = name.substring(1);
     for (final StandardLocation where :
         new StandardLocation[] {
           StandardLocation.SOURCE_PATH, StandardLocation.CLASS_PATH, StandardLocation.CLASS_OUTPUT
         }) {
+      final InputStream stream;
       try {
-        final FileObject found = processingEnv.getFiler().getResource(where, pkg, name);
-        try (InputStream stream = found.openInputStream()) {
-          return parser().parse(stream);
-        }
-      } catch (final Exception ignored) {
-        // try the next location
+        stream =
+            processingEnv.getFiler().getResource(where, resourcePackage, name).openInputStream();
+      } catch (final IOException missing) {
+        // A missing resource may be available at the next location.
+        continue;
+      }
+      try (stream) {
+        return parser().parse(stream);
+      } catch (final IOException
+          | org.xml.sax.SAXException
+          | javax.xml.parsers.ParserConfigurationException failure) {
+        throw new Failure("Cannot parse " + name + ": " + failure.getMessage(), owner);
       }
     }
     processingEnv
         .getMessager()
-        .printMessage(
-            Diagnostic.Kind.WARNING,
-            "no " + name + " found for " + simple + "; leaving its binder to GWT",
-            owner);
+        .printMessage(Diagnostic.Kind.ERROR, "no " + name + " found for " + simple, owner);
     return null;
   }
 
@@ -255,10 +255,8 @@ public class UiBinderProcessor extends AbstractProcessor {
    * Rejects any ui: element this generator does not implement.
    *
    * <p>GWT's UiBinder has a wider vocabulary than this: ui:msg for internationalised text, ui:image
-   * and ui:data for bundled resources, ui:attribute. None appears in any template here, so none is
-   * implemented. A template that used one would otherwise be built as though the element were not
-   * there, and the difference would show only at runtime; naming it at compile time is the whole
-   * point.
+   * and ui:data for bundled resources, ui:attribute. These directives are unsupported; the
+   * processor reports an error instead of silently omitting them from the generated UI.
    */
   private void rejectUnsupported(final Node root, final TypeElement owner) {
     final NodeList children = root.getChildNodes();

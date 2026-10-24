@@ -134,7 +134,8 @@ can also serve files directly from a JAR through `/resources/`.
 Use `inlineTextBundles` for ClientBundle interfaces whose `TextResource` methods
 must return text immediately. The plugin generates Java implementations and the
 registration files used to find them. Each method must name a single file with
-`@Source`; the file's contents are preserved.
+`@Source`; the file's contents are preserved. Resource objects and reconstructed text
+are cached, so repeated accessor calls do not allocate another wrapper or rebuild the string.
 
 Scripts in these bundles are packaged for the application to load when needed.
 For example, an editor can load the language selected by the user. Large text
@@ -177,3 +178,20 @@ Older code that still uses JSNI can set `<legacyJsni>true</legacyJsni>`: JSNI bo
 `@JSBody` first. A body that calls into Java through `@Class::member` cannot be translated,
 so the build fails naming the file; give that callback a `@JsFunction` type and call it as a
 function instead.
+
+JsInterop `name` and `namespace` attributes can use string constants from the
+adapted source set, including imported constants and string concatenation.
+`JsPackage.GLOBAL` is recognized directly. Unresolved constant expressions fail
+generation instead of producing a binding to an incorrect JavaScript name.
+The [Charba core port](https://github.com/instanto-io/teavm-charba) exercises this path with upstream sources.
+
+The adapter also preserves concrete `@JsFunction` values passed through generic
+native void setters, such as `CallbackProxy<Callback>.setCallback(...)`, on
+fields, parameters and local variables. The bridge keeps the native function
+identity and converts erased object results. Overloaded/inherited setters and
+arbitrary receiver expressions need an explicit bridge.
+
+Native adaptation also resolves raw callback type parameters to their declared
+upper bound and annotates implicit native JsInterop methods for TeaVM. These
+paths are exercised by the [Tealeaf port](https://github.com/instanto-io/tealeaf),
+including Java event callbacks and methods inherited through native interfaces.

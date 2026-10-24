@@ -1,9 +1,7 @@
 package io.instanto.teavm.modules;
 
-import io.instanto.compat.GenerateBindings;
-import io.instanto.compat.LegacyNativeBodies;
+import io.instanto.compat.BindingPipeline;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,8 +21,8 @@ final class SourceAdapter {
 
   /** Adapts every Java source below {@code input} into {@code output}; returns how many. */
   static int adapt(Path input, Path output, boolean legacyJsni) throws IOException {
-    Path in = input.toAbsolutePath().normalize();
-    Path out = output.toAbsolutePath().normalize();
+    Path in = input.toRealPath();
+    Path out = output.toFile().getCanonicalFile().toPath();
     if (in.startsWith(out) || out.startsWith(in))
       throw new IllegalArgumentException("Source and output roots must be separate");
     if (!Files.isDirectory(in)) throw new IllegalArgumentException("No source root at " + in);
@@ -33,18 +31,21 @@ final class SourceAdapter {
     try (Stream<Path> files = Files.walk(in)) {
       sources = files.filter(f -> f.toString().endsWith(".java")).sorted().toList();
     }
+    java.util.Map<Path, String> inputs = new java.util.LinkedHashMap<>();
+    for (Path source : sources)
+      inputs.put(source, Files.readString(source, StandardCharsets.UTF_8));
+    BindingPipeline pipeline = new BindingPipeline(inputs.values(), legacyJsni);
     for (Path source : sources) {
       Path relative = in.relativize(source);
-      String text = Files.readString(source, StandardCharsets.UTF_8);
+      String text = inputs.get(source);
       String adapted;
       try {
-        adapted =
-            GenerateBindings.transform(legacyJsni ? LegacyNativeBodies.transform(text) : text);
+        adapted = pipeline.transform(text);
       } catch (RuntimeException failure) {
         throw new IllegalArgumentException(relative + ": " + failure.getMessage(), failure);
       }
       Path target = out.resolve(relative);
-      Files.createDirectories(target.getParent());
+      Files.createDirectories(java.util.Objects.requireNonNull(target.getParent()));
       Files.writeString(target, adapted, StandardCharsets.UTF_8);
     }
     return sources.size();
@@ -53,13 +54,19 @@ final class SourceAdapter {
   /** Removes earlier output so a source deleted upstream does not linger. */
   private static void clear(Path out) throws IOException {
     if (!Files.exists(out)) return;
+    // Validate before deleting anything: a directory symlink could redirect later writes
+    // outside the generated-source tree, even though the two roots are disjoint.
     try (Stream<Path> files = Files.walk(out)) {
-      for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {
-        try {
-          Files.delete(file);
-        } catch (IOException failure) {
-          throw new UncheckedIOException(failure);
+      for (Path file : (Iterable<Path>) files::iterator) {
+        if (Files.isSymbolicLink(file)) {
+          throw new IOException("Generated-source output contains a symbolic link: " + file);
         }
+      }
+    }
+    try (Stream<Path> files = Files.walk(out)) {
+      for (Path file :
+          (Iterable<Path>) files.filter(f -> f.toString().endsWith(".java"))::iterator) {
+        Files.delete(file);
       }
     }
   }

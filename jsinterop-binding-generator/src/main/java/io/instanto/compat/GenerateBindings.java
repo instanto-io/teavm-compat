@@ -92,6 +92,18 @@ public final class GenerateBindings {
         annotate(c, "@JSClass(name = \"" + qualified + "\")");
       }
       if (functor) annotate(c, "@JSFunctor");
+      if (!functor) {
+        // JsType makes native methods implicit JS methods. TeaVM needs an explicit annotation
+        // when the same declaration is inherited through both a class and an interface.
+        for (MethodDeclaration method : c.getMethods()) {
+          if ((method.isNative() || c.isInterface() && method.getBody().isEmpty())
+              && method.getAnnotationByName("JsMethod").isEmpty()
+              && method.getAnnotationByName("JsProperty").isEmpty()
+              && method.getAnnotationByName("JSMethod").isEmpty()
+              && method.getAnnotationByName("JSProperty").isEmpty()
+              && method.getAnnotationByName("JSBody").isEmpty()) annotate(method, "@JSMethod");
+        }
+      }
       for (MethodDeclaration m : new ArrayList<>(c.getMethodsByName("cast"))) {
         if (m.getAnnotationByName("JsOverlay").isPresent()
             && m.getParameters().isEmpty()
@@ -191,7 +203,8 @@ public final class GenerateBindings {
           a.remove();
           continue;
         }
-        if (n.equals("JsMethod") && (ns.equals("JsPackage.GLOBAL") || ns.equals("GLOBAL")))
+        if (n.equals("JsMethod")
+            && (ns.equals("JsPackage.GLOBAL") || ns.equals("GLOBAL") || ns.equals("<global>")))
           annotate(owner, "@JSTopLevel");
         annotate(
             owner,
@@ -288,16 +301,12 @@ public final class GenerateBindings {
     return cu.toString();
   }
 
-  private static void write(Path p, String source) throws Exception {
-    Files.createDirectories(p.getParent());
-    Files.writeString(p, transform(source));
-  }
-
   public static void main(String[] args) throws Exception {
     if (args.length < 2)
       throw new IllegalArgumentException("Usage: GenerateBindings OUTPUT INPUT...");
     Path out = Path.of(args[0]).toAbsolutePath().normalize();
     Files.createDirectories(out);
+    Map<Path, String> sources = new LinkedHashMap<>();
     for (int i = 1; i < args.length; i++) {
       Path input = Path.of(args[i]).toAbsolutePath().normalize();
       if (input.startsWith(out) || out.startsWith(input))
@@ -305,7 +314,7 @@ public final class GenerateBindings {
       if (Files.isDirectory(input)) {
         try (var files = Files.walk(input)) {
           for (Path file : files.filter(f -> f.toString().endsWith(".java")).sorted().toList())
-            write(out.resolve(input.relativize(file)), Files.readString(file));
+            sources.put(out.resolve(input.relativize(file)), Files.readString(file));
         }
       } else {
         try (JarFile jar = new JarFile(input.toFile())) {
@@ -318,13 +327,18 @@ public final class GenerateBindings {
             if (!destination.startsWith(out))
               throw new IllegalArgumentException("Invalid source entry: " + entry.getName());
             try (var stream = jar.getInputStream(entry)) {
-              write(
+              sources.put(
                   destination,
                   new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
             }
           }
         }
       }
+    }
+    BindingPipeline pipeline = new BindingPipeline(sources.values(), false);
+    for (var source : sources.entrySet()) {
+      Files.createDirectories(source.getKey().getParent());
+      Files.writeString(source.getKey(), pipeline.transform(source.getValue()));
     }
     StringBuilder manifest = new StringBuilder();
     var digest = java.security.MessageDigest.getInstance("SHA-256");

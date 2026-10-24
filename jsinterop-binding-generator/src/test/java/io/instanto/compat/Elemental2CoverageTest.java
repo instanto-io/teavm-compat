@@ -66,12 +66,7 @@ public class Elemental2CoverageTest {
                   && method.isAnnotationPresent("JsOverlay")) continue;
               assertTrue(
                   path + ": missing method " + method.getDeclarationAsString(),
-                  adapted.get().getMethodsByName(method.getNameAsString()).stream()
-                      .anyMatch(
-                          m ->
-                              m.getParameters()
-                                  .toString()
-                                  .equals(method.getParameters().toString())));
+                  exposesMethod(generated, adapted.get(), method, new HashSet<>()));
             }
           }
         }
@@ -85,5 +80,40 @@ public class Elemental2CoverageTest {
       assertEquals(
           "Generated source set must match the declared upstream inputs", expected, actual);
     }
+  }
+
+  /** An adapter may live on an inherited interface because TeaVM overlay bodies are final. */
+  private boolean exposesMethod(
+      Path generated,
+      ClassOrInterfaceDeclaration type,
+      com.github.javaparser.ast.body.MethodDeclaration method,
+      Set<String> seen)
+      throws Exception {
+    if (type.getMethodsByName(method.getNameAsString()).stream()
+        .anyMatch(m -> m.getSignature().equals(method.getSignature()))) return true;
+    if (method.isStatic()) return false;
+    var unit = type.findCompilationUnit().orElseThrow();
+    String pkg = unit.getPackageDeclaration().map(p -> p.getNameAsString() + ".").orElse("");
+    var parents = new java.util.ArrayList<>(type.getExtendedTypes());
+    parents.addAll(type.getImplementedTypes());
+    for (var parent : parents) {
+      String name = parent.getNameWithScope();
+      String qualified = pkg + name;
+      for (var imported : unit.getImports()) {
+        if (!imported.isAsterisk() && imported.getName().getIdentifier().equals(name))
+          qualified = imported.getNameAsString();
+      }
+      if (!seen.add(qualified)) continue;
+      Path file = generated.resolve(qualified.replace('.', '/') + ".java");
+      if (!Files.isRegularFile(file)) continue;
+      var parsed = StaticJavaParser.parse(Files.readString(file));
+      var declaration =
+          parsed
+              .getClassByName(parent.getNameAsString())
+              .or(() -> parsed.getInterfaceByName(parent.getNameAsString()));
+      if (declaration.isPresent() && exposesMethod(generated, declaration.get(), method, seen))
+        return true;
+    }
+    return false;
   }
 }

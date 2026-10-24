@@ -21,6 +21,7 @@ package io.instanto.widgets.processor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -82,7 +83,9 @@ public class UiBinderProcessorTest {
         compile(
             sampleOwner("widgets.Choice.Change<String>")
                 .replace("widgets.Button action", "widgets.Choice<String> action"),
-            "<ui:UiBinder xmlns:ui=\"urn:ui:com.google.gwt.uibinder\" xmlns:w=\"urn:import:widgets\"><w:Panel><w:Choice ui:field=\"action\"/></w:Panel></ui:UiBinder>");
+            "<ui:UiBinder xmlns:ui=\"urn:ui:com.google.gwt.uibinder\""
+                + " xmlns:w=\"urn:import:widgets\"><w:Panel><w:Choice"
+                + " ui:field=\"action\"/></w:Panel></ui:UiBinder>");
     assertTrue(compiled.diagnostics(), compiled.success);
     assertTrue(
         compiled
@@ -107,7 +110,9 @@ public class UiBinderProcessorTest {
   public void generatesDefaultStringConstantsAndLookupProvider() throws Exception {
     Compilation compiled =
         compile(
-            "package fixture; public interface Sample extends com.google.gwt.i18n.client.ConstantsWithLookup { @DefaultStringValue(\"Cannot be blank\") String blank(); }",
+            "package fixture; public interface Sample extends"
+                + " com.google.gwt.i18n.client.ConstantsWithLookup { @DefaultStringValue(\"Cannot"
+                + " be blank\") String blank(); }",
             validTemplate());
     assertTrue(compiled.diagnostics(), compiled.success);
     String source = compiled.generated("fixture/Sample_StringConstants.java");
@@ -228,7 +233,7 @@ public class UiBinderProcessorTest {
         compilation.diagnostics(),
         compilation
             .diagnostics()
-            .contains("Button needs the kind attribute its @UiConstructor takes"));
+            .contains("Button needs the kind attribute its constructor/factory takes"));
   }
 
   @Test
@@ -253,15 +258,14 @@ public class UiBinderProcessorTest {
 
     assertTrue(compilation.diagnostics(), compilation.success);
     final String generated = compilation.generated("fixture/Sample_BinderImpl.java");
-    // Prefixed, because 21 of the showcase templates each declare their own .margin-fix
-    // and they all end up on one page.
+    String prefix = SourceSupport.prefix("fixture.Sample.style");
     assertContains(
         generated,
-        "StyleInjector.inject(\".Sample-spacing { margin: 4px; } "
-            + ".Sample-margin-fix { margin-bottom: 0 !important; }\");",
+        "StyleInjector.inject(text,true)",
+        "uiStyle_style.ensureInjected();",
         "button2.addStyleName(\"btn\");",
-        "button2.addStyleName(\"Sample-spacing\");",
-        "button2.addStyleName(\"Sample-margin-fix\");");
+        "button2.addStyleName(\"" + prefix + "spacing\");",
+        "button2.addStyleName(\"" + prefix + "margin-fix\");");
   }
 
   @Test
@@ -341,7 +345,7 @@ public class UiBinderProcessorTest {
         compilation.diagnostics(),
         compilation
             .diagnostics()
-            .contains("no <ui:with> declares absent, which {absent.thing} reads from"));
+            .contains("No template field declares absent, named by {absent.thing}"));
   }
 
   @Test
@@ -404,16 +408,41 @@ public class UiBinderProcessorTest {
     Compilation compiled = compile(owner, validTemplate());
     assertTrue(compiled.diagnostics(), compiled.success);
     assertEquals(
-        "fixture.Sample_Source_TextBundle\n",
+        "fixture.Sample_Source_Resources\n",
         Files.readString(compiled.classes.resolve("META-INF/services/fixture.Sample$Source")));
     try (var loader =
         new java.net.URLClassLoader(new java.net.URL[] {compiled.classes.toUri().toURL()})) {
       Object bundle =
-          loader.loadClass("fixture.Sample_Source_TextBundle").getConstructor().newInstance();
+          loader.loadClass("fixture.Sample_Source_Resources").getConstructor().newInstance();
       Object text = bundle.getClass().getMethod("template").invoke(bundle);
+      assertSame(text, bundle.getClass().getMethod("template").invoke(bundle));
       Class<?> resource = loader.loadClass("com.google.gwt.resources.client.TextResource");
       assertEquals(validTemplate(), resource.getMethod("getText").invoke(text));
       assertEquals("template", resource.getMethod("getName").invoke(text));
+    }
+  }
+
+  @Test
+  public void largeTextResourcePreservesUnicodeAcrossChunkBoundaries() throws Exception {
+    String content = "x".repeat(4095) + "😀" + "y".repeat(4096);
+    Compilation result =
+        compile(
+            "package fixture; public interface Sample extends"
+                + " com.google.gwt.resources.client.ClientBundle { @Source(\"text.txt\")"
+                + " com.google.gwt.resources.client.TextResource text(); }",
+            validTemplate(),
+            java.util.Map.of("fixture/text.txt", content));
+    assertTrue(result.diagnostics(), result.success);
+    try (var loader =
+        new java.net.URLClassLoader(new java.net.URL[] {result.classes.toUri().toURL()})) {
+      Object bundle = loader.loadClass("fixture.Sample_Resources").getConstructor().newInstance();
+      Object resource = bundle.getClass().getMethod("text").invoke(bundle);
+      assertEquals(
+          content,
+          loader
+              .loadClass("com.google.gwt.resources.client.TextResource")
+              .getMethod("getText")
+              .invoke(resource));
     }
   }
 
@@ -427,10 +456,130 @@ public class UiBinderProcessorTest {
                 + "com.google.gwt.resources.client.TextResource template(); }",
             validTemplate());
     assertFalse(compiled.success);
-    assertTrue(compiled.diagnostics(), compiled.diagnostics().contains("Missing @Source resource"));
+    assertTrue(compiled.diagnostics(), compiled.diagnostics().contains("Missing resource"));
+  }
+
+  @Test
+  public void malformedTemplateFailsWithItsNameInsteadOfBeingReportedMissing() throws Exception {
+    Compilation compiled =
+        compile(sampleOwner("ClickEvent"), validTemplate().replace("</w:Panel>", "</w:Button>"));
+    assertFalse(compiled.success);
+    assertTrue(
+        compiled.diagnostics(), compiled.diagnostics().contains("Cannot parse Sample.ui.xml"));
+    assertFalse(
+        compiled.diagnostics(), compiled.diagnostics().contains("leaving its binder to GWT"));
+  }
+
+  @Test
+  public void templateOverrideAndFactoryAreUsed() throws Exception {
+    String owner =
+        sampleOwner("com.google.gwt.event.dom.client.ClickEvent")
+            .replace(
+                "interface Binder",
+                "@com.google.gwt.uibinder.client.UiTemplate(\"Other.ui.xml\") interface Binder")
+            .replace(
+                "  void onAction",
+                "  @com.google.gwt.uibinder.client.UiFactory widgets.Button makeButton(widgets.Kind"
+                    + " kind) { return new widgets.Button(kind); }\n"
+                    + "  void onAction");
+    // Keep UiHandler on its original method, not the inserted factory.
+    owner =
+        owner
+            .replace("  @com.google.gwt.uibinder.client.UiHandler(\"action\")\n", "")
+            .replace(
+                "  void onAction",
+                "  @com.google.gwt.uibinder.client.UiHandler(\"action\") void onAction");
+    Compilation result =
+        compile(
+            owner,
+            "invalid unused template",
+            java.util.Map.of("fixture/Other.ui.xml", validTemplate()));
+    assertTrue(result.diagnostics(), result.success);
+    assertContains(
+        result.generated("fixture/Sample_BinderImpl.java"),
+        "owner.makeButton(widgets.Kind.PRIMARY)");
+  }
+
+  @Test
+  public void typedStyleIsAssignedAndPreservesCssStrings() throws Exception {
+    String owner =
+        sampleOwner("com.google.gwt.event.dom.client.ClickEvent")
+            .replace(
+                "  interface Binder",
+                "  public interface Style extends com.google.gwt.resources.client.CssResource {"
+                    + " String spacing(); }\n"
+                    + "  @com.google.gwt.uibinder.client.UiField Style style;\n"
+                    + "  interface Binder");
+    String template =
+        styledTemplate()
+            .replace("<ui:style>", "<ui:style type=\"fixture.Sample.Style\">")
+            .replace("margin: 4px;", "margin: 4px; content: '.spacing  two spaces';");
+    Compilation result = compile(owner, template);
+    assertTrue(result.diagnostics(), result.success);
+    assertContains(
+        result.generated("fixture/Sample_BinderImpl.java"),
+        "owner.style = uiStyle_style",
+        "content: '.spacing  two spaces'",
+        "public String spacing()");
+  }
+
+  @Test
+  public void resourceExpressionsResolveChainedMethods() throws Exception {
+    String template =
+        validTemplate()
+            .replace(
+                "<w:Panel>", "<ui:with field=\"resources\" type=\"fixture.Resources\"/><w:Panel>")
+            .replace("enabled=\"true\"", "enabled=\"true\" text=\"{resources.text.value}\"");
+    Compilation result =
+        compile(
+            sampleOwner("com.google.gwt.event.dom.client.ClickEvent"),
+            template,
+            java.util.Map.of(
+                "fixture/Resources.java",
+                "package fixture; public class Resources { public Text text(){return new Text();}"
+                    + " public static class Text {public String value(){return \"hello\";}} }"));
+    assertTrue(result.diagnostics(), result.success);
+    assertContains(
+        result.generated("fixture/Sample_BinderImpl.java"), "uiWith_resources.text().value()");
+  }
+
+  @Test
+  public void rejectsUnsafeTemplateContextsAtCompilation() throws Exception {
+    var stubs =
+        java.util.Map.of(
+            "com/google/gwt/safehtml/client/SafeHtmlTemplates.java",
+                "package com.google.gwt.safehtml.client; public interface SafeHtmlTemplates {"
+                    + " @interface Template {String value();} }",
+            "com/google/gwt/safehtml/shared/SafeHtml.java",
+                "package com.google.gwt.safehtml.shared; public interface SafeHtml {String"
+                    + " asString();}");
+    for (String html :
+        java.util.List.of(
+            "<div onclick=\"{0}\">x</div>",
+            "<img srcset=\"{0}\">",
+            "<{0}>x</div>",
+            "<a href=\"prefix{0}\">x</a>",
+            "<script>{0}</script>",
+            "<svg><animate attributeName=\"href\" values=\"{0}\"/></svg>")) {
+      String owner =
+          "package fixture; public interface Sample extends"
+              + " com.google.gwt.safehtml.client.SafeHtmlTemplates { @Template("
+              + SourceSupport.quote(html)
+              + ") com.google.gwt.safehtml.shared.SafeHtml render(String value); }";
+      Compilation result = compile(owner, validTemplate(), stubs);
+      assertFalse("Accepted unsafe template: " + html, result.success);
+      assertTrue(
+          result.diagnostics(), result.diagnostics().contains("Cannot generate SafeHtmlTemplates"));
+    }
   }
 
   private Compilation compile(final String owner, final String template) throws Exception {
+    return compile(owner, template, java.util.Map.of());
+  }
+
+  private Compilation compile(
+      final String owner, final String template, java.util.Map<String, String> extra)
+      throws Exception {
     final Path workspace = Files.createTempDirectory("uibinder-processor-test-");
     workspaces.add(workspace);
     final Path sources = Files.createDirectories(workspace.resolve("src"));
@@ -439,19 +588,24 @@ public class UiBinderProcessorTest {
     write(
         sources,
         "com/google/gwt/i18n/client/Constants.java",
-        "package com.google.gwt.i18n.client; public interface Constants { @interface DefaultStringValue {String value();} }");
+        "package com.google.gwt.i18n.client; public interface Constants { @interface"
+            + " DefaultStringValue {String value();} }");
     write(
         sources,
         "com/google/gwt/i18n/client/ConstantsWithLookup.java",
-        "package com.google.gwt.i18n.client; public interface ConstantsWithLookup extends Constants { String getString(String name); }");
+        "package com.google.gwt.i18n.client; public interface ConstantsWithLookup extends Constants"
+            + " { String getString(String name); }");
     write(
         sources,
         "com/google/gwt/dom/client/Element.java",
-        "package com.google.gwt.dom.client; public class Element { public void setAttribute(String a,String b){} public void appendChild(Object child){} }");
+        "package com.google.gwt.dom.client; public class Element { public void setAttribute(String"
+            + " a,String b){} public void appendChild(Object child){} }");
     write(
         sources,
         "com/google/gwt/dom/client/Document.java",
-        "package com.google.gwt.dom.client; public class Document { public static Document get(){return new Document();} public Element createElement(String tag){return new Element();} public Object createTextNode(String text){return text;} }");
+        "package com.google.gwt.dom.client; public class Document { public static Document"
+            + " get(){return new Document();} public Element createElement(String tag){return new"
+            + " Element();} public Object createTextNode(String text){return text;} }");
 
     write(
         sources,
@@ -459,6 +613,19 @@ public class UiBinderProcessorTest {
         "package com.google.gwt.resources.client; public interface ClientBundle {\n"
             + "@java.lang.annotation.Target(java.lang.annotation.ElementType.METHOD)\n"
             + "@interface Source { String[] value(); } }");
+    write(
+        sources,
+        "com/google/gwt/resources/client/CssResource.java",
+        "package com.google.gwt.resources.client; public interface CssResource { String getName();"
+            + " String getText(); boolean ensureInjected(); }");
+    write(
+        sources,
+        "com/google/gwt/uibinder/client/UiFactory.java",
+        annotation("UiFactory", "METHOD"));
+    write(
+        sources,
+        "com/google/gwt/uibinder/client/UiTemplate.java",
+        annotation("UiTemplate", "TYPE").replace("{}", "{ String value(); }"));
     write(
         sources,
         "com/google/gwt/resources/client/TextResource.java",
@@ -489,7 +656,8 @@ public class UiBinderProcessorTest {
         sources,
         "com/google/gwt/dom/client/StyleInjector.java",
         "package com.google.gwt.dom.client;\n"
-            + "public class StyleInjector { public static void inject(String css) {} }\n");
+            + "public class StyleInjector { public static void inject(String css) {} public static"
+            + " void inject(String css, boolean immediate) {} }\n");
     write(
         sources,
         "com/google/gwt/event/dom/client/ClickEvent.java",
@@ -522,7 +690,8 @@ public class UiBinderProcessorTest {
         sources,
         "widgets/Panel.java",
         "package widgets; public class Panel {\n"
-            + "  public com.google.gwt.dom.client.Element getElement(){return new com.google.gwt.dom.client.Element();}\n"
+            + "  public com.google.gwt.dom.client.Element getElement(){return new"
+            + " com.google.gwt.dom.client.Element();}\n"
             + "  public void add(Object child) {}\n"
             + "}\n");
     write(
@@ -542,12 +711,15 @@ public class UiBinderProcessorTest {
             + "public class Button extends BaseButton<Integer> {\n"
             + "  @com.google.gwt.uibinder.client.UiConstructor\n"
             + "  public Button(Kind kind) {}\n"
-            + "  public void addClickHandler(com.google.gwt.event.dom.client.ClickHandler handler) {}\n"
+            + "  public void addClickHandler(com.google.gwt.event.dom.client.ClickHandler handler)"
+            + " {}\n"
             + "}\n");
     write(
         sources,
         "widgets/Choice.java",
-        "package widgets; public class Choice<T> { public static class Change<T> {} public interface Handler<T> { void onChange(Change<T> event); } public void addChangeHandler(Handler<T> handler) {} }");
+        "package widgets; public class Choice<T> { public static class Change<T> {} public"
+            + " interface Handler<T> { void onChange(Change<T> event); } public void"
+            + " addChangeHandler(Handler<T> handler) {} }");
     write(sources, "fixture/Sample.java", owner);
     write(
         sources,
@@ -555,6 +727,7 @@ public class UiBinderProcessorTest {
         "package widgets.images; public class Picture extends widgets.Panel {}");
     write(sources, "fixture/Sample.ui.xml", template);
 
+    for (var entry : extra.entrySet()) write(sources, entry.getKey(), entry.getValue());
     final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     final DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
     try (StandardJavaFileManager files =
@@ -583,7 +756,8 @@ public class UiBinderProcessorTest {
   private static String sampleOwner(final String event) {
     return "package fixture;\n"
         + "public class Sample {\n"
-        + "  interface Binder extends com.google.gwt.uibinder.client.UiBinder<widgets.Panel, Sample> {}\n"
+        + "  interface Binder extends com.google.gwt.uibinder.client.UiBinder<widgets.Panel,"
+        + " Sample> {}\n"
         + "  @com.google.gwt.uibinder.client.UiField widgets.Button action;\n"
         + "  @com.google.gwt.uibinder.client.UiHandler(\"action\")\n"
         + "  void onAction("

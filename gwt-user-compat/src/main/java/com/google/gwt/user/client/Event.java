@@ -33,6 +33,58 @@ import com.google.gwt.dom.client.NativeEvent;
  */
 public class Event extends NativeEvent {
 
+  public interface NativePreviewHandler extends com.google.gwt.event.shared.EventHandler {
+    void onPreviewNativeEvent(NativePreviewEvent event);
+  }
+
+  public static final class NativePreviewEvent
+      extends com.google.gwt.event.shared.GwtEvent<NativePreviewHandler> {
+    private static final Type<NativePreviewHandler> TYPE = new Type<>();
+    private final NativeEvent event;
+    private boolean canceled, consumed;
+
+    NativePreviewEvent(NativeEvent event) {
+      this.event = event;
+    }
+
+    public NativeEvent getNativeEvent() {
+      return event;
+    }
+
+    public int getTypeInt() {
+      return Event.getTypeInt(event.getType());
+    }
+
+    public void cancel() {
+      canceled = true;
+    }
+
+    public void consume() {
+      consumed = true;
+    }
+
+    public boolean isCanceled() {
+      return canceled;
+    }
+
+    public boolean isConsumed() {
+      return consumed;
+    }
+
+    public Type<NativePreviewHandler> getAssociatedType() {
+      return TYPE;
+    }
+
+    protected void dispatch(NativePreviewHandler handler) {
+      handler.onPreviewNativeEvent(this);
+    }
+  }
+
+  public static com.google.gwt.event.shared.HandlerRegistration addNativePreviewHandler(
+      NativePreviewHandler handler) {
+    return BrowserEventBridge.preview(handler);
+  }
+
   public static final int ONBLUR = 0x01000;
   public static final int ONCHANGE = 0x00400;
   public static final int ONCLICK = 0x00001;
@@ -133,17 +185,27 @@ public class Event extends NativeEvent {
         return ONSCROLL;
       case "touchstart":
         return ONTOUCHSTART;
+      case "touchmove":
+        return ONTOUCHMOVE;
+      case "touchend":
+        return ONTOUCHEND;
+      case "touchcancel":
+        return ONTOUCHCANCEL;
       default:
         return -1;
     }
   }
 
   public static int getEventsSunk(final com.google.gwt.dom.client.Element element) {
-    return 0;
+    return BrowserEventBridge.bits(element);
   }
 
   public static void sinkEvents(
       final com.google.gwt.dom.client.Element element, final int eventBits) {
-    // No central dispatcher to register with; listeners bind on handler registration.
+    BrowserEventBridge.sinkBits(element, eventBits);
+  }
+
+  public static void sinkBitlessEvent(Element element, String name) {
+    BrowserEventBridge.sink(element, name);
   }
 }

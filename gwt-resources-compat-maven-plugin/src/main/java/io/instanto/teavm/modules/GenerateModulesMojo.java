@@ -282,20 +282,32 @@ public class GenerateModulesMojo extends AbstractMojo {
       }
       final String text = Files.readString(file, StandardCharsets.UTF_8);
       final String method = methods.group(2);
-      java.append("public com.google.gwt.resources.client.TextResource ")
+      java.append("private static final com.google.gwt.resources.client.TextResource resource_")
           .append(method)
-          .append("() { return new com.google.gwt.resources.client.TextResource() {\n")
+          .append(" = new com.google.gwt.resources.client.TextResource() {\n")
           .append("public String getName() { return \"")
           .append(method)
           .append("\"; }\n")
-          .append("public String getText() { StringBuilder text = new StringBuilder();\n");
-      // Separate append calls avoid the class-file limit on a single string constant.
-      for (int start = 0; start < text.length(); start += 8000) {
+          .append("private final String value = loadText();\n")
+          .append("public String getText() { return value; }\n")
+          .append("private String loadText() { StringBuilder text = new StringBuilder();\n");
+      // Build once, avoiding both constant-size limits and splitting UTF-16 surrogate pairs.
+      for (int start = 0; start < text.length(); ) {
+        int end = Math.min(start + 8000, text.length());
+        if (end < text.length()
+            && Character.isHighSurrogate(text.charAt(end - 1))
+            && Character.isLowSurrogate(text.charAt(end))) end--;
         java.append("text.append(\"")
-            .append(javaLiteral(text.substring(start, Math.min(start + 8000, text.length()))))
+            .append(javaLiteral(text.substring(start, end)))
             .append("\");\n");
+        start = end;
       }
-      java.append("return text.toString(); }\n}; }\n");
+      java.append(
+              "return text.toString(); }\n};\npublic com.google.gwt.resources.client.TextResource ")
+          .append(method)
+          .append("() { return resource_")
+          .append(method)
+          .append("; }\n");
     }
     long declarations =
         Pattern.compile("\\bTextResource\\s+\\w+\\(\\)\\s*;").matcher(source).results().count();

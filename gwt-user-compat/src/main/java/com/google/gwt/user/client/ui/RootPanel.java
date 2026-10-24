@@ -34,8 +34,6 @@ import java.util.Set;
 /**
  * The panels that wrap elements already on the page.
  *
- * <p>Two things here are less obvious than they look, and both were missing.
- *
  * <p>A panel is cached per element, because it owns the widgets added to it. Returning a fresh
  * panel for a second call on the same id would hand back something that shares an element with the
  * first but knows nothing of its children: clearing one would leave the other's widgets on the
@@ -85,6 +83,10 @@ public final class RootPanel extends ComplexPanel {
     if (existing != null && existing.getElement().unwrap() == element.unwrap()) {
       return existing;
     }
+    if (existing != null) {
+      ROOTS.remove(id);
+      detachNow(existing);
+    }
     final RootPanel created = new RootPanel(element);
     ROOTS.put(id, created);
     // A panel wrapping an element has no parent widget to detach it, so it asks
@@ -119,15 +121,14 @@ public final class RootPanel extends ComplexPanel {
       detach(widget);
     } finally {
       TO_DETACH.remove(widget);
+      ROOTS.values().removeIf(root -> root == widget);
+      if (bodyRoot == widget) bodyRoot = null;
     }
   }
 
   /** Detaches everything registered. Called as the page closes. */
   public static void detachWidgets() {
-    for (final Widget widget : new LinkedHashSet<>(TO_DETACH)) {
-      detach(widget);
-    }
-    TO_DETACH.clear();
+    Lifecycle.forEach(new LinkedHashSet<>(TO_DETACH), RootPanel::detachNow);
   }
 
   private static void detach(final Widget widget) {

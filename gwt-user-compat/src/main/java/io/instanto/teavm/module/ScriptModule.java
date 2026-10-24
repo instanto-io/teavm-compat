@@ -25,28 +25,10 @@ import org.teavm.jso.JSBody;
 import org.teavm.jso.JSObject;
 
 /**
- * A group of browser assets, and a way to know when they are usable.
- *
- * <p>This is the part GWT's module system does not have. A {@code .gwt.xml} says what to load and
- * what depends on what at compile time, but nothing says when a library is <em>ready</em>:
- * onModuleLoad returns void, so a module cannot report that its own initialisation is still in
- * flight, and nothing can wait for it. GWT once could -- its script element took a JavaScript block
- * that it polled before starting the application -- and the module parser still carries the notice
- * that the feature was withdrawn: "Injected scripts no longer use an associated JavaScript block;
- * ignoring." What replaced it, ScriptInjector, offers no ordering and no completion signal at all.
- *
- * <p>Without one, every widget invents the same workaround: ask whether the library has appeared,
- * and if not, poll on a timer until it does or a timeout gives up quietly. Four widgets here did
- * exactly that, each with its own interval and its own silent deadline. This replaces all of it
- * with the browser's own answer -- a script element reports when it has run, and when it has
- * failed.
- *
- * <p>Three things follow from that, all of which were previously left to each caller: scripts in
- * one module load in the order declared, because each waits for the one before; a module that
- * cannot load says so once, naming itself and the file, rather than timing out into silence; and a
- * library already on the page is recognised without loading anything, so an application that brings
- * its own copy is never made to take ours. That last point is what keeps the module system
- * optional.
+ * Loads a module's scripts in declaration order and reports readiness once. Stylesheets are
+ * inserted in declaration order but readiness does not wait for their downloads. Existing scripts
+ * owned by the host page must have finished loading before this module starts; supply a presence
+ * check to validate their API. ScriptInjector also offers loading callbacks.
  */
 public final class ScriptModule {
 
@@ -69,6 +51,20 @@ public final class ScriptModule {
   private boolean started;
   private boolean ready;
   private boolean failed;
+  private final List<java.util.function.Consumer<Throwable>> failureHandlers = new ArrayList<>();
+  private Throwable failure;
+
+  public ScriptModule onFailure(java.util.function.Consumer<Throwable> handler) {
+    if (failure != null) handler.accept(failure);
+    else if (!ready) failureHandlers.add(handler);
+    return this;
+  }
+
+  /** Like whenReady, with a removable subscription for widgets detached before loading finishes. */
+  public com.google.gwt.event.shared.HandlerRegistration addReadyHandler(Runnable action) {
+    whenReady(action);
+    return () -> waiting.remove(action);
+  }
 
   private ScriptModule(final String name) {
     this.name = name;
@@ -79,7 +75,7 @@ public final class ScriptModule {
     return new ScriptModule(name);
   }
 
-  /** Adds a stylesheet. Order does not matter for these, so they are not chained. */
+  /** Adds a stylesheet in cascade order; downloads are not chained. */
   public ScriptModule stylesheet(final String href) {
     stylesheets.add(href);
     return this;
@@ -173,15 +169,34 @@ public final class ScriptModule {
     ready = true;
     final List<Runnable> pending = new ArrayList<>(waiting);
     waiting.clear();
+    failureHandlers.clear();
+    java.util.Set<Throwable> failures = new java.util.LinkedHashSet<>();
     for (final Runnable action : pending) {
-      action.run();
+      try {
+        action.run();
+      } catch (Throwable error) {
+        failures.add(error);
+      }
     }
+    if (!failures.isEmpty()) throw new com.google.gwt.event.shared.UmbrellaException(failures);
   }
 
   private void fail(final String src) {
     failed = true;
     waiting.clear();
+    failure = new IllegalStateException("Module " + name + " could not load " + src);
+    List<java.util.function.Consumer<Throwable>> handlers = new ArrayList<>(failureHandlers);
+    failureHandlers.clear();
     report(name, src);
+    java.util.Set<Throwable> failures = new java.util.LinkedHashSet<>();
+    for (var handler : handlers) {
+      try {
+        handler.accept(failure);
+      } catch (Throwable error) {
+        failures.add(error);
+      }
+    }
+    if (!failures.isEmpty()) throw new com.google.gwt.event.shared.UmbrellaException(failures);
   }
 
   @JSBody(
@@ -204,30 +219,24 @@ public final class ScriptModule {
               + "}")
   private static native void addStylesheet(String href);
 
-  /**
-   * Adds a script and reports how it went.
-   *
-   * <p>An existing tag is reused rather than duplicated, so two modules sharing a dependency load
-   * it once and both hear about it. The handlers are attached before the src is set: afterwards is
-   * a race a cached file can already have won.
-   */
+  /** Shared per-element load state releases all callbacks after success or failure. */
   @JSBody(
       params = {"src", "onLoad", "onError"},
       script =
-          "var existing = document.querySelector('script[src=\"' + src + '\"]');"
-              + "if (existing) {"
-              + "  if (existing.getAttribute('data-loaded') === 'true') { onLoad.run(); return; }"
-              + "  existing.addEventListener('load', function () { onLoad.run(); });"
-              + "  existing.addEventListener('error', function () { onError.run(); });"
-              + "  return;"
-              + "}"
-              + "var script = document.createElement('script');"
-              + "script.addEventListener('load', function () {"
-              + "  script.setAttribute('data-loaded', 'true');"
-              + "  onLoad.run();"
-              + "});"
-              + "script.addEventListener('error', function () { onError.run(); });"
-              + "script.src = src;"
-              + "document.head.appendChild(script);")
+          "var url=new URL(src,document.baseURI).href;var all=document.scripts, script=null;for(var"
+              + " i=0;i<all.length;i++){if(all[i].src===url){script=all[i];break;}}if(script){var"
+              + " state=script.__instantoLoad;if(!state || state.status===1){onLoad.run();return;}"
+              + "if(state.status===2){onError.run();return;}"
+              + "state.waiters.push({ok:onLoad,fail:onError});return;}"
+              + "script=document.createElement('script');var"
+              + " state={status:0,waiters:[{ok:onLoad,fail:onError}]};script.__instantoLoad=state;function"
+              + " done(ok){if(state.status)return;state.status=ok?1:2;"
+              + "script.removeEventListener('load',loaded);script.removeEventListener('error',failed);var"
+              + " waiters=state.waiters;state.waiters=[];var error=null;for(var"
+              + " i=0;i<waiters.length;i++){try{(ok?waiters[i].ok:waiters[i].fail).run();}catch(e){if(!error)error=e;}}if(error)throw"
+              + " error;}function loaded(){done(true);}function failed(){done(false);}"
+              + "script.addEventListener('load',loaded);script.addEventListener('error',failed);var"
+              + " nonce=document.querySelector('script[nonce]');if(nonce)script.nonce=nonce.nonce;"
+              + "script.src=src;document.head.appendChild(script);")
   private static native void addScript(String src, JsAction onLoad, JsAction onError);
 }

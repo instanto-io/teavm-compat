@@ -8,6 +8,14 @@ import org.junit.Test;
 
 public class GenerateBindingsTest {
   @org.junit.Test
+  public void implicitNativeMethodsHaveExplicitTeaVmAnnotations() {
+    String source =
+        "import jsinterop.annotations.*; @JsType(isNative=true) class Child extends Parent implements Contract { public native void add(); }";
+    String result = GenerateBindings.transform(source);
+    org.junit.Assert.assertTrue(result, result.contains("@JSMethod\n    public native void add()"));
+  }
+
+  @org.junit.Test
   public void wrapsNativeDomPropertyAccessors() {
     String result =
         GenerateBindings.transform(

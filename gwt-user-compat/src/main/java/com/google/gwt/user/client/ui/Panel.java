@@ -24,8 +24,6 @@
  */
 package com.google.gwt.user.client.ui;
 
-import java.util.Iterator;
-
 /** Base class for widgets that contain other widgets. */
 public abstract class Panel extends Widget implements HasWidgets {
 
@@ -38,11 +36,9 @@ public abstract class Panel extends Widget implements HasWidgets {
 
   @Override
   public void clear() {
-    final Iterator<Widget> it = iterator();
-    while (it.hasNext()) {
-      it.next();
-      it.remove();
-    }
+    java.util.List<Widget> children = new java.util.ArrayList<>();
+    for (Widget child : this) children.add(child);
+    Lifecycle.forEach(children, child -> remove(child));
   }
 
   @Override
@@ -68,11 +64,13 @@ public abstract class Panel extends Widget implements HasWidgets {
 
   @Override
   protected void doDetachChildren() {
-    for (final Widget child : this) {
-      if (child.isAttached()) {
-        child.onDetach();
-      }
-    }
+    java.util.List<Widget> children = new java.util.ArrayList<>();
+    for (Widget child : this) children.add(child);
+    Lifecycle.forEach(
+        children,
+        child -> {
+          if (child.isAttached()) child.onDetach();
+        });
   }
 
   /** Releases a child: detaches it and clears its parent. */

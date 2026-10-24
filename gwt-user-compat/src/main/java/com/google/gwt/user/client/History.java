@@ -26,85 +26,113 @@ package com.google.gwt.user.client;
 
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
-import org.teavm.jso.browser.Window;
-import org.teavm.jso.dom.events.Event;
-import org.teavm.jso.dom.events.EventListener;
+import org.teavm.jso.*;
 
-/**
- * History-token encoding, and notification when the token changes.
- *
- * <p>The widget library itself needs only the encoding, for {@code setTargetHistoryToken()} on
- * Anchor and LinkedGroupItem, and this class used to stop there on the grounds that routing belongs
- * to an application rather than a widget library. That holds right up until an application is
- * compiled for this backend: a showcase routing on the token would render its first page and then
- * ignore the address bar entirely. The change notification is the whole of what routing needs, so
- * it is emulated over hashchange.
- */
+/** Decoded history tokens with synchronous programmatic events and removable browser listeners. */
 public final class History {
+  private static final HandlerManager handlers = new HandlerManager(new Object());
+  private static String lastToken;
+  private static org.teavm.jso.dom.events.Registration registration;
 
   private History() {}
 
-  /**
-   * Escapes the characters that are not legal in a URL fragment. Mirrors GWT's encoding: {@code ?},
-   * {@code #}, {@code &}, {@code ;}, {@code +} are escaped, everything else is left alone so tokens
-   * stay readable.
-   */
-  public static String encodeHistoryToken(final String historyToken) {
-    if (historyToken == null) {
-      return "";
-    }
-    return historyToken
-        .replace("?", "%3F")
-        .replace("#", "%23")
-        .replace("&", "%26")
-        .replace(";", "%3B")
-        .replace("+", "%2B");
+  @JSBody(
+      params = "token",
+      script =
+          "return encodeURI(token == null ? '' : token).replace(/[?#&;+]/g,function(c){return '%' +"
+              + " c.charCodeAt(0).toString(16).toUpperCase();});")
+  public static native String encodeHistoryToken(String token);
+
+  @JSBody(
+      params = "token",
+      script = "try{return decodeURIComponent(token);}catch(e){return token;}")
+  private static native String decode(String token);
+
+  @JSBody(script = "return window.location.hash;")
+  private static native String hash();
+
+  public static String getToken() {
+    String value = hash();
+    return value.isEmpty() ? "" : decode(value.substring(1));
   }
 
-  /** Sets the history token, which for a hash-based app navigates the page. */
-  public static void newItem(final String token) {
+  public static void newItem(String token) {
     newItem(token, true);
   }
 
-  public static void newItem(final String token, final boolean issueEvent) {
-    setHash(token == null ? "" : token);
+  public static void newItem(String token, boolean issueEvent) {
+    change(token, issueEvent, false);
   }
 
-  /**
-   * Notified whenever the history token changes, as GWT's History is.
-   *
-   * <p>An application routes on this, so without it a showcase compiled for TeaVM would render its
-   * first page and then never respond to the address bar.
-   */
-  public static HandlerRegistration addValueChangeHandler(
-      final ValueChangeHandler<String> handler) {
-    if (handler == null) {
-      return () -> {};
+  public static void replaceItem(String token) {
+    replaceItem(token, true);
+  }
+
+  public static void replaceItem(String token, boolean issueEvent) {
+    change(token, issueEvent, true);
+  }
+
+  private static void change(String token, boolean issueEvent, boolean replace) {
+    token = token == null ? "" : token;
+    if (token.equals(getToken())) return;
+    changeHash(encodeHistoryToken(token), replace);
+    lastToken = token;
+    if (issueEvent) fireCurrentHistoryState();
+  }
+
+  @JSBody(
+      params = {"token", "replace"},
+      script =
+          "var url=window.location.pathname+window.location.search+'#'+token;if(replace)window.history.replaceState(null,'',url);else"
+              + " window.history.pushState(null,'',url);")
+  private static native void changeHash(String token, boolean replace);
+
+  @JSBody(script = "window.history.back();")
+  public static native void back();
+
+  @JSBody(script = "window.history.forward();")
+  public static native void forward();
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static HandlerRegistration addValueChangeHandler(ValueChangeHandler<String> handler) {
+    java.util.Objects.requireNonNull(handler);
+    var added =
+        handlers.addHandler(
+            (com.google.gwt.event.shared.GwtEvent.Type) ValueChangeEvent.getType(), handler);
+    if (registration == null) {
+      lastToken = getToken();
+      registration =
+          org.teavm.jso.browser.Window.current()
+              .onEvent(
+                  "hashchange",
+                  event ->
+                      com.google.gwt.core.client.Scheduler.runEntry(
+                          () -> {
+                            String token = getToken();
+                            if (!token.equals(lastToken)) {
+                              lastToken = token;
+                              fireCurrentHistoryState();
+                            }
+                          }));
     }
-    final EventListener<Event> listener =
-        event -> handler.onValueChange(new TokenChange(getToken()));
-    Window.current().addEventListener("hashchange", listener);
-    return () -> Window.current().removeEventListener("hashchange", listener);
+    return () -> {
+      added.removeHandler();
+      if (handlers.getHandlerCount(ValueChangeEvent.getType()) == 0 && registration != null) {
+        registration.dispose();
+        registration = null;
+      }
+    };
   }
 
-  /** ValueChangeEvent's constructor is protected, as it is in GWT. */
+  public static void fireCurrentHistoryState() {
+    handlers.fireEvent(new TokenChange(getToken()));
+  }
+
   private static final class TokenChange extends ValueChangeEvent<String> {
-    TokenChange(final String token) {
+    TokenChange(String token) {
       super(token);
     }
   }
-
-  public static String getToken() {
-    final String hash = currentHash();
-    return hash == null || hash.isEmpty() ? "" : hash.substring(1);
-  }
-
-  @org.teavm.jso.JSBody(
-      params = {"t"},
-      script = "window.location.hash = t;")
-  private static native void setHash(String t);
-
-  @org.teavm.jso.JSBody(script = "return window.location.hash;")
-  private static native String currentHash();
 }

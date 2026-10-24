@@ -31,7 +31,9 @@ import java.util.Set;
 /** Feeds row data to one or more views. */
 public abstract class AbstractDataProvider<T> {
 
-  private final Set<HasData<T>> displays = new HashSet<>();
+  private final java.util.Map<HasData<T>, com.google.gwt.event.shared.HandlerRegistration>
+      registrations = new java.util.LinkedHashMap<>();
+  private final Set<HasData<T>> displays = registrations.keySet();
   private ProvidesKey<T> keyProvider;
   private int rowCount = -1;
   private boolean rowCountExact;
@@ -48,16 +50,22 @@ public abstract class AbstractDataProvider<T> {
     if (display == null) {
       throw new IllegalArgumentException("display must not be null");
     }
-    displays.add(display);
-    if (rowCount >= 0) {
-      display.setRowCount(rowCount, rowCountExact);
+    if (registrations.containsKey(display))
+      throw new IllegalStateException("Display already added");
+    var registration = display.addRangeChangeHandler(event -> onRangeChanged(display));
+    registrations.put(display, registration);
+    try {
+      if (rowCount >= 0) display.setRowCount(rowCount, rowCountExact);
+      onRangeChanged(display);
+    } catch (RuntimeException | Error failure) {
+      removeDataDisplay(display);
+      throw failure;
     }
-    onRangeChanged(display);
-    display.addRangeChangeHandler(event -> onRangeChanged(display));
   }
 
   public void removeDataDisplay(final HasData<T> display) {
-    displays.remove(display);
+    var registration = registrations.remove(display);
+    if (registration != null) registration.removeHandler();
   }
 
   public Set<HasData<T>> getDataDisplays() {

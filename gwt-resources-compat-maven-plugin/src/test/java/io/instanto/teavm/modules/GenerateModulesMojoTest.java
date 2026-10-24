@@ -23,12 +23,14 @@ public class GenerateModulesMojoTest {
     Files.writeString(
         directory.resolve("Locales.java"),
         """
-                package example.client;
-                public interface Locales extends ClientBundle {
-                  @Source("fr.js") TextResource french();
-                }
-                """);
+        package example.client;
+        import com.google.gwt.resources.client.*;
+        public interface Locales extends ClientBundle {
+          @Source("fr.js") TextResource french();
+        }
+        """);
     String script = "// quote \\\" slash \\\\ newline\n" + "x".repeat(70000);
+    script = "x".repeat(7999) + "😀" + script;
     Files.writeString(directory.resolve("fr.js"), script);
     Path output = temporary.newFolder("inline-java").toPath();
     Path classes = temporary.newFolder("inline-classes").toPath();
@@ -51,6 +53,40 @@ public class GenerateModulesMojoTest {
     assertTrue(provider.contains("TextResource french()"));
     assertTrue(provider.contains("text.append("));
     assertTrue(provider.length() > script.length());
+    Path stubs = source.resolve("com/google/gwt/resources/client");
+    Files.createDirectories(stubs);
+    Files.writeString(
+        stubs.resolve("ClientBundle.java"),
+        "package com.google.gwt.resources.client; public interface ClientBundle { @interface Source"
+            + " {String value();} }");
+    Files.writeString(
+        stubs.resolve("TextResource.java"),
+        "package com.google.gwt.resources.client; public interface TextResource { String getName();"
+            + " String getText(); }");
+    int result =
+        javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(
+                null,
+                null,
+                null,
+                "-proc:none",
+                "-d",
+                classes.toString(),
+                stubs.resolve("ClientBundle.java").toString(),
+                stubs.resolve("TextResource.java").toString(),
+                directory.resolve("Locales.java").toString(),
+                output.resolve("example/client/Locales_TeaVM.java").toString());
+    assertEquals(0, result);
+    try (var loader = new java.net.URLClassLoader(new java.net.URL[] {classes.toUri().toURL()})) {
+      Object bundle =
+          loader.loadClass("example.client.Locales_TeaVM").getConstructor().newInstance();
+      Object text = bundle.getClass().getMethod("french").invoke(bundle);
+      assertSame(text, bundle.getClass().getMethod("french").invoke(bundle));
+      var accessor =
+          loader.loadClass("com.google.gwt.resources.client.TextResource").getMethod("getText");
+      assertSame(accessor.invoke(text), accessor.invoke(text));
+      assertEquals(script, accessor.invoke(text));
+    }
   }
 
   @Test
@@ -61,13 +97,13 @@ public class GenerateModulesMojoTest {
     Files.writeString(
         directory.resolve("Theme.gwt.xml"),
         """
-                <module>
-                  <public path="public"/>
-                  <stylesheet src="css/theme.css"/>
-                  <script src="js/core.js"/>
-                  <script src="js/extension.js"/>
-                </module>
-                """);
+        <module>
+          <public path="public"/>
+          <stylesheet src="css/theme.css"/>
+          <script src="js/core.js"/>
+          <script src="js/extension.js"/>
+        </module>
+        """);
     List<String> resources =
         List.of(
             "js/core.js",
@@ -116,26 +152,26 @@ public class GenerateModulesMojoTest {
     Files.writeString(
         directory.resolve("Editor.gwt.xml"),
         """
-                <module>
-                  <public path="public">
-                    <include name="**/*"/>
-                    <exclude name="private/**"/>
-                  </public>
-                  <stylesheet src="skin/editor.css"/>
-                  <script src="vendor/core.js"/>
-                  <script src="vendor/editor.js"/>
-                </module>
-                """);
+        <module>
+          <public path="public">
+            <include name="**/*"/>
+            <exclude name="private/**"/>
+          </public>
+          <stylesheet src="skin/editor.css"/>
+          <script src="vendor/core.js"/>
+          <script src="vendor/editor.js"/>
+        </module>
+        """);
     Files.writeString(
         directory.resolve("EditorAssets.java"),
         """
-                package example.client;
-                interface EditorAssets extends ClientBundle {
-                  @Source("internal/extension.js") TextResource extension();
-                  @Source({"icons/one.svg", "icons/two.svg"}) DataResource icons();
-                  @Source("strings/messages.json") TextResource messages();
-                }
-                """);
+        package example.client;
+        interface EditorAssets extends ClientBundle {
+          @Source("internal/extension.js") TextResource extension();
+          @Source({"icons/one.svg", "icons/two.svg"}) DataResource icons();
+          @Source("strings/messages.json") TextResource messages();
+        }
+        """);
     for (String file :
         List.of(
             "public/skin/editor.css",

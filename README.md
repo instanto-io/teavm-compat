@@ -14,7 +14,7 @@ rewriting its imports.
 | `elemental2-compat` | Generated TeaVM bindings for Elemental2 core, DOM, promises, SVG, storage, IndexedDB, WebGL and media APIs |
 | `gwt-user-compat` | A TeaVM implementation of the supported legacy `com.google.gwt.*` and `com.google.web.bindery.*` client APIs |
 | `gwt-modular-services-compat` | TeaVM implementations of the supported `org.gwtproject.safehtml`, `i18n`, and `editor` APIs |
-| `gwt-uibinder-processor` | A javac annotation processor for supported UiBinder templates, ClientBundle text resources and default string constants |
+| `gwt-uibinder-processor` | A javac annotation processor for supported UiBinder templates, ClientBundle resources, SafeHtmlTemplates and default string constants |
 | `gwt-resources-compat-maven-plugin` | Packages widget CSS, scripts, fonts and images, generates code to load them, and copies them into an application's website folder |
 | `jsinterop-binding-generator` | A build tool that adapts supported JsInterop declarations and JSNI bodies to TeaVM JSO |
 
@@ -28,6 +28,13 @@ including DOM, SVG, storage, IndexedDB, WebGL and media APIs. The
 [UiBinder processor guide](gwt-uibinder-processor/README.md) and
 [resource plugin guide](gwt-resources-compat-maven-plugin/README.md) show the
 two build tools in use.
+
+## Library ports
+
+[teavm-charba](https://github.com/instanto-io/teavm-charba) adapts Charba core and
+provides a six-example chart showcase. [Tealeaf](https://github.com/instanto-io/tealeaf)
+maintains the gwty-leaflet Java API with a Leaflet 1.9.4 map demo. Each has its own
+build, coordinates, tested-coverage notes and resource-ownership guide.
 
 ## Use the compatibility JAR instead of the upstream JAR
 
@@ -64,6 +71,9 @@ differently.
 The project includes browser contracts for the behavior it supports. Those
 contracts compile with TeaVM and run in a browser, covering both API shape and
 observable browser behavior.
+
+See [GWT compatibility coverage and ownership](docs/GWT-COMPATIBILITY.md) for the
+supported porting APIs, resource lifetimes, scheduling boundaries and limits.
 
 ## Use UiBinder with TeaVM
 

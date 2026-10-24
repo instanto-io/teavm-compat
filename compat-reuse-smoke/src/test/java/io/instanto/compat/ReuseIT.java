@@ -17,7 +17,14 @@ import org.junit.runners.Parameterized;
 public class ReuseIT {
   @Parameterized.Parameters(name = "{0}")
   public static Object[] browsers() {
-    return new Object[] {"chromium", "firefox", "webkit"};
+    String[] engines =
+        System.getProperty("compat.reuse.browsers", "chromium,firefox,webkit").split(",");
+    for (int i = 0; i < engines.length; i++) {
+      engines[i] = engines[i].trim();
+      if (!Set.of("chromium", "firefox", "webkit").contains(engines[i]))
+        throw new IllegalArgumentException("Unknown reuse-test browser: " + engines[i]);
+    }
+    return engines;
   }
 
   private final String engine;
@@ -94,7 +101,8 @@ public class ReuseIT {
                 new FilePayload(
                     "probe.txt", "text/plain", "uploaded text".getBytes(StandardCharsets.UTF_8)));
         page.waitForFunction(
-            "document.querySelector('#browser-apis').getAttribute('data-file') === 'uploaded text'");
+            "document.querySelector('#browser-apis').getAttribute('data-file') === 'uploaded"
+                + " text'");
         page.locator("#push-history").click();
         assertTrue(page.url().endsWith("#detail"));
         page.goBack();

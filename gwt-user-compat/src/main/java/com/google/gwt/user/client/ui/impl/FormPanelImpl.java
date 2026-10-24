@@ -26,31 +26,45 @@ package com.google.gwt.user.client.ui.impl;
 
 import com.google.gwt.dom.client.Element;
 import org.teavm.jso.JSBody;
-import org.teavm.jso.dom.events.Event;
 import org.teavm.jso.dom.html.HTMLElement;
 
 /** Wires a form element's submit and its target frame's load back to the host panel. */
 public class FormPanelImpl {
 
-  /** Hooks the form's submit event and the frame's load event to {@code host}. */
+  private org.teavm.jso.dom.events.Registration submitRegistration;
+  private org.teavm.jso.dom.events.Registration loadRegistration;
+
+  /** One host owns these registrations until unhookEvents or the next hookEvents call. */
   public void hookEvents(final Element iframe, final Element form, final FormPanelImplHost host) {
-    if (form != null) {
-      form.unwrap()
-          .addEventListener(
-              "submit",
-              (Event event) -> {
-                if (!host.onFormSubmit()) {
-                  event.preventDefault();
-                }
-              });
-    }
-    if (iframe != null) {
-      iframe.unwrap().addEventListener("load", (Event event) -> host.onFrameLoad());
-    }
+    unhookEvents(iframe, form);
+    if (form != null)
+      submitRegistration =
+          form.unwrap()
+              .onEvent(
+                  "submit",
+                  event ->
+                      com.google.gwt.core.client.Scheduler.runEntry(
+                          () -> {
+                            if (!host.onFormSubmit()) event.preventDefault();
+                          }));
+    if (iframe != null)
+      loadRegistration =
+          iframe
+              .unwrap()
+              .onEvent(
+                  "load",
+                  event -> com.google.gwt.core.client.Scheduler.runEntry(host::onFrameLoad));
   }
 
   public void unhookEvents(final Element iframe, final Element form) {
-    // Listeners are bound to the elements' lifetime; nothing to unhook explicitly.
+    if (submitRegistration != null) {
+      submitRegistration.dispose();
+      submitRegistration = null;
+    }
+    if (loadRegistration != null) {
+      loadRegistration.dispose();
+      loadRegistration = null;
+    }
   }
 
   public String getContents(final Element iframe) {

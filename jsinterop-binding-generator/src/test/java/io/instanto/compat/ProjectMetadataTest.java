@@ -55,8 +55,7 @@ public class ProjectMetadataTest {
       String groupId = xpath.evaluate("groupId", managed.item(i));
       String artifactId = xpath.evaluate("artifactId", managed.item(i));
       assertEquals(artifactId, "io.instanto", groupId);
-      assertTrue(
-          artifactId + " is not built by this project", ownArtifacts.contains(artifactId));
+      assertTrue(artifactId + " is not built by this project", ownArtifacts.contains(artifactId));
     }
   }
 }

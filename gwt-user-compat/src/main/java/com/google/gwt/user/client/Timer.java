@@ -35,15 +35,19 @@ public abstract class Timer {
   public abstract void run();
 
   public void schedule(final int delayMillis) {
+    if (delayMillis < 0) throw new IllegalArgumentException("Negative delay");
     cancel();
     repeating = false;
     handle = Window.setTimeout(this::fire, delayMillis);
   }
 
   public void scheduleRepeating(final int periodMillis) {
+    if (periodMillis <= 0) throw new IllegalArgumentException("Nonpositive period");
     cancel();
     repeating = true;
-    handle = Window.setInterval(this::run, periodMillis);
+    handle =
+        Window.setInterval(
+            () -> com.google.gwt.core.client.Scheduler.runEntry(this::run), periodMillis);
   }
 
   public void cancel() {
@@ -60,6 +64,10 @@ public abstract class Timer {
 
   private void fire() {
     handle = -1;
-    run();
+    com.google.gwt.core.client.Scheduler.runEntry(this::run);
+  }
+
+  public boolean isRunning() {
+    return handle != -1;
   }
 }

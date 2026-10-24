@@ -27,21 +27,21 @@ fixtures live here and are not counted as upstream GWT parity checks.
 ## Running them
 
 ```
-mvn -pl gwt-user-compat-tests test
+mvn -pl gwt-user-compat-tests -am test
 ```
 
 They need Chrome. `teavm-junit` compiles the tests to JavaScript and runs them there,
 so this exercises the compiled artefact rather than the JVM.
 
-To check the portable Material contracts against the original GWT runtime, use
-the optional reference test profile:
+This repository does not contain the previously documented
+`native-gwt-baseline` profile or `gwt-api-browser-baseline` module. Original-GWT
+reference runs belong to the downstream widget repositories above. A passing
+TeaVM test alone is not evidence of upstream GWT parity.
 
-```sh
-mvn -Pnative-gwt-baseline -pl gwt-api-browser-baseline -am verify
-```
-
-This builds a test application, not a GWT compatibility distribution. The default
-reactor remains the TeaVM libraries and their tests.
+Generated-resource tests run javac's UiBinder processor, then load its providers
+through `GWT.create` in the TeaVM browser. Lifecycle regressions exercise detach
+failures, data-window bounds, handler cleanup, history and script reuse. Scheduling
+and panel tests cover queue ordering, cancellation, capture, previews and ownership.
 
 The TeaVM-specific tests also exercise canvas sizing, scaling and image export,
 typed string-array factories and file-input creation. Currency tests cover

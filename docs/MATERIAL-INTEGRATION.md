@@ -20,8 +20,8 @@ coordinates rather than private `material-SNAPSHOT` builds.
   by Material's original templates, plus subpackage-qualified widget names.
 - `instanto-teavm-classlib`, through `gwt-user-compat`, supplies class-library
   methods TeaVM lacks.
-- `gwt-api` contains portable assertions; the optional native GWT test
-  application checks their reference behaviour.
+- `gwt-api` contains portable assertions. Reference runs against original GWT
+  live in downstream widget test projects, not this reactor.
 
 The integration preserves the source-intake migration already in the checkout:
 Elemental2 inputs are resolved by Maven and modular GWT implementations live in
@@ -34,12 +34,13 @@ Validation on JDK 21:
 
 ```sh
 mvn clean install
-mvn -Pnative-gwt-baseline -pl gwt-api-browser-baseline -am verify
 ```
 
-The reactor passed 78 TeaVM browser checks, 21 UiBinder processor tests,
-20 binding-generator tests and three browser reuse tests. The optional original
-GWT reference passed 42 checks. The binding generator's reserved-name, varargs and native `Object` result
+The historical integration run recorded 78 TeaVM browser checks, 21 UiBinder processor tests,
+20 binding-generator tests and three browser reuse tests. A downstream original
+GWT reference run recorded 42 checks. These are historical counts, not the current
+reactor inventory. The previously documented `native-gwt-baseline` profile and
+`gwt-api-browser-baseline` module are absent from this repository. The binding generator's reserved-name, varargs and native `Object` result
 regressions are checked by its unit suite and real jQuery calls in the downstream
 Material browser tests.
 
@@ -61,8 +62,8 @@ and using separately wrapped handles as map keys. UiBinder now reuses
 `@UiField(provided = true)` instances and resolves handlers against the owner's
 declared generic field types.
 
-The Material generator registers the original jQuery callback declarations with
-`NativeCallbackBindings`. Supported callbacks receive wrapped DOM handles and
+Both the standalone binding CLI and Maven source adapter now register the original
+callback declarations through `BindingPipeline` and `NativeCallbackBindings`. Supported callbacks receive wrapped DOM handles and
 boxed primitive arguments, and retain their native identity for handler removal.
 Native DOM property getters use the same wrapping boundary. This does not imply
 support for every native field, callback shape or GWT API. Consumers must recompile

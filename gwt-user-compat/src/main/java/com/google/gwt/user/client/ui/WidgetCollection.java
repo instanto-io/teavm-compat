@@ -51,11 +51,14 @@ public class WidgetCollection implements Iterable<Widget> {
   }
 
   public boolean contains(final Widget widget) {
-    return widgets.contains(widget);
+    return indexOf(widget) >= 0;
   }
 
   public int indexOf(final Widget widget) {
-    return widgets.indexOf(widget);
+    for (int index = 0; index < widgets.size(); index++) {
+      if (widgets.get(index) == widget) return index;
+    }
+    return -1;
   }
 
   public Widget get(final int index) {
@@ -86,6 +89,33 @@ public class WidgetCollection implements Iterable<Widget> {
 
   @Override
   public Iterator<Widget> iterator() {
-    return widgets.iterator();
+    // Removing a logical child must also run the owner's DOM/lifecycle cleanup.
+    return new Iterator<Widget>() {
+      private int nextIndex;
+      private Widget current;
+      private boolean canRemove;
+
+      @Override
+      public boolean hasNext() {
+        return nextIndex < size();
+      }
+
+      @Override
+      public Widget next() {
+        if (!hasNext()) throw new NoSuchElementException();
+        current = widgets.get(nextIndex++);
+        canRemove = true;
+        return current;
+      }
+
+      @Override
+      public void remove() {
+        if (!canRemove) throw new IllegalStateException();
+        parent.remove(current);
+        nextIndex--;
+        current = null;
+        canRemove = false;
+      }
+    };
   }
 }

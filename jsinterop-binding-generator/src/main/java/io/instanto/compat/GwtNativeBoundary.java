@@ -222,8 +222,8 @@ public final class GwtNativeBoundary {
               + value
               + ")))";
       case "com.google.gwt.core.client.JsArrayNumber",
-              "com.google.gwt.core.client.JsArrayString",
-              "com.google.gwt.core.client.JsArrayMixed" ->
+          "com.google.gwt.core.client.JsArrayString",
+          "com.google.gwt.core.client.JsArrayMixed" ->
           qualified(type, imports) + ".of(" + value + ")";
       default -> throw new IllegalArgumentException("Unsupported native GWT return: " + type);
     };

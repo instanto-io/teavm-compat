@@ -31,6 +31,31 @@ public final class DOM {
 
   private DOM() {}
 
+  public static void setEventListener(
+      com.google.gwt.dom.client.Element element, EventListener listener) {
+    BrowserEventBridge.setListener(element, listener);
+  }
+
+  public static void setCapture(com.google.gwt.dom.client.Element element) {
+    BrowserEventBridge.setCapture(element);
+  }
+
+  public static void releaseCapture(com.google.gwt.dom.client.Element element) {
+    BrowserEventBridge.releaseCapture(element);
+  }
+
+  public static Element getCaptureElement() {
+    return Element.as(BrowserEventBridge.getCapture());
+  }
+
+  public static void sinkEvents(com.google.gwt.dom.client.Element element, int bits) {
+    Event.sinkEvents(element, bits);
+  }
+
+  public static int getEventsSunk(com.google.gwt.dom.client.Element element) {
+    return Event.getEventsSunk(element);
+  }
+
   public static Element createFieldSet() {
     return Element.as(Document.get().createFieldSetElement());
   }
@@ -142,16 +167,6 @@ public final class DOM {
         return Event.UNDEFINED;
     }
   }
-
-  /**
-   * No-op. GWT registers an element with its central event dispatcher here; this layer binds
-   * listeners when a handler is added instead.
-   */
-  public static void setEventListener(
-      final com.google.gwt.dom.client.Element element, final Object listener) {}
-
-  public static void sinkEvents(
-      final com.google.gwt.dom.client.Element element, final int eventBits) {}
 
   private static com.google.gwt.dom.client.Element childAt(
       final com.google.gwt.dom.client.Element parent, final int index) {

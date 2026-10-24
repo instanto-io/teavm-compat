@@ -106,7 +106,7 @@ can publish its generated classes and descriptors in its TeaVM JAR; applications
 using those precompiled views do not regenerate them. Applications with their own
 UiBinder views configure the processor for those sources as well.
 
-The processor also emits providers for its supported text ClientBundle and
+The processor also emits providers for its supported ClientBundle, SafeHtmlTemplates and
 default string-constant interfaces. They use the same service-loading route.
 This does not implement arbitrary GWT deferred-binding rules, locale permutations
 or every UiBinder feature. See the [supported subset](../gwt-uibinder-processor/README.md#supported-features-and-limits).
@@ -122,8 +122,8 @@ jar tf target/hello-uibinder-1.0-SNAPSHOT.jar
 ```
 
 If generation is missing, check `proc=full`, the processor path and the template's
-package and name. The current processor warns and emits no provider when it
-cannot find a template; that warning is not a TeaVM fallback to GWT generation.
+package and name. The processor reports a compilation error when it
+cannot find a template; there is no fallback to GWT generation.
 An unsupported template construct should be resolved at Java compilation before
 investigating browser behaviour.
 

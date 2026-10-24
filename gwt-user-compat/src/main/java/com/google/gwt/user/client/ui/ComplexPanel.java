@@ -114,9 +114,15 @@ public abstract class ComplexPanel extends Panel implements IndexedPanel.ForIsWi
     if (child == null || child.getParent() != this) {
       return false;
     }
-    orphan(child);
-    child.getElement().removeFromParent();
-    getChildren().remove(child);
+    try {
+      orphan(child);
+    } finally {
+      try {
+        child.getElement().removeFromParent();
+      } finally {
+        getChildren().remove(child);
+      }
+    }
     return true;
   }
 
@@ -149,6 +155,7 @@ public abstract class ComplexPanel extends Panel implements IndexedPanel.ForIsWi
   public Iterator<Widget> iterator() {
     return new Iterator<Widget>() {
       private int index = -1;
+      private boolean removable;
 
       @Override
       public boolean hasNext() {
@@ -160,16 +167,21 @@ public abstract class ComplexPanel extends Panel implements IndexedPanel.ForIsWi
         if (!hasNext()) {
           throw new java.util.NoSuchElementException();
         }
+        removable = true;
         return getWidget(++index);
       }
 
       @Override
       public void remove() {
-        if (index < 0) {
+        if (!removable) {
           throw new IllegalStateException("next() has not been called");
         }
-        ComplexPanel.this.remove(getWidget(index));
-        index--;
+        removable = false;
+        try {
+          ComplexPanel.this.remove(getWidget(index));
+        } finally {
+          index--;
+        }
       }
     };
   }

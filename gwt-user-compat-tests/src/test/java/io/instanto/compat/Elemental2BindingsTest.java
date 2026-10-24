@@ -19,6 +19,24 @@ import org.teavm.junit.TeaVMTestRunner;
 @SkipJVM
 public class Elemental2BindingsTest {
   @Test
+  public void generatedGenericCallbacksResolveOverloadsAndConvertJavaValues() {
+    elemental2.core.JsArray<String> values = elemental2.core.JsArray.of("first", "second");
+    var selected = values.filter((value, index) -> value.equals("second"));
+    assertEquals(1, selected.length);
+    assertEquals("second", selected.getAt(0));
+    int[] calls = {0};
+    String found =
+        values.find(
+            (value, index, array) -> {
+              calls[0]++;
+              assertEquals(2, array.length);
+              return value.equals("second");
+            });
+    assertEquals("second", found);
+    assertEquals(2, calls[0]);
+  }
+
+  @Test
   public void svgPropertiesGeometryAndTransformsUseNativeObjects() {
     SVGSVGElement svg =
         (SVGSVGElement) DomGlobal.document.createElementNS("http://www.w3.org/2000/svg", "svg");

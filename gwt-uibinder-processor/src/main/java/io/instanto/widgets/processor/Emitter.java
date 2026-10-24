@@ -64,7 +64,8 @@ final class Emitter {
   private final Map<String, String> enclosingWidget = new LinkedHashMap<>();
 
   private final Map<String, String> styleClasses = new LinkedHashMap<>();
-  private String styleCss;
+  private final StringBuilder styleDeclarations = new StringBuilder();
+  private final StringBuilder styleInitialization = new StringBuilder();
   private final Map<String, TypeElement> withFields = new LinkedHashMap<>();
   private final java.util.Set<String> withInstances = new java.util.HashSet<>();
 
@@ -82,9 +83,16 @@ final class Emitter {
             .append(entry.getValue().getQualifiedName())
             .append(' ')
             .append(local(entry.getKey()))
-            .append(" = new ")
-            .append(entry.getValue().getQualifiedName())
-            .append("();\n");
+            .append(" = ")
+            .append(
+                isProvided(entry.getKey())
+                    ? "java.util.Objects.requireNonNull(owner." + entry.getKey() + ")"
+                    : entry.getValue().getKind() == ElementKind.INTERFACE
+                        ? "com.google.gwt.core.client.GWT.create("
+                            + entry.getValue().getQualifiedName()
+                            + ".class)"
+                        : "new " + entry.getValue().getQualifiedName() + "()")
+            .append(";\n");
       }
     }
     return declarations.append(body).toString();
@@ -94,62 +102,56 @@ final class Emitter {
     return rootType == null ? "com.google.gwt.user.client.ui.Widget" : rootType;
   }
 
-  /**
-   * Reads a {@code <ui:style>} block, if the template has one.
-   *
-   * <p>GWT turns these into a CssResource with a method per class and obfuscated names, which is
-   * what stops two templates that both declare ".spacing" colliding. Every block in this repository
-   * is the plain form with no declared type, so rather than generate an interface the class names
-   * are prefixed with the owner's name: unique per template, and still legible in the inspector,
-   * which obfuscation is not.
-   */
+  /** Generates cached, package-qualified CSS resources for template style blocks. */
   void readStyles(final Node root) {
     final NodeList children = root.getChildNodes();
     for (int i = 0; i < children.getLength(); i++) {
       final Node child = children.item(i);
       if (child.getNodeType() != Node.ELEMENT_NODE
           || !UI_NS.equals(child.getNamespaceURI())
-          || !"style".equals(child.getLocalName())) {
-        continue;
-      }
-      if (child.getAttributes().getLength() > 0) {
-        throw new UiBinderProcessor.Failure("a typed <ui:style> is not supported yet", owner);
-      }
+          || !"style".equals(child.getLocalName())) continue;
+      final Map<String, String> attrs = attributes(child);
+      final String field = attrs.getOrDefault("field", "style");
+      final String typeName =
+          attrs.getOrDefault("type", "com.google.gwt.resources.client.CssResource");
+      final TypeElement type = env.getElementUtils().getTypeElement(typeName);
+      if (type == null)
+        throw new UiBinderProcessor.Failure("Missing CSS resource type " + typeName, owner);
       String css = child.getTextContent();
-
-      // @external tells GWT to leave a class name alone rather than obfuscate it,
-      // because something outside the template -- a vendored stylesheet, a plugin
-      // -- already owns it. It is a CssResource directive, not CSS, so it also has
-      // to come back out before the text reaches the browser.
-      final java.util.Set<String> external = new java.util.HashSet<>();
-      final java.util.regex.Matcher directive =
-          java.util.regex.Pattern.compile("@external\\s+([^;]*);").matcher(css);
-      while (directive.find()) {
-        for (final String name : directive.group(1).trim().split("\\s*,\\s*")) {
-          if (!name.isEmpty()) {
-            external.add(name);
-          }
+      if (attrs.containsKey("src")) {
+        try {
+          css =
+              ResourceBundleGenerator.readCss(
+                      env,
+                      env.getElementUtils().getPackageOf(owner).getQualifiedName().toString(),
+                      attrs.get("src"))
+                  + "\n"
+                  + css;
+        } catch (java.io.IOException e) {
+          throw new UiBinderProcessor.Failure(e.getMessage(), owner);
         }
       }
-      css = css.replaceAll("@external\\s+[^;]*;", "");
-
-      for (final String selector : selectors(css)) {
-        final java.util.regex.Matcher declared =
-            java.util.regex.Pattern.compile("\\.([A-Za-z][\\w-]*)").matcher(selector);
-        while (declared.find()) {
-          final String name = declared.group(1);
-          if (!external.contains(name)) {
-            styleClasses.put(name, owner.getSimpleName() + "-" + name);
-          }
-        }
-      }
-      for (final Map.Entry<String, String> entry : styleClasses.entrySet()) {
-        css =
-            css.replaceAll(
-                "\\." + java.util.regex.Pattern.quote(entry.getKey()) + "(?![\\w-])",
-                "." + entry.getValue());
-      }
-      styleCss = css;
+      final var styles =
+          CssSupport.scope(
+              css, SourceSupport.prefix(((TypeElement) owner).getQualifiedName() + "." + field));
+      for (var entry : styles.classes().entrySet())
+        styleClasses.put(field + "." + entry.getKey(), entry.getValue());
+      String variable = "uiStyle_" + field;
+      styleDeclarations
+          .append("    private static final ")
+          .append(typeName)
+          .append(' ')
+          .append(variable)
+          .append(" = new ")
+          .append(typeName)
+          .append("(){public String getName(){return ")
+          .append(SourceSupport.quote(field))
+          .append(";}")
+          .append(new ResourceBundleGenerator(env).cssBody(type, field, styles))
+          .append("};\n");
+      styleInitialization.append("        ").append(variable).append(".ensureInjected();\n");
+      fields.put(field, variable);
+      fieldTypes.put(field, type.asType());
     }
   }
 
@@ -183,6 +185,9 @@ final class Emitter {
             typeName + ", named by <ui:with>, is not on the compile path", owner);
       }
       withFields.put(name, type);
+      fields.put(name, local(name));
+      fieldTypes.put(name, type.asType());
+      if (declaresField(owner, name)) withInstances.add(name);
     }
   }
 
@@ -196,98 +201,71 @@ final class Emitter {
     return "uiWith_" + field;
   }
 
-  /**
-   * Turns a whole-value template expression into Java, or returns null.
-   *
-   * <p>{@code {nameTokens.getHome}} is a read of getHome on the object ui:with called nameTokens.
-   * Returning null for anything else is what keeps an unrecognised expression from being emitted as
-   * its own literal text: the showcase navbar spent this session pointing every link at the string
-   * "{nameTokens.getHome}".
-   */
+  /** Resolves typed resource/property chains, for example {resources.css.button}. */
   private String expression(final String raw) {
     final String trimmed = raw == null ? "" : raw.trim();
-    if (!trimmed.startsWith("{") || !trimmed.endsWith("}") || trimmed.length() < 3) {
-      return null;
+    if (!trimmed.startsWith("{") || !trimmed.endsWith("}") || trimmed.length() < 3) return null;
+    final String[] path = trimmed.substring(1, trimmed.length() - 1).split("\\.");
+    TypeMirror current = fieldTypes.get(path[0]);
+    String value = fields.get(path[0]);
+    if (withFields.containsKey(path[0])) {
+      current = withFields.get(path[0]).asType();
+      value = local(path[0]);
     }
-    final String path = trimmed.substring(1, trimmed.length() - 1);
-    final int dot = path.indexOf('.');
-    if (dot < 0) {
-      return null;
-    }
-    final String root = path.substring(0, dot);
-    final TypeElement type = withFields.get(root);
-    if (type == null) {
-      // Reaching here means the template asked for something and this generator
-      // has no idea what. Emitting it as text is the one outcome that must not
-      // happen: it compiles, it runs, and the value is silently the wrong thing.
+    if (current == null)
       throw new UiBinderProcessor.Failure(
-          "no <ui:with> declares " + root + ", which " + trimmed + " reads from", owner);
-    }
-    final String member = path.substring(dot + 1);
-    for (final ExecutableElement method :
-        ElementFilter.methodsIn(env.getElementUtils().getAllMembers(type))) {
-      if (!method.getParameters().isEmpty()) {
-        continue;
+          "No template field declares " + path[0] + ", named by " + trimmed, owner);
+    boolean instance = path.length == 1;
+    for (int i = 1; i < path.length; i++) {
+      final String member = path[i];
+      final Element resolved = env.getTypeUtils().asElement(current);
+      if (!(resolved instanceof TypeElement type) || member.isEmpty())
+        throw new UiBinderProcessor.Failure("Cannot resolve " + trimmed, owner);
+      Element match = null;
+      for (ExecutableElement method :
+          ElementFilter.methodsIn(env.getElementUtils().getAllMembers(type))) {
+        String name = method.getSimpleName().toString();
+        if (method.getParameters().isEmpty()
+            && (name.equals(member)
+                || name.equals(
+                    "get" + Character.toUpperCase(member.charAt(0)) + member.substring(1)))) {
+          match = method;
+          break;
+        }
       }
-      final String name = method.getSimpleName().toString();
-      if (name.equals(member)
-          || name.equals("get" + Character.toUpperCase(member.charAt(0)) + member.substring(1))) {
-        // A static read through an instance compiles but reads as a mistake.
-        final String target =
-            method.getModifiers().contains(javax.lang.model.element.Modifier.STATIC)
-                ? type.getQualifiedName().toString()
-                : withInstance(root);
-        return target + "." + name + "()";
-      }
-    }
-    for (final Element member2 : env.getElementUtils().getAllMembers(type)) {
-      if (member2.getKind() == ElementKind.FIELD && member2.getSimpleName().contentEquals(member)) {
-        final String target =
-            member2.getModifiers().contains(javax.lang.model.element.Modifier.STATIC)
-                ? type.getQualifiedName().toString()
-                : withInstance(root);
-        return target + "." + member;
-      }
-    }
-    throw new UiBinderProcessor.Failure(
-        type.getQualifiedName() + " has no " + member + ", named by " + trimmed, owner);
-  }
-
-  /**
-   * The selector of every rule in a stylesheet.
-   *
-   * <p>Enough of a CSS parser to find class names, and no more. Selectors are richer than one
-   * leading class -- ".buttons > button" and ".labels span" both appear in the showcase -- so the
-   * text before each brace is taken whole and every class in it collected. Declaration bodies are
-   * skipped, so a colour like "#fcf2f2" or a property value can never be mistaken for a selector.
-   */
-  private static List<String> selectors(final String css) {
-    final List<String> found = new ArrayList<>();
-    int depth = 0;
-    int start = 0;
-    for (int i = 0; i < css.length(); i++) {
-      final char c = css.charAt(i);
-      if (c == '{') {
-        if (depth == 0) {
-          final String selector = css.substring(start, i).trim();
-          if (!selector.startsWith("@")) {
-            found.add(selector);
+      if (match == null)
+        for (VariableElement field :
+            ElementFilter.fieldsIn(env.getElementUtils().getAllMembers(type))) {
+          if (field.getSimpleName().contentEquals(member)) {
+            match = field;
+            break;
           }
         }
-        depth++;
-      } else if (c == '}') {
-        depth = Math.max(0, depth - 1);
-        if (depth == 0) {
-          start = i + 1;
-        }
-      }
+      if (match == null)
+        throw new UiBinderProcessor.Failure(
+            type + " has no " + member + ", named by " + trimmed, owner);
+      if (match.getModifiers().contains(Modifier.STATIC))
+        value = type.getQualifiedName().toString();
+      else instance = true;
+      value += "." + match.getSimpleName();
+      if (match instanceof ExecutableElement method) {
+        value += "()";
+        current =
+            ((javax.lang.model.type.ExecutableType)
+                    env.getTypeUtils().asMemberOf((DeclaredType) current, method))
+                .getReturnType();
+      } else current = env.getTypeUtils().asMemberOf((DeclaredType) current, match);
     }
-    return found;
+    if (instance && withFields.containsKey(path[0])) withInstance(path[0]);
+    return value;
   }
 
-  /** The CSS this template declares, already prefixed, or null. */
-  String styles() {
-    return styleCss;
+  String styleDeclarations() {
+    return styleDeclarations.toString();
+  }
+
+  String styleInitialization() {
+    return styleInitialization.toString();
   }
 
   /**
@@ -337,7 +315,9 @@ final class Emitter {
 
     final String className = type.getSimpleName().toString();
     final String var =
-        className.substring(0, 1).toLowerCase() + className.substring(1) + (++counter);
+        className.substring(0, 1).toLowerCase(java.util.Locale.ROOT)
+            + className.substring(1)
+            + (++counter);
     final Map<String, String> attrs = attributes(element);
     final String field = attrs.remove("$field");
 
@@ -348,7 +328,8 @@ final class Emitter {
     // GWT special-cases it in the same way, for the same reason.
     final boolean htmlPanel =
         "com.google.gwt.user.client.ui.HTMLPanel".equals(type.getQualifiedName().toString());
-    final ExecutableElement uiConstructor = uiConstructor(type);
+    final ExecutableElement factory = uiFactory(type);
+    final ExecutableElement uiConstructor = factory == null ? uiConstructor(type) : factory;
     final List<String> args = new ArrayList<>();
     if (!provided && uiConstructor != null) {
       for (final VariableElement param : uiConstructor.getParameters()) {
@@ -356,7 +337,7 @@ final class Emitter {
         final String value = attrs.remove(name);
         if (value == null) {
           throw new UiBinderProcessor.Failure(
-              simple + " needs the " + name + " attribute its @UiConstructor takes", owner);
+              simple + " needs the " + name + " attribute its constructor/factory takes", owner);
         }
         args.add(render(param.asType(), value));
       }
@@ -370,6 +351,12 @@ final class Emitter {
           .append(", \"Provided UiField ")
           .append(field)
           .append(" must be initialised before binding\");\n");
+    } else if (factory != null) {
+      body.append(" = owner.")
+          .append(factory.getSimpleName())
+          .append('(')
+          .append(String.join(", ", args))
+          .append(");\n");
     } else {
       body.append(" = new ")
           .append(pkg)
@@ -534,20 +521,37 @@ final class Emitter {
     }
   }
 
-  /** Turns {style.foo} into the prefixed class name the block now declares. */
+  /** Substitutes known CSS names while leaving typed resource expressions for javac. */
   private String resolveStyles(final String value) {
     String out = value;
-    final java.util.regex.Matcher m =
-        java.util.regex.Pattern.compile("\\{style\\.([A-Za-z][\\w-]*)\\}").matcher(value);
-    while (m.find()) {
-      final String mapped = styleClasses.get(m.group(1));
-      if (mapped == null) {
-        throw new UiBinderProcessor.Failure(
-            "{style." + m.group(1) + "} is not declared by this template's <ui:style>", owner);
-      }
-      out = out.replace(m.group(0), mapped);
-    }
+    for (var entry : styleClasses.entrySet())
+      out = out.replace("{" + entry.getKey() + "}", entry.getValue());
+    if (out.contains("{style."))
+      throw new UiBinderProcessor.Failure(
+          out + " is not declared by this template's <ui:style>", owner);
     return out;
+  }
+
+  private ExecutableElement uiFactory(TypeElement widget) {
+    ExecutableElement found = null;
+    for (ExecutableElement method :
+        ElementFilter.methodsIn(env.getElementUtils().getAllMembers((TypeElement) owner))) {
+      boolean annotated =
+          method.getAnnotationMirrors().stream()
+              .anyMatch(
+                  a ->
+                      a.getAnnotationType()
+                          .toString()
+                          .equals("com.google.gwt.uibinder.client.UiFactory"));
+      if (!annotated || !env.getTypeUtils().isAssignable(method.getReturnType(), widget.asType()))
+        continue;
+      if (found != null)
+        throw new UiBinderProcessor.Failure("Multiple @UiFactory methods create " + widget, owner);
+      if (method.getModifiers().contains(Modifier.PRIVATE))
+        throw new UiBinderProcessor.Failure("@UiFactory must be accessible to the binder", method);
+      found = method;
+    }
+    return found;
   }
 
   /** Whitespace between two inline elements is content, not indentation. */

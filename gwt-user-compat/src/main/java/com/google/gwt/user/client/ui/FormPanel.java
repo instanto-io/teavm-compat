@@ -29,7 +29,126 @@ import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.FormElement;
 
 /** A panel wrapping a {@code form} element. */
-public class FormPanel extends SimplePanel {
+public class FormPanel extends SimplePanel
+    implements com.google.gwt.user.client.ui.impl.FormPanelImplHost {
+  public interface SubmitHandler extends com.google.gwt.event.shared.EventHandler {
+    void onSubmit(SubmitEvent event);
+  }
+
+  public interface SubmitCompleteHandler extends com.google.gwt.event.shared.EventHandler {
+    void onSubmitComplete(SubmitCompleteEvent event);
+  }
+
+  public static class SubmitEvent extends com.google.gwt.event.shared.GwtEvent<SubmitHandler> {
+    private static final Type<SubmitHandler> TYPE = new Type<>();
+    private boolean canceled;
+
+    public void cancel() {
+      canceled = true;
+    }
+
+    public boolean isCanceled() {
+      return canceled;
+    }
+
+    public Type<SubmitHandler> getAssociatedType() {
+      return TYPE;
+    }
+
+    protected void dispatch(SubmitHandler handler) {
+      handler.onSubmit(this);
+    }
+  }
+
+  public static class SubmitCompleteEvent
+      extends com.google.gwt.event.shared.GwtEvent<SubmitCompleteHandler> {
+    private static final Type<SubmitCompleteHandler> TYPE = new Type<>();
+    private final String results;
+
+    protected SubmitCompleteEvent(String results) {
+      this.results = results;
+    }
+
+    public String getResults() {
+      return results;
+    }
+
+    public Type<SubmitCompleteHandler> getAssociatedType() {
+      return TYPE;
+    }
+
+    protected void dispatch(SubmitCompleteHandler handler) {
+      handler.onSubmitComplete(this);
+    }
+  }
+
+  private final com.google.gwt.user.client.ui.impl.FormPanelImpl impl =
+      new com.google.gwt.user.client.ui.impl.FormPanelImpl();
+  private com.google.gwt.dom.client.IFrameElement frame;
+  private boolean submitted;
+
+  public com.google.gwt.event.shared.HandlerRegistration addSubmitHandler(SubmitHandler handler) {
+    return addHandler(handler, SubmitEvent.TYPE);
+  }
+
+  public com.google.gwt.event.shared.HandlerRegistration addSubmitCompleteHandler(
+      SubmitCompleteHandler handler) {
+    return addHandler(handler, SubmitCompleteEvent.TYPE);
+  }
+
+  private void prepare() {
+    if (createIFrame && frame == null && getTarget().isEmpty()) {
+      frame = Document.get().createIFrameElement();
+      frame.setName(Document.get().createUniqueId());
+      frame.getStyle().setProperty("display", "none");
+      getElement().appendChild(frame);
+      getFormElement().setTarget(frame.getName());
+    }
+    impl.hookEvents(frame, getElement(), this);
+  }
+
+  @Override
+  protected void onAttach() {
+    prepare();
+    super.onAttach();
+  }
+
+  @Override
+  protected void onDetach() {
+    try {
+      super.onDetach();
+    } finally {
+      impl.unhookEvents(frame, getElement());
+      submitted = false;
+      if (frame != null) {
+        if (getTarget().equals(frame.getName())) getElement().removeAttribute("target");
+        frame.removeFromParent();
+        frame = null;
+      }
+    }
+  }
+
+  @Override
+  public boolean onFormSubmit() {
+    SubmitEvent event = new SubmitEvent();
+    fireEvent(event);
+    submitted = !event.isCanceled();
+    return submitted;
+  }
+
+  @Override
+  public void onFrameLoad() {
+    if (!submitted || frame == null || isInitialDocument(frame.unwrap())) return;
+    submitted = false;
+    fireEvent(new SubmitCompleteEvent(impl.getContents(frame)));
+  }
+
+  @org.teavm.jso.JSBody(
+      params = "frame",
+      script =
+          "try { return frame.contentDocument && frame.contentDocument.URL === 'about:blank'; }"
+              + " catch(e) { return false; }")
+  private static native boolean isInitialDocument(org.teavm.jso.JSObject frame);
 
   /** Standard form encodings. */
   public static final String ENCODING_MULTIPART = "multipart/form-data";
@@ -74,11 +193,18 @@ public class FormPanel extends SimplePanel {
   }
 
   public void setTarget(final String target) {
+    if (frame != null && !frame.getName().equals(target)) {
+      impl.unhookEvents(frame, getElement());
+      frame.removeFromParent();
+      frame = null;
+      submitted = false;
+    }
     if (target == null || target.isEmpty()) {
       getElement().removeAttribute("target");
     } else {
       getFormElement().setTarget(target);
     }
+    if (isAttached()) prepare();
   }
 
   protected FormElement getFormElement() {
@@ -110,7 +236,8 @@ public class FormPanel extends SimplePanel {
   }
 
   public void submit() {
-    getFormElement().submit();
+    prepare();
+    if (onFormSubmit()) impl.submit(getElement(), frame);
   }
 
   public void reset() {

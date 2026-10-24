@@ -19,6 +19,32 @@ public class AssetStagerTest {
   @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
   @Test
+  public void rejectsFileDirectoryConflictsBeforeCopyingAnyAssets() throws Exception {
+    Path input =
+        jar(
+            "file-directory.jar",
+            "source=public\ntarget=assets/widget\n",
+            Map.of("public/css", "file", "public/css/theme/main.css", "nested"));
+    Path site = temporary.getRoot().toPath().resolve("site");
+    IOException failure =
+        assertThrows(IOException.class, () -> AssetStager.stage(List.of(input), site));
+    assertTrue(failure.getMessage().contains("file and directory"));
+    assertFalse(Files.exists(site));
+  }
+
+  @Test
+  public void similarlyPrefixedAssetNamesDoNotConflict() throws Exception {
+    Path input =
+        jar(
+            "prefix.jar",
+            "source=public\ntarget=assets/widget\n",
+            Map.of("public/css", "file", "public/css-theme/main.css", "nested"));
+    Path site = temporary.getRoot().toPath().resolve("site");
+    assertEquals(2, AssetStager.stage(List.of(input), site));
+    assertEquals("nested", Files.readString(site.resolve("assets/widget/css-theme/main.css")));
+  }
+
+  @Test
   public void stagesDeclaredJarAssetsWithRelativeFontPathsAndUpdatesExistingFiles()
       throws Exception {
     Path jar =

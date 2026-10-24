@@ -73,7 +73,8 @@ final class AssetStager {
       throw new IOException(
           "No "
               + DESCRIPTOR
-              + " assets found in runtime dependencies; use widget JARs containing asset descriptors");
+              + " assets found in runtime dependencies; use widget JARs containing asset"
+              + " descriptors");
     }
     Path root = output.toFile().getCanonicalFile().toPath();
     // Validate every destination before modifying the served tree.
@@ -86,8 +87,15 @@ final class AssetStager {
         if (Files.exists(parent) && !Files.isDirectory(parent))
           throw new IOException("Asset parent is not a directory: " + parent);
       }
-      if (assets.keySet().stream().anyMatch(other -> name.startsWith(other + "/")))
-        throw new IOException("Conflicting asset file and directory: " + name);
+      // Only path ancestors can conflict. Checking every asset against every other asset
+      // makes staging quadratic in the number of files.
+      for (int slash = name.lastIndexOf('/');
+          slash >= 0;
+          slash = name.lastIndexOf('/', slash - 1)) {
+        if (assets.containsKey(name.substring(0, slash))) {
+          throw new IOException("Conflicting asset file and directory: " + name);
+        }
+      }
     }
     for (var entry : assets.entrySet()) {
       Path destination = root.resolve(entry.getKey());

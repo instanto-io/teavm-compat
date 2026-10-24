@@ -36,17 +36,15 @@ import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.event.shared.HasHandlers;
-import java.util.HashMap;
-import java.util.Map;
-import org.teavm.jso.dom.events.Event;
-import org.teavm.jso.dom.events.EventListener;
-import org.teavm.jso.dom.events.Registration;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Element-backed widget with GWT's handler-registration surface, implemented over TeaVM DOM events.
  */
 public class Widget extends UIObject
-    implements IsWidget,
+    implements com.google.gwt.user.client.EventListener,
+        IsWidget,
         HasHandlers,
         HasClickHandlers,
         HasDoubleClickHandlers,
@@ -57,7 +55,7 @@ public class Widget extends UIObject
   private boolean attached;
 
   /** One native listener per DOM event name; it re-dispatches through the handler manager. */
-  private final Map<String, Registration> nativeListeners = new HashMap<>();
+  private final Set<String> nativeListeners = new HashSet<>();
 
   @Override
   public Widget asWidget() {
@@ -71,10 +69,11 @@ public class Widget extends UIObject
   void setParent(final Widget parent) {
     final Widget oldParent = this.parent;
     if (parent == null) {
-      if (oldParent != null && oldParent.isAttached()) {
-        onDetach();
+      try {
+        if (attached) onDetach();
+      } finally {
+        this.parent = null;
       }
-      this.parent = null;
     } else {
       if (oldParent != null) {
         throw new IllegalStateException(
@@ -108,6 +107,7 @@ public class Widget extends UIObject
   }
 
   protected void onAttach() {
+    com.google.gwt.user.client.DOM.setEventListener(getElement(), this);
     attached = true;
     everAttached = true;
     doAttachChildren();
@@ -124,6 +124,8 @@ public class Widget extends UIObject
         doDetachChildren();
       } finally {
         attached = false;
+        com.google.gwt.user.client.DOM.releaseCapture(getElement());
+        com.google.gwt.user.client.DOM.setEventListener(getElement(), null);
       }
     }
   }
@@ -192,14 +194,12 @@ public class Widget extends UIObject
   }
 
   private void ensureNativeListener(String name) {
-    if (nativeListeners.containsKey(name)) {
+    if (nativeListeners.contains(name)) {
       return;
     }
-    final EventListener<Event> listener =
-        nativeEvent -> {
-          onBrowserEvent(new com.google.gwt.user.client.Event(nativeEvent));
-        };
-    nativeListeners.put(name, getElement().unwrap().onEvent(name, listener));
+    com.google.gwt.user.client.DOM.setEventListener(getElement(), this);
+    com.google.gwt.user.client.Event.sinkBitlessEvent(getElement(), name);
+    nativeListeners.add(name);
   }
 
   @Override
@@ -217,6 +217,17 @@ public class Widget extends UIObject
   @Override
   public HandlerRegistration addDoubleClickHandler(final DoubleClickHandler handler) {
     return addDomHandler(handler, DoubleClickEvent.getType());
+  }
+
+  public void sinkEvents(int bits) {
+    com.google.gwt.user.client.DOM.setEventListener(getElement(), this);
+    com.google.gwt.user.client.Event.sinkEvents(
+        getElement(), bits | com.google.gwt.user.client.Event.getEventsSunk(getElement()));
+  }
+
+  public void unsinkEvents(int bits) {
+    com.google.gwt.user.client.Event.sinkEvents(
+        getElement(), com.google.gwt.user.client.Event.getEventsSunk(getElement()) & ~bits);
   }
 
   public void sinkBitlessEvent(String eventName) {

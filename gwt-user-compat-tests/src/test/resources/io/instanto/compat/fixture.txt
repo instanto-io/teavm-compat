@@ -1,0 +1,1 @@
+resource text with "quotes" and two  spaces

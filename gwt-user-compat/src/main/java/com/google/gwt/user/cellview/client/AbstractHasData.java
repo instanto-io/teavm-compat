@@ -109,8 +109,11 @@ public abstract class AbstractHasData<T> extends Widget implements HasData<T> {
     if (count == rowCount && isExact == rowCountExact) {
       return;
     }
+    if (count < 0) throw new IllegalArgumentException("Negative row count");
     rowCount = count;
     rowCountExact = isExact;
+    if (isExact)
+      trimRows(Math.max(0, Math.min(visibleRange.getLength(), count - visibleRange.getStart())));
     RowCountChangeEvent.fire(this, count, isExact);
     refresh();
   }
@@ -130,7 +133,20 @@ public abstract class AbstractHasData<T> extends Widget implements HasData<T> {
     if (range == null || range.equals(visibleRange)) {
       return;
     }
+    if (range.getStart() < 0 || range.getLength() < 0)
+      throw new IllegalArgumentException("Negative range");
+    int shift = range.getStart() - visibleRange.getStart();
+    if (shift != 0) {
+      List<T> old = new ArrayList<>(rowData);
+      rowData.clear();
+      for (int i = 0; i < range.getLength(); i++) {
+        long oldIndex = (long) i + shift;
+        if (oldIndex >= old.size()) break;
+        rowData.add(oldIndex < 0 ? null : old.get((int) oldIndex));
+      }
+    }
     visibleRange = range;
+    trimRows(range.getLength());
     RangeChangeEvent.fire(this, range);
     refresh();
   }
@@ -153,28 +169,29 @@ public abstract class AbstractHasData<T> extends Widget implements HasData<T> {
 
   @Override
   public void setRowData(final int start, final List<? extends T> values) {
-    final int offset = start - visibleRange.getStart();
-    while (rowData.size() < offset + values.size()) {
-      rowData.add(null);
-    }
-    for (int i = 0; i < values.size(); i++) {
-      final int index = offset + i;
-      if (index >= 0) {
-        rowData.set(index, values.get(i));
-      }
-    }
-    if (rowCount < start + values.size()) {
-      rowCount = start + values.size();
-    }
+    if (start < 0) throw new IllegalArgumentException("Negative row start");
+    long end = (long) start + values.size();
+    int first = Math.max(start, visibleRange.getStart());
+    long last = Math.min(end, (long) visibleRange.getStart() + visibleRange.getLength());
+    if (rowCountExact) last = Math.min(last, rowCount);
+    if (first >= last) return;
+    int offset = first - visibleRange.getStart();
+    int length = (int) (last - first);
+    while (rowData.size() < offset + length) rowData.add(null);
+    for (int i = 0; i < length; i++) rowData.set(offset + i, values.get(first - start + i));
     refresh();
   }
 
   /** Replaces the whole visible page. */
   public void setRowData(final List<? extends T> values) {
+    setVisibleRange(0, values.size());
     rowData.clear();
-    rowData.addAll(values);
     setRowCount(values.size(), true);
-    refresh();
+    setRowData(0, values);
+  }
+
+  private void trimRows(int size) {
+    if (rowData.size() > size) rowData.subList(size, rowData.size()).clear();
   }
 
   @Override
@@ -220,7 +237,7 @@ public abstract class AbstractHasData<T> extends Widget implements HasData<T> {
     return selectionModel != null && value != null && selectionModel.isSelected(value);
   }
 
-  /** Marks the view dirty; subclasses render on the next call to {@link #render()}. */
+  /** Renders the visible page immediately, coalescing reentrant refresh requests. */
   public void redraw() {
     refresh();
   }

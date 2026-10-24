@@ -27,7 +27,95 @@ package com.google.gwt.user.client.ui;
 import com.google.gwt.dom.client.Document;
 
 /** A panel positioned above the page, used for dropdowns and suggestion lists. */
-public class PopupPanel extends SimplePanel {
+public class PopupPanel extends SimplePanel
+    implements com.google.gwt.event.logical.shared.HasCloseHandlers<PopupPanel> {
+  private com.google.gwt.event.shared.HandlerRegistration previewRegistration;
+  private com.google.gwt.event.shared.HandlerRegistration historyRegistration;
+  private boolean modal;
+  private boolean autoHideOnHistoryEvents = true;
+  private final java.util.List<com.google.gwt.dom.client.Element> partners =
+      new java.util.ArrayList<>();
+
+  public PopupPanel(boolean autoHide, boolean modal) {
+    this(autoHide);
+    this.modal = modal;
+  }
+
+  public void setModal(boolean modal) {
+    this.modal = modal;
+  }
+
+  public boolean isModal() {
+    return modal;
+  }
+
+  public void setAutoHideOnHistoryEventsEnabled(boolean enabled) {
+    autoHideOnHistoryEvents = enabled;
+  }
+
+  public boolean isAutoHideOnHistoryEventsEnabled() {
+    return autoHideOnHistoryEvents;
+  }
+
+  public void addAutoHidePartner(com.google.gwt.dom.client.Element element) {
+    partners.add(element);
+  }
+
+  public void removeAutoHidePartner(com.google.gwt.dom.client.Element element) {
+    partners.remove(element);
+  }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public com.google.gwt.event.shared.HandlerRegistration addCloseHandler(
+      com.google.gwt.event.logical.shared.CloseHandler<PopupPanel> handler) {
+    return addHandler(
+        handler,
+        (com.google.gwt.event.shared.GwtEvent.Type)
+            com.google.gwt.event.logical.shared.CloseEvent.getType());
+  }
+
+  private void hookPreview() {
+    previewRegistration =
+        com.google.gwt.user.client.Event.addNativePreviewHandler(
+            event -> {
+              var target = event.getNativeEvent().getEventTarget();
+              boolean inside = target != null && contains(getElement().unwrap(), target.unwrap());
+              if (target != null)
+                for (var partner : partners) inside |= contains(partner.unwrap(), target.unwrap());
+              if (inside) {
+                event.consume();
+                return;
+              }
+              String type = event.getNativeEvent().getType();
+              if (autoHide && (type.equals("mousedown") || type.equals("touchstart"))) hide(true);
+              else if (modal) event.cancel();
+            });
+    historyRegistration =
+        com.google.gwt.user.client.History.addValueChangeHandler(
+            event -> {
+              if (autoHideOnHistoryEvents) hide(true);
+            });
+  }
+
+  @org.teavm.jso.JSBody(
+      params = {"element", "target"},
+      script = "return target && element.contains(target);")
+  private static native boolean contains(
+      org.teavm.jso.JSObject element, org.teavm.jso.JSObject target);
+
+  @Override
+  protected void onDetach() {
+    showing = false;
+    if (previewRegistration != null) {
+      previewRegistration.removeHandler();
+      previewRegistration = null;
+    }
+    if (historyRegistration != null) {
+      historyRegistration.removeHandler();
+      historyRegistration = null;
+    }
+    super.onDetach();
+  }
 
   private boolean autoHide;
   private boolean showing;
@@ -52,13 +140,30 @@ public class PopupPanel extends SimplePanel {
     if (!showing) {
       RootPanel.get().add(this);
       showing = true;
+      hookPreview();
     }
     setVisible(true);
   }
 
   public void hide() {
-    setVisible(false);
+    hide(false);
+  }
+
+  public void hide(boolean autoClosed) {
+    if (!showing) return;
     showing = false;
+    try {
+      removeFromParent();
+    } finally {
+      com.google.gwt.event.logical.shared.CloseEvent.fire(this, this, autoClosed);
+    }
+  }
+
+  public void center() {
+    show();
+    setPopupPosition(
+        Math.max(0, (com.google.gwt.user.client.Window.getClientWidth() - getOffsetWidth()) / 2),
+        Math.max(0, (com.google.gwt.user.client.Window.getClientHeight() - getOffsetHeight()) / 2));
   }
 
   public boolean isShowing() {

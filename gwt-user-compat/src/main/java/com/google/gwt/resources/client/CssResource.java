@@ -26,6 +26,15 @@ package com.google.gwt.resources.client;
 
 /** A packaged stylesheet. */
 public interface CssResource extends ResourcePrototype {
+  @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+  @java.lang.annotation.Target(java.lang.annotation.ElementType.METHOD)
+  @interface ClassName {
+    String value();
+  }
+
+  @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+  @java.lang.annotation.Target(java.lang.annotation.ElementType.METHOD)
+  @interface NotStrict {}
 
   String getText();
 

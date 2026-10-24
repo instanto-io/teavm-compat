@@ -1,0 +1,5 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder" xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:with field="resources" type="io.instanto.compat.GeneratedResources.Bundle"/>
+  <ui:style type="io.instanto.compat.GeneratedView.Style">.local {color:blue;}</ui:style>
+  <g:FlowPanel><g:Label ui:field="label" text="{resources.text.getText}" styleName="{style.local}"/></g:FlowPanel>
+</ui:UiBinder>

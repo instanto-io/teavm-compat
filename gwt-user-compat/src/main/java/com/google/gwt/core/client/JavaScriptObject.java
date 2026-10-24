@@ -40,6 +40,11 @@ public class JavaScriptObject implements io.instanto.compat.NativeHandle {
     this.value = value;
   }
 
+  /** Unwraps a callback result once, preserving a Java null. */
+  public static JSObject unwrapNullable(final JavaScriptObject value) {
+    return value == null ? null : value.unwrap();
+  }
+
   /** The underlying JavaScript value. */
   public JSObject unwrap() {
     return value;
@@ -76,7 +81,10 @@ public class JavaScriptObject implements io.instanto.compat.NativeHandle {
   @org.teavm.jso.JSBody(
       params = {"state", "value"},
       script =
-          "if(value == null) return 0; if(typeof value !== 'object' && typeof value !== 'function') { var s=String(value), h=0; for(var i=0;i<s.length;i++) h=(31*h+s.charCodeAt(i))|0; return h; } var id=state.objects.get(value); if(id === undefined) { id=state.next++; state.objects.set(value,id); } return id;")
+          "if(value == null) return 0; if(typeof value !== 'object' && typeof value !== 'function')"
+              + " { var s=String(value), h=0; for(var i=0;i<s.length;i++)"
+              + " h=(31*h+s.charCodeAt(i))|0; return h; } var id=state.objects.get(value); if(id"
+              + " === undefined) { id=state.next++; state.objects.set(value,id); } return id;")
   private static native int identity(JSObject state, JSObject value);
 
   /** Wraps a JavaScript value, or null. */

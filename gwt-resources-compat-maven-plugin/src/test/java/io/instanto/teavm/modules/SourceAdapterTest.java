@@ -19,6 +19,28 @@ public class SourceAdapterTest {
   }
 
   @Test
+  public void outputDirectorySymlinksCannotRedirectWrites() throws Exception {
+    Path in = folder.newFolder("in").toPath();
+    Path out = folder.newFolder("out").toPath();
+    Path outside = folder.newFolder("outside").toPath();
+    write(in, "p/Kept.java", "package p; class Kept {}\n");
+    Path existing = write(outside, "Kept.java", "original");
+    Files.createSymbolicLink(out.resolve("p"), outside);
+    assertThrows(java.io.IOException.class, () -> SourceAdapter.adapt(in, out, false));
+    assertEquals("original", Files.readString(existing));
+  }
+
+  @Test
+  public void outputAliasingInputThroughASymlinkCannotDeleteSources() throws Exception {
+    Path in = folder.newFolder("in").toPath();
+    Path source = write(in, "Kept.java", "class Kept {}\n");
+    Path alias = folder.getRoot().toPath().resolve("alias");
+    Files.createSymbolicLink(alias, in);
+    assertThrows(IllegalArgumentException.class, () -> SourceAdapter.adapt(in, alias, false));
+    assertEquals("class Kept {}\n", Files.readString(source));
+  }
+
+  @Test
   public void jsInteropBecomesTeaVmJso() throws Exception {
     Path in = folder.newFolder("in").toPath();
     Path out = folder.getRoot().toPath().resolve("out");
@@ -31,6 +53,28 @@ public class SourceAdapterTest {
     String adapted = Files.readString(out.resolve("p/Lib.java"));
     assertTrue(adapted, adapted.contains("extends JSObject"));
     assertFalse(adapted, adapted.contains("@JsType"));
+  }
+
+  @Test
+  public void callbackDeclarationsFeedTheSourceAdaptationPipeline() throws Exception {
+    Path in = folder.newFolder("callbacks").toPath();
+    Path out = folder.getRoot().toPath().resolve("adapted-callbacks");
+    write(
+        in,
+        "p/Callback.java",
+        "package p; import jsinterop.annotations.JsFunction; @JsFunction public interface"
+            + " Callback<T> { Object call(T value); }");
+    write(
+        in,
+        "p/Api.java",
+        "package p; import jsinterop.annotations.JsType; import com.google.gwt.dom.client.Element;"
+            + " @JsType(isNative=true) public class Api { public native void on(Callback<Element>"
+            + " callback); public native void off(Callback<Element> callback); }");
+    assertEquals(2, SourceAdapter.adapt(in, out, false));
+    String adapted = Files.readString(out.resolve("p/Api.java"));
+    assertTrue(adapted, adapted.contains("NativeCallbacks.remember"));
+    assertTrue(adapted, adapted.contains("JavaScriptObject.of(a0)"));
+    assertTrue(adapted, adapted.contains("off$callback"));
   }
 
   @Test
@@ -55,7 +99,10 @@ public class SourceAdapterTest {
     write(
         in,
         "p/B.java",
-        "package p;\nclass B {\n  static native void call(Runnable r) /*-{ r.@java.lang.Runnable::run()(); }-*/;\n}\n");
+        "package p;\n"
+            + "class B {\n"
+            + "  static native void call(Runnable r) /*-{ r.@java.lang.Runnable::run()(); }-*/;\n"
+            + "}\n");
     try {
       SourceAdapter.adapt(in, out, true);
       fail("expected the Java callback to be rejected");

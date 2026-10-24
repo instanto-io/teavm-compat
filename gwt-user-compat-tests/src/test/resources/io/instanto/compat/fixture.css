@@ -1,0 +1,5 @@
+/* keep selectors separate from values */
+@external external;
+.button { background-image: url(pixel.png); content: ".button  literal"; }
+@media screen { .button:hover {color:red;} }
+.external {color:blue;}
