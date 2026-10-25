@@ -26,6 +26,7 @@ final class SafeHtmlTemplateGenerator {
         || type.equals(base)
         || type.getKind() != ElementKind.INTERFACE
         || !env.getTypeUtils().isSubtype(type.asType(), base.asType())) return;
+    if (hasExplicitProvider(type)) return;
     try {
       generate(type);
     } catch (IOException | IllegalArgumentException failure) {
@@ -35,6 +36,30 @@ final class SafeHtmlTemplateGenerator {
               "Cannot generate SafeHtmlTemplates: " + failure.getMessage(),
               type);
     }
+  }
+
+  /** Existing hand-written bindings take precedence over generator fallbacks. */
+  private boolean hasExplicitProvider(TypeElement type) {
+    String binary = env.getElementUtils().getBinaryName(type).toString();
+    String generated = binary.replace('$', '_') + "_Templates";
+    try {
+      String services =
+          new String(
+              SourceSupport.read(env, "", "META-INF/services/" + binary),
+              java.nio.charset.StandardCharsets.UTF_8);
+      for (String line : services.split("\\R")) {
+        String providerName = line.split("#", 2)[0].trim();
+        if (providerName.isEmpty() || providerName.equals(generated)) continue;
+        TypeElement provider = env.getElementUtils().getTypeElement(providerName);
+        if (provider != null
+            && provider.getKind() == ElementKind.CLASS
+            && !provider.getModifiers().contains(Modifier.ABSTRACT)
+            && env.getTypeUtils().isSubtype(provider.asType(), type.asType())) return true;
+      }
+    } catch (IOException absent) {
+      // No explicit binding: generate and validate the template normally.
+    }
+    return false;
   }
 
   private void generate(TypeElement type) throws IOException {

@@ -573,6 +573,37 @@ public class UiBinderProcessorTest {
     }
   }
 
+  @Test
+  public void explicitSafeHtmlProviderRetainsControlOfUnsupportedTemplate() throws Exception {
+    String owner =
+        "package fixture; public interface Sample extends"
+            + " com.google.gwt.safehtml.client.SafeHtmlTemplates { @Template("
+            + SourceSupport.quote("<iframe name=\"{0}\"></iframe>")
+            + ") com.google.gwt.safehtml.shared.SafeHtml render(String value); }";
+    var sources = new java.util.HashMap<String, String>();
+    sources.put(
+        "com/google/gwt/safehtml/client/SafeHtmlTemplates.java",
+        "package com.google.gwt.safehtml.client; public interface SafeHtmlTemplates {"
+            + " @interface Template {String value();} }");
+    sources.put(
+        "com/google/gwt/safehtml/shared/SafeHtml.java",
+        "package com.google.gwt.safehtml.shared; public interface SafeHtml {String asString();}");
+    sources.put(
+        "fixture/CustomTemplate.java",
+        "package fixture; public final class CustomTemplate"
+            + " implements Sample { public com.google.gwt.safehtml.shared.SafeHtml render(String value)"
+            + " { return () -> \"handwritten\"; } }");
+    sources.put(
+        "META-INF/services/fixture.Sample",
+        "# Explicit application binding\nfixture.CustomTemplate\n");
+    Compilation result = compile(owner, validTemplate(), sources);
+    assertTrue(result.diagnostics(), result.success);
+    assertFalse(Files.exists(result.generated.resolve("fixture/Sample_Templates.java")));
+    sources.put("META-INF/services/fixture.Sample", "java.lang.String\n");
+    Compilation invalid = compile(owner, validTemplate(), sources);
+    assertFalse("An unrelated provider must not bypass validation", invalid.success);
+  }
+
   private Compilation compile(final String owner, final String template) throws Exception {
     return compile(owner, template, java.util.Map.of());
   }
