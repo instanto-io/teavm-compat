@@ -19,6 +19,27 @@ public class SourceAdapterTest {
   }
 
   @Test
+  public void changedSourcesRetainOriginalNoticesAndIdentifyModification() throws Exception {
+    Path in = folder.newFolder("notices").toPath();
+    Path out = folder.getRoot().toPath().resolve("adapted-notices");
+    String notice = "/* Copyright Original Author. Licensed under Apache License 2.0. */";
+    write(
+        in,
+        "p/Lib.java",
+        notice
+            + "\npackage p;\n"
+            + "import jsinterop.annotations.JsType;\n"
+            + "@JsType(isNative = true) interface Lib { String name(); }\n");
+    String unchanged = "package p;\nclass Unchanged {}\n";
+    write(in, "p/Unchanged.java", unchanged);
+    SourceAdapter.adapt(in, out, false);
+    String adapted = Files.readString(out.resolve("p/Lib.java"));
+    assertTrue(adapted, adapted.startsWith(SourceAdapter.MODIFICATION_NOTICE));
+    assertTrue(adapted, adapted.contains(notice));
+    assertEquals(unchanged, Files.readString(out.resolve("p/Unchanged.java")));
+  }
+
+  @Test
   public void outputDirectorySymlinksCannotRedirectWrites() throws Exception {
     Path in = folder.newFolder("in").toPath();
     Path out = folder.newFolder("out").toPath();

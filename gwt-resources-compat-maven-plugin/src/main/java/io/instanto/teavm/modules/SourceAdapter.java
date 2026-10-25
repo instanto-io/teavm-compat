@@ -17,6 +17,9 @@ import java.util.stream.Stream;
  * than being dropped. Only {@code .java} files are written.
  */
 final class SourceAdapter {
+  static final String MODIFICATION_NOTICE =
+      "// Modified by Instanto's TeaVM source adapter for TeaVM interoperability.\n";
+
   private SourceAdapter() {}
 
   /** Adapts every Java source below {@code input} into {@code output}; returns how many. */
@@ -43,6 +46,9 @@ final class SourceAdapter {
         adapted = pipeline.transform(text);
       } catch (RuntimeException failure) {
         throw new IllegalArgumentException(relative + ": " + failure.getMessage(), failure);
+      }
+      if (!adapted.equals(text) && !adapted.contains(MODIFICATION_NOTICE.strip())) {
+        adapted = MODIFICATION_NOTICE + adapted;
       }
       Path target = out.resolve(relative);
       Files.createDirectories(java.util.Objects.requireNonNull(target.getParent()));
