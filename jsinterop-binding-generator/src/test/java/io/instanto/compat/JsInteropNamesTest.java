@@ -45,8 +45,7 @@ public class JsInteropNamesTest {
   public void unresolvedNamesFailInsteadOfGeneratingBrokenJavaScript() {
     String source =
         "import jsinterop.annotations.*; @JsType(isNative=true, name=Missing.NAME) class Api {}";
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new BindingPipeline(List.of(source), false).transform(source));
+    var pipeline = new BindingPipeline(List.of(source), false);
+    assertThrows(IllegalArgumentException.class, () -> pipeline.transform(source));
   }
 }

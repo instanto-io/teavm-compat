@@ -51,7 +51,7 @@ public class LoadingAndHistoryRegressionTest {
       form.submit();
       assertEquals(1, submittedCount(form.getElement().unwrap()));
       setFrameResponse(form.getElement().unwrap());
-      Thread.sleep(100);
+      BrowserWait.until(() -> complete[0] == 1);
       assertEquals(1, complete[0]);
       form.removeFromParent();
       assertEquals(0, form.getElement().getElementsByTagName("iframe").getLength());
@@ -75,7 +75,7 @@ public class LoadingAndHistoryRegressionTest {
     var registration = History.addValueChangeHandler(e -> events[0]++);
     try {
       History.newItem("review-silent-" + System.currentTimeMillis(), false);
-      Thread.sleep(100);
+      BrowserWait.nextEventLoopTurn();
       assertEquals("issueEvent=false must suppress hashchange notification", 0, events[0]);
     } finally {
       registration.removeHandler();
@@ -88,11 +88,11 @@ public class LoadingAndHistoryRegressionTest {
     String src = "data:text/javascript,void(0)";
     JSObject script = loadScript(src);
     try {
-      Thread.sleep(100);
+      BrowserWait.until(() -> scriptLoaded(script));
       assertTrue("fixture script must finish loading", scriptLoaded(script));
       boolean[] completed = {false};
       ScriptModule.named("review-existing").script(src).whenReady(() -> completed[0] = true);
-      Thread.sleep(100);
+      BrowserWait.until(() -> completed[0]);
       assertTrue("existing loaded script must not leave module waiting forever", completed[0]);
     } finally {
       removeScript(script);

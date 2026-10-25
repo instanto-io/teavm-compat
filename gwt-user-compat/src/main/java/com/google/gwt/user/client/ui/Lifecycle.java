@@ -9,6 +9,9 @@ import java.util.function.Consumer;
 final class Lifecycle {
   private Lifecycle() {}
 
+  // GWT dispatch must finish remaining callbacks/cleanup even after AssertionError,
+  // then propagate every failure via UmbrellaException.
+  @SuppressWarnings("java:S1181")
   static <T> void forEach(Iterable<T> values, Consumer<T> action) {
     Set<Throwable> failures = new LinkedHashSet<>();
     for (T value : values) {

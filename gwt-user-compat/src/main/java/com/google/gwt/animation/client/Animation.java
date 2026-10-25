@@ -14,7 +14,7 @@ public abstract class Animation {
   private Element element;
   private int generation;
 
-  public Animation() {
+  protected Animation() {
     this(AnimationScheduler.get());
   }
 
@@ -70,27 +70,32 @@ public abstract class Animation {
   private void update(double now, int run) {
     if (!running || generation != run) return;
     handle = null;
+    boolean advanced = false;
     try {
-      if (now >= start) {
-        if (!started) {
-          started = true;
-          onStart();
-        }
-        if (!running || generation != run) return;
-        double progress = duration == 0 ? 1 : Math.min(1, (now - start) / duration);
-        if (progress >= 1) {
-          stop();
-          onComplete();
-          return;
-        }
-        onUpdate(interpolate(progress));
-      }
-      if (running && generation == run)
-        handle = scheduler.requestAnimationFrame(timestamp -> update(timestamp, run), element);
-    } catch (RuntimeException | Error failure) {
-      if (generation == run) stop();
-      throw failure;
+      advance(now, run);
+      advanced = true;
+    } finally {
+      if (!advanced && generation == run) stop();
     }
+  }
+
+  private void advance(double now, int run) {
+    if (now >= start) {
+      if (!started) {
+        started = true;
+        onStart();
+      }
+      if (!running || generation != run) return;
+      double progress = duration == 0 ? 1 : Math.min(1, (now - start) / duration);
+      if (progress >= 1) {
+        stop();
+        onComplete();
+        return;
+      }
+      onUpdate(interpolate(progress));
+    }
+    if (running && generation == run)
+      handle = scheduler.requestAnimationFrame(timestamp -> update(timestamp, run), element);
   }
 
   protected double interpolate(double progress) {

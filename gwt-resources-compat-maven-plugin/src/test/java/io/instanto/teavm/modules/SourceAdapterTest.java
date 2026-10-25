@@ -120,10 +120,12 @@ public class SourceAdapterTest {
     write(
         in,
         "p/B.java",
-        "package p;\n"
-            + "class B {\n"
-            + "  static native void call(Runnable r) /*-{ r.@java.lang.Runnable::run()(); }-*/;\n"
-            + "}\n");
+        """
+        package p;
+        class B {
+          static native void call(Runnable r) /*-{ r.@java.lang.Runnable::run()(); }-*/;
+        }
+        """);
     try {
       SourceAdapter.adapt(in, out, true);
       fail("expected the Java callback to be rejected");

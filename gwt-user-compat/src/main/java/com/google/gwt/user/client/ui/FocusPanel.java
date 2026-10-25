@@ -30,10 +30,12 @@ public class FocusPanel extends SimplePanel
     setWidget(child);
   }
 
+  @Override
   public int getTabIndex() {
     return getElement().getPropertyInt("tabIndex");
   }
 
+  @Override
   public void setTabIndex(int index) {
     getElement().setTabIndex(index);
   }

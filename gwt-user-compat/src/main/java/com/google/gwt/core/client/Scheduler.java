@@ -87,6 +87,9 @@ public abstract class Scheduler {
       }
     }
 
+    // GWT dispatch must finish remaining callbacks/cleanup even after AssertionError,
+    // then propagate every failure via UmbrellaException.
+    @SuppressWarnings("java:S1181")
     private void drain(ArrayDeque<RepeatingCommand> queue) {
       if (queue.isEmpty()) return;
       List<RepeatingCommand> repeat = new ArrayList<>();
@@ -174,11 +177,12 @@ public abstract class Scheduler {
               () ->
                   enter(
                       () -> {
+                        boolean executed = false;
                         try {
                           if (!command.execute()) Window.clearInterval(id[0]);
-                        } catch (RuntimeException | Error failure) {
-                          Window.clearInterval(id[0]);
-                          throw failure;
+                          executed = true;
+                        } finally {
+                          if (!executed) Window.clearInterval(id[0]);
                         }
                       }),
               periodMs);
@@ -197,13 +201,13 @@ public abstract class Scheduler {
             scheduleIncremental(command);
           });
     }
+
+    @JSBody(params = "action", script = "Promise.resolve().then(action);")
+    private static native void microtask(Action action);
   }
 
   @JSFunctor
   private interface Action extends JSObject {
     void run();
   }
-
-  @JSBody(params = "action", script = "Promise.resolve().then(action);")
-  private static native void microtask(Action action);
 }

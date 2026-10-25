@@ -2,6 +2,7 @@ package io.instanto.widgets.processor;
 
 import static org.junit.Assert.*;
 
+import java.util.List;
 import org.junit.Test;
 
 public class CssSupportTest {
@@ -35,5 +36,37 @@ public class CssSupportTest {
   public void qualifiedPrefixesDoNotCollideAcrossPackagesOrPunctuation() {
     assertNotEquals(SourceSupport.prefix("one.View.style"), SourceSupport.prefix("two.View.style"));
     assertNotEquals(SourceSupport.prefix("a.b_C.style"), SourceSupport.prefix("a_b.C.style"));
+  }
+
+  @Test(timeout = 5000)
+  public void unterminatedDirectivesDoNotCauseQuadraticBacktracking() {
+    String css = "@external ".repeat(20000);
+    assertEquals(css, CssSupport.scope(css, "p-").css());
+  }
+
+  @Test
+  public void urlsIgnoreCommentsAndStringsAndAllowQuotedParentheses() {
+    String css =
+        "/* url(unclosed */ a {content:'url(hidden)';background:url( 'a(b).png' );src:url(font.woff)}";
+    assertEquals(
+        List.of("a(b).png", "font.woff"),
+        CssSupport.urls(css).stream().map(CssSupport.Url::value).toList());
+  }
+
+  @Test
+  public void malformedAndUnterminatedUrlsRemainUnchanged() {
+    assertTrue(CssSupport.urls("url( 'missing-close' ").isEmpty());
+    assertTrue(CssSupport.urls("url( ").isEmpty());
+    assertTrue(CssSupport.urls("url( )").isEmpty());
+    assertTrue(CssSupport.urls("url('unterminated)").isEmpty());
+  }
+
+  @Test
+  public void escapedQuotesAndUnterminatedLiteralsDoNotExposeCssCode() {
+    String quoted = "'a\\'b'";
+    for (boolean code : CssSupport.codePositions(quoted)) assertFalse(code);
+    for (boolean code : CssSupport.codePositions("/* unfinished")) assertFalse(code);
+    assertEquals(
+        ".p-item {content:'unfinished", CssSupport.scope(".item {content:'unfinished", "p-").css());
   }
 }

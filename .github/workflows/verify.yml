@@ -44,6 +44,18 @@ jobs:
       - run: mvn -U -B -ntp clean install
       - run: mvn -U -B -ntp -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test
       - run: mvn -U -B -ntp -Pproduction verify
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Measure browser execution against Java source maps
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/compat-coverage-browsers
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0'
+        run: |
+          npm ci --prefix scripts/browser-coverage --ignore-scripts
+          npm test --prefix scripts/browser-coverage
+          scripts/browser-coverage/node_modules/.bin/playwright install chromium
+          npm run collect --prefix scripts/browser-coverage
       - name: SonarQube Quality Gate
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
@@ -64,3 +76,7 @@ jobs:
           path: |
             **/target/surefire-reports/**
             **/target/spotbugs/**
+            target/browser-coverage.xml
+      - name: Remove coverage browser cache
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/compat-coverage-browsers"

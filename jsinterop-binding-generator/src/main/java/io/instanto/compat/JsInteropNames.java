@@ -12,25 +12,28 @@ final class JsInteropNames {
 
   JsInteropNames(Collection<String> sources) {
     for (String source : sources) {
-      var cu = StaticJavaParser.parse(source);
-      for (var owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
-        for (var field : owner.getFields()) {
-          if (!(owner.isInterface() || field.isStatic() && field.isFinal())) continue;
-          for (var variable : field.getVariables()) {
-            if (!variable.getTypeAsString().equals("String")) continue;
-            variable
-                .getInitializer()
-                .ifPresent(
-                    value ->
-                        constants.put(
-                            owner.getFullyQualifiedName().orElseThrow()
-                                + "."
-                                + variable.getNameAsString(),
-                            value));
-          }
-        }
-      }
+      StaticJavaParser.parse(source)
+          .findAll(ClassOrInterfaceDeclaration.class)
+          .forEach(this::collectConstants);
     }
+  }
+
+  private void collectConstants(ClassOrInterfaceDeclaration owner) {
+    owner.getFields().stream()
+        .filter(field -> owner.isInterface() || field.isStatic() && field.isFinal())
+        .flatMap(field -> field.getVariables().stream())
+        .filter(variable -> variable.getTypeAsString().equals("String"))
+        .forEach(
+            variable ->
+                variable
+                    .getInitializer()
+                    .ifPresent(
+                        value ->
+                            constants.put(
+                                owner.getFullyQualifiedName().orElseThrow()
+                                    + "."
+                                    + variable.getNameAsString(),
+                                value)));
   }
 
   String transform(String source) {
@@ -40,9 +43,9 @@ final class JsInteropNames {
       if (!Set.of("JsType", "JsMethod", "JsProperty")
           .contains(annotation.getName().getIdentifier())) continue;
       for (var pair : annotation.getPairs()) {
-        if (!Set.of("name", "namespace").contains(pair.getNameAsString())) continue;
         Expression value = pair.getValue();
-        if (value.isStringLiteralExpr()) continue;
+        if (!Set.of("name", "namespace").contains(pair.getNameAsString())
+            || value.isStringLiteralExpr()) continue;
         String resolved = resolve(value, new HashSet<>());
         if (resolved == null)
           throw new IllegalArgumentException(
@@ -68,6 +71,23 @@ final class JsInteropNames {
       return left == null || right == null ? null : left + right;
     }
     if (!expression.isNameExpr() && !expression.isFieldAccessExpr()) return null;
+    return resolveCandidates(expression, visiting);
+  }
+
+  private String resolveCandidates(Expression expression, Set<String> visiting) {
+    for (String candidate : candidates(expression)) {
+      if (candidate.equals("jsinterop.annotations.JsPackage.GLOBAL")) return "<global>";
+      Expression value = constants.get(candidate);
+      if (value != null && visiting.add(candidate)) {
+        String resolved = resolve(value, visiting);
+        visiting.remove(candidate);
+        if (resolved != null) return resolved;
+      }
+    }
+    return null;
+  }
+
+  private List<String> candidates(Expression expression) {
     String name = expression.toString();
     var cu = expression.findCompilationUnit().orElseThrow();
     List<String> candidates = new ArrayList<>();
@@ -87,15 +107,6 @@ final class JsInteropNames {
       }
     }
     cu.getPackageDeclaration().ifPresent(p -> candidates.add(p.getNameAsString() + "." + name));
-    for (String candidate : candidates) {
-      if (candidate.equals("jsinterop.annotations.JsPackage.GLOBAL")) return "<global>";
-      Expression value = constants.get(candidate);
-      if (value != null && visiting.add(candidate)) {
-        String resolved = resolve(value, visiting);
-        visiting.remove(candidate);
-        if (resolved != null) return resolved;
-      }
-    }
-    return null;
+    return candidates;
   }
 }

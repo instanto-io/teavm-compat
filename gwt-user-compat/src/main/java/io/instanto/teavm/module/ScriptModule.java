@@ -159,6 +159,9 @@ public final class ScriptModule {
     addScript(src, (JsAction) () -> loadFrom(index + 1), (JsAction) () -> fail(src));
   }
 
+  // GWT dispatch must finish remaining callbacks/cleanup even after AssertionError,
+  // then propagate every failure via UmbrellaException.
+  @SuppressWarnings("java:S1181")
   private void complete() {
     if (presence != null && !presence.isPresent()) {
       // Every file arrived and the library still is not there: the wrong thing was
@@ -181,6 +184,9 @@ public final class ScriptModule {
     if (!failures.isEmpty()) throw new com.google.gwt.event.shared.UmbrellaException(failures);
   }
 
+  // GWT dispatch must finish remaining callbacks/cleanup even after AssertionError,
+  // then propagate every failure via UmbrellaException.
+  @SuppressWarnings("java:S1181")
   private void fail(final String src) {
     failed = true;
     waiting.clear();

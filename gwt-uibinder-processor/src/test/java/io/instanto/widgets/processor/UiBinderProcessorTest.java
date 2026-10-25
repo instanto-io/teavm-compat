@@ -506,10 +506,11 @@ public class UiBinderProcessorTest {
         sampleOwner("com.google.gwt.event.dom.client.ClickEvent")
             .replace(
                 "  interface Binder",
-                "  public interface Style extends com.google.gwt.resources.client.CssResource {"
-                    + " String spacing(); }\n"
-                    + "  @com.google.gwt.uibinder.client.UiField Style style;\n"
-                    + "  interface Binder");
+                """
+                  public interface Style extends com.google.gwt.resources.client.CssResource { String spacing(); }
+                  @com.google.gwt.uibinder.client.UiField Style style;
+                  interface Binder\
+                """);
     String template =
         styledTemplate()
             .replace("<ui:style>", "<ui:style type=\"fixture.Sample.Style\">")
@@ -604,12 +605,156 @@ public class UiBinderProcessorTest {
     assertFalse("An unrelated provider must not bypass validation", invalid.success);
   }
 
+  @Test
+  public void binaryResourcesPreserveBytesDimensionsAndCachedIdentity() throws Exception {
+    var bytes = new java.io.ByteArrayOutputStream();
+    javax.imageio.ImageIO.write(
+        new java.awt.image.BufferedImage(3, 2, java.awt.image.BufferedImage.TYPE_INT_ARGB),
+        "png",
+        bytes);
+    byte[] png = bytes.toByteArray();
+    Compilation result =
+        compile(
+            bundleOwner(
+                """
+        @Source("picture.png") com.google.gwt.resources.client.ImageResource picture();
+        @Source("payload.unknown") com.google.gwt.resources.client.DataResource payload();
+        """),
+            validTemplate(),
+            binaryResourceStubs(),
+            java.util.Map.of(
+                "fixture/picture.png", png, "fixture/payload.unknown", new byte[] {0, 1, -1}));
+    assertTrue(result.diagnostics(), result.success);
+    try (var loader =
+        new java.net.URLClassLoader(new java.net.URL[] {result.classes.toUri().toURL()})) {
+      Object bundle = loader.loadClass("fixture.Sample_Resources").getConstructor().newInstance();
+      Object picture = bundle.getClass().getMethod("picture").invoke(bundle);
+      assertSame(picture, bundle.getClass().getMethod("picture").invoke(bundle));
+      Class<?> imageType = loader.loadClass("com.google.gwt.resources.client.ImageResource");
+      assertEquals(3, imageType.getMethod("getWidth").invoke(picture));
+      assertEquals(2, imageType.getMethod("getHeight").invoke(picture));
+      assertEquals(0, imageType.getMethod("getLeft").invoke(picture));
+      assertEquals(0, imageType.getMethod("getTop").invoke(picture));
+      assertEquals(false, imageType.getMethod("isAnimated").invoke(picture));
+      assertEquals(
+          "data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(png),
+          imageType.getMethod("getURL").invoke(picture));
+      Object payload = bundle.getClass().getMethod("payload").invoke(bundle);
+      Class<?> dataType = loader.loadClass("com.google.gwt.resources.client.DataResource");
+      assertEquals(
+          "data:application/octet-stream;base64,AAH/",
+          dataType.getMethod("getUrl").invoke(payload));
+      Object safeUri = dataType.getMethod("getSafeUri").invoke(payload);
+      assertEquals(
+          dataType.getMethod("getUrl").invoke(payload),
+          loader
+              .loadClass("com.google.gwt.safehtml.shared.SafeUri")
+              .getMethod("asString")
+              .invoke(safeUri));
+    }
+  }
+
+  @Test
+  public void cssEmbedsRelativeAssetsAndPreservesExternalUrls() throws Exception {
+    Compilation result =
+        compile(
+            bundleOwner(
+                """
+        @Source("styles/main.css") com.google.gwt.resources.client.CssResource style();
+        """),
+            validTemplate(),
+            java.util.Map.of(
+                "fixture/styles/main.css",
+                """
+            .icon { background: url('../asset.bin?v=2#glyph'); }
+            .remote { background: url(https://example.test/icon.png); }
+            .root { background: url(/icons/icon.png); }
+            .fragment { filter: url(#mask); }
+            .embedded { background: url(data:image/png;base64,AA==); }
+            """),
+            java.util.Map.of("fixture/asset.bin", new byte[] {1, 2, 3}));
+    assertTrue(result.diagnostics(), result.success);
+    String generated = result.generated("fixture/Sample_Resources.java");
+    assertContains(generated, "data:application/octet-stream;base64,AQID#glyph");
+    assertContains(generated, "url(https://example.test/icon.png)");
+    assertContains(generated, "url(/icons/icon.png)");
+    assertContains(generated, "url(#mask)");
+    assertContains(generated, "url(data:image/png;base64,AA==)");
+  }
+
+  @Test
+  public void invalidBinaryAndResourceDeclarationsReportUsefulErrors() throws Exception {
+    var declarations =
+        java.util.Map.of(
+            "@Source(\"bad.png\") com.google.gwt.resources.client.ImageResource image();",
+            "Image dimensions unavailable",
+            "@Source({\"a.bin\",\"b.bin\"}) com.google.gwt.resources.client.DataResource data();",
+            "Binary resource requires one @Source",
+            "@Source(\"bad.png\") com.google.gwt.resources.client.TextResource text(int index);",
+            "Resource methods must have no parameters",
+            "com.google.gwt.resources.client.TextResource text();",
+            "requires @Source",
+            "@Source(\"bad.png\") String text();",
+            "Unsupported resource type",
+            "@Source(\"bad.png\") int number();",
+            "Unsupported resource");
+    for (var declaration : declarations.entrySet()) {
+      Compilation result =
+          compile(
+              bundleOwner(declaration.getKey()),
+              validTemplate(),
+              binaryResourceStubs(),
+              java.util.Map.of("fixture/bad.png", new byte[] {1, 2, 3}));
+      assertFalse(result.diagnostics(), result.success);
+      assertContains(result.diagnostics(), declaration.getValue());
+    }
+  }
+
+  private static String bundleOwner(String methods) {
+    return "package fixture; public interface Sample extends com.google.gwt.resources.client.ClientBundle {"
+        + methods
+        + "}";
+  }
+
+  private static java.util.Map<String, String> binaryResourceStubs() {
+    return java.util.Map.of(
+        "com/google/gwt/safehtml/shared/SafeUri.java",
+            """
+        package com.google.gwt.safehtml.shared;
+        public interface SafeUri { String asString(); }
+        """,
+        "com/google/gwt/resources/client/DataResource.java",
+            """
+        package com.google.gwt.resources.client;
+        public interface DataResource {
+          String getName(); String getUrl(); com.google.gwt.safehtml.shared.SafeUri getSafeUri();
+        }
+        """,
+        "com/google/gwt/resources/client/ImageResource.java",
+            """
+        package com.google.gwt.resources.client;
+        public interface ImageResource {
+          String getName(); String getURL(); com.google.gwt.safehtml.shared.SafeUri getSafeUri();
+          int getWidth(); int getHeight(); int getLeft(); int getTop(); boolean isAnimated();
+        }
+        """);
+  }
+
   private Compilation compile(final String owner, final String template) throws Exception {
     return compile(owner, template, java.util.Map.of());
   }
 
   private Compilation compile(
       final String owner, final String template, java.util.Map<String, String> extra)
+      throws Exception {
+    return compile(owner, template, extra, java.util.Map.of());
+  }
+
+  private Compilation compile(
+      final String owner,
+      final String template,
+      java.util.Map<String, String> extra,
+      java.util.Map<String, byte[]> binaryResources)
       throws Exception {
     final Path workspace = Files.createTempDirectory("uibinder-processor-test-");
     workspaces.add(workspace);
@@ -759,6 +904,11 @@ public class UiBinderProcessorTest {
     write(sources, "fixture/Sample.ui.xml", template);
 
     for (var entry : extra.entrySet()) write(sources, entry.getKey(), entry.getValue());
+    for (var entry : binaryResources.entrySet()) {
+      Path destination = sources.resolve(entry.getKey());
+      Files.createDirectories(destination.getParent());
+      Files.write(destination, entry.getValue());
+    }
     final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     final DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
     try (StandardJavaFileManager files =

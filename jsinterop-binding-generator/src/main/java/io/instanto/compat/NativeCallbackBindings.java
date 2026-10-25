@@ -7,6 +7,8 @@ import java.util.*;
 
 /** Adapts generic JsFunction arguments using their original functional declarations. */
 public final class NativeCallbackBindings {
+  private static final String TEAVM_PROPERTY = "JSProperty";
+
   private record Function(
       List<String> variables,
       List<String> bounds,
@@ -31,34 +33,38 @@ public final class NativeCallbackBindings {
       for (var type : cu.findAll(ClassOrInterfaceDeclaration.class)) {
         type.getFullyQualifiedName().ifPresent(name -> declarationsByName.put(name, type));
         if (type.getAnnotationByName("JsFunction").isEmpty()) continue;
-        var methods =
-            type.getMethods().stream().filter(m -> !m.isStatic() && m.getBody().isEmpty()).toList();
-        if (methods.size() != 1)
-          throw new IllegalArgumentException(
-              "Expected single JsFunction method: " + type.getName());
-        var method = methods.get(0);
-        String name = type.getFullyQualifiedName().orElseThrow();
-        functions.put(
-            name,
-            new Function(
-                type.getTypeParameters().stream().map(t -> t.getNameAsString()).toList(),
-                type.getTypeParameters().stream()
-                    .map(
-                        t ->
-                            t.getTypeBound().isEmpty()
-                                ? "Object"
-                                : boundName(
-                                    t.getTypeBound().get(0).getNameWithScope(),
-                                    type,
-                                    declarationImports))
-                    .toList(),
-                method.getNameAsString(),
-                method.getParameters().stream()
-                    .map(p -> qualified(p.getTypeAsString(), declarationImports))
-                    .toList(),
-                qualified(method.getTypeAsString(), declarationImports)));
+        registerFunction(type, declarationImports);
       }
     }
+  }
+
+  private void registerFunction(
+      ClassOrInterfaceDeclaration type, Map<String, String> declarationImports) {
+    var methods =
+        type.getMethods().stream().filter(m -> !m.isStatic() && m.getBody().isEmpty()).toList();
+    if (methods.size() != 1)
+      throw new IllegalArgumentException("Expected single JsFunction method: " + type.getName());
+    var method = methods.get(0);
+    String name = type.getFullyQualifiedName().orElseThrow();
+    functions.put(
+        name,
+        new Function(
+            type.getTypeParameters().stream().map(t -> t.getNameAsString()).toList(),
+            type.getTypeParameters().stream()
+                .map(
+                    t ->
+                        t.getTypeBound().isEmpty()
+                            ? "Object"
+                            : boundName(
+                                t.getTypeBound().get(0).getNameWithScope(),
+                                type,
+                                declarationImports))
+                .toList(),
+            method.getNameAsString(),
+            method.getParameters().stream()
+                .map(p -> qualified(p.getTypeAsString(), declarationImports))
+                .toList(),
+            qualified(method.getTypeAsString(), declarationImports)));
   }
 
   private String boundName(
@@ -108,8 +114,8 @@ public final class NativeCallbackBindings {
                             .asStringLiteralExpr()
                             .asString())
                 .orElse(method.getNameAsString());
-        if (method.getAnnotationByName("JSProperty").isPresent()) {
-          bridge.addAnnotation(method.getAnnotationByName("JSProperty").orElseThrow().clone());
+        if (method.getAnnotationByName(TEAVM_PROPERTY).isPresent()) {
+          bridge.addAnnotation(method.getAnnotationByName(TEAVM_PROPERTY).orElseThrow().clone());
         } else {
           bridge.addAnnotation(
               StaticJavaParser.parseAnnotation("@org.teavm.jso.JSMethod(\"" + nativeName + "\")"));
@@ -196,7 +202,8 @@ public final class NativeCallbackBindings {
         method.setNative(false);
         method
             .getAnnotations()
-            .removeIf(a -> Set.of("JSMethod", "JSProperty").contains(a.getName().getIdentifier()));
+            .removeIf(
+                a -> Set.of("JSMethod", TEAVM_PROPERTY).contains(a.getName().getIdentifier()));
         if (owner.isInterface()) method.setDefault(true);
         method.setBody(StaticJavaParser.parseBlock(body));
         changed = true;
@@ -242,23 +249,7 @@ public final class NativeCallbackBindings {
   private Shape shape(Type type, Map<String, String> imports) {
     if (!type.isClassOrInterfaceType()) return null;
     var declared = type.asClassOrInterfaceType();
-    String declaredName = declared.getNameWithScope();
-    int dot = declaredName.indexOf('.');
-    String first = dot < 0 ? declaredName : declaredName.substring(0, dot);
-    String resolved =
-        imports.getOrDefault(first, first) + (dot < 0 ? "" : declaredName.substring(dot));
-    if (!imports.containsKey(first)) {
-      String scope = imports.getOrDefault("$scope", "");
-      while (!scope.isEmpty()) {
-        if (functions.containsKey(scope + "." + declaredName)) {
-          resolved = scope + "." + declaredName;
-          break;
-        }
-        int parent = scope.lastIndexOf('.');
-        scope = parent < 0 ? "" : scope.substring(0, parent);
-      }
-    }
-    final String name = resolved;
+    String name = resolveFunctionName(declared, imports);
     var matches =
         functions.entrySet().stream()
             .filter(e -> e.getKey().equals(name) || e.getKey().endsWith("." + name))
@@ -283,6 +274,26 @@ public final class NativeCallbackBindings {
             + args.stream().map(t -> qualified(t, imports)).toList()
             + qualified(result, imports);
     return new Shape(function, args, result, key);
+  }
+
+  private String resolveFunctionName(ClassOrInterfaceType declared, Map<String, String> imports) {
+    String declaredName = declared.getNameWithScope();
+    int dot = declaredName.indexOf('.');
+    String first = dot < 0 ? declaredName : declaredName.substring(0, dot);
+    String resolved =
+        imports.getOrDefault(first, first) + (dot < 0 ? "" : declaredName.substring(dot));
+    if (!imports.containsKey(first)) {
+      String scope = imports.getOrDefault("$scope", "");
+      while (!scope.isEmpty()) {
+        if (functions.containsKey(scope + "." + declaredName)) {
+          resolved = scope + "." + declaredName;
+          break;
+        }
+        int parent = scope.lastIndexOf('.');
+        scope = parent < 0 ? "" : scope.substring(0, parent);
+      }
+    }
+    return resolved;
   }
 
   private static boolean needsBridge(String type, Map<String, String> imports) {

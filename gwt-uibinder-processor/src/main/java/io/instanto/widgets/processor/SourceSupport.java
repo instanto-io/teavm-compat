@@ -40,7 +40,8 @@ final class SourceSupport {
 
   static String stringExpression(String value) {
     StringBuilder result = new StringBuilder("new StringBuilder()");
-    for (int i = 0; i < value.length(); ) {
+    int i = 0;
+    while (i < value.length()) {
       int end = Math.min(i + 4096, value.length());
       if (end < value.length()
           && Character.isHighSurrogate(value.charAt(end - 1))

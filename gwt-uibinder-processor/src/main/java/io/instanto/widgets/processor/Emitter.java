@@ -47,6 +47,8 @@ import org.w3c.dom.NodeList;
  * generics and overloads.
  */
 final class Emitter {
+  private static final String FIELD_ATTRIBUTE = "field";
+  private static final String INDENT = "        ";
 
   static final String UI_NS = "urn:ui:com.google.gwt.uibinder";
   private static final String IMPORT_PREFIX = "urn:import:";
@@ -84,18 +86,18 @@ final class Emitter {
             .append(' ')
             .append(local(entry.getKey()))
             .append(" = ")
-            .append(
-                isProvided(entry.getKey())
-                    ? "java.util.Objects.requireNonNull(owner." + entry.getKey() + ")"
-                    : entry.getValue().getKind() == ElementKind.INTERFACE
-                        ? "com.google.gwt.core.client.GWT.create("
-                            + entry.getValue().getQualifiedName()
-                            + ".class)"
-                        : "new " + entry.getValue().getQualifiedName() + "()")
+            .append(withInitializer(entry.getKey(), entry.getValue()))
             .append(";\n");
       }
     }
     return declarations.append(body).toString();
+  }
+
+  private String withInitializer(String field, TypeElement type) {
+    if (isProvided(field)) return "java.util.Objects.requireNonNull(owner." + field + ")";
+    if (type.getKind() == ElementKind.INTERFACE)
+      return "com.google.gwt.core.client.GWT.create(" + type.getQualifiedName() + ".class)";
+    return "new " + type.getQualifiedName() + "()";
   }
 
   String rootType() {
@@ -111,7 +113,7 @@ final class Emitter {
           || !UI_NS.equals(child.getNamespaceURI())
           || !"style".equals(child.getLocalName())) continue;
       final Map<String, String> attrs = attributes(child);
-      final String field = attrs.getOrDefault("field", "style");
+      final String field = attrs.getOrDefault(FIELD_ATTRIBUTE, "style");
       final String typeName =
           attrs.getOrDefault("type", "com.google.gwt.resources.client.CssResource");
       final TypeElement type = env.getElementUtils().getTypeElement(typeName);
@@ -149,7 +151,7 @@ final class Emitter {
           .append(";}")
           .append(new ResourceBundleGenerator(env).cssBody(type, field, styles))
           .append("};\n");
-      styleInitialization.append("        ").append(variable).append(".ensureInjected();\n");
+      styleInitialization.append(INDENT).append(variable).append(".ensureInjected();\n");
       fields.put(field, variable);
       fieldTypes.put(field, type.asType());
     }
@@ -174,7 +176,7 @@ final class Emitter {
         continue;
       }
       final Map<String, String> attrs = attributes(child);
-      final String name = attrs.get("field");
+      final String name = attrs.get(FIELD_ATTRIBUTE);
       final String typeName = attrs.get("type");
       if (name == null || typeName == null) {
         throw new UiBinderProcessor.Failure("<ui:with> needs both a field and a type", owner);
@@ -207,10 +209,13 @@ final class Emitter {
     if (!trimmed.startsWith("{") || !trimmed.endsWith("}") || trimmed.length() < 3) return null;
     final String[] path = trimmed.substring(1, trimmed.length() - 1).split("\\.");
     TypeMirror current = fieldTypes.get(path[0]);
-    String value = fields.get(path[0]);
+    StringBuilder value = new StringBuilder();
+    String initial = fields.get(path[0]);
+    if (initial != null) value.append(initial);
     if (withFields.containsKey(path[0])) {
       current = withFields.get(path[0]).asType();
-      value = local(path[0]);
+      value.setLength(0);
+      value.append(local(path[0]));
     }
     if (current == null)
       throw new UiBinderProcessor.Failure(
@@ -244,12 +249,13 @@ final class Emitter {
       if (match == null)
         throw new UiBinderProcessor.Failure(
             type + " has no " + member + ", named by " + trimmed, owner);
-      if (match.getModifiers().contains(Modifier.STATIC))
-        value = type.getQualifiedName().toString();
-      else instance = true;
-      value += "." + match.getSimpleName();
+      if (match.getModifiers().contains(Modifier.STATIC)) {
+        value.setLength(0);
+        value.append(type.getQualifiedName());
+      } else instance = true;
+      value.append('.').append(match.getSimpleName());
       if (match instanceof ExecutableElement method) {
-        value += "()";
+        value.append("()");
         current =
             ((javax.lang.model.type.ExecutableType)
                     env.getTypeUtils().asMemberOf((DeclaredType) current, method))
@@ -257,7 +263,7 @@ final class Emitter {
       } else current = env.getTypeUtils().asMemberOf((DeclaredType) current, match);
     }
     if (instance && withFields.containsKey(path[0])) withInstance(path[0]);
-    return value;
+    return value.toString();
   }
 
   String styleDeclarations() {
@@ -288,7 +294,7 @@ final class Emitter {
     final Map<String, String> attrs = attributes(element);
     final String text = escapeTrimmed(directText(element));
     final String value = attrs.get("value");
-    body.append("        ").append(parent).append(".addItem(\"").append(text).append('"');
+    body.append(INDENT).append(parent).append(".addItem(\"").append(text).append('"');
     if (value != null) {
       body.append(", \"").append(escapeTrimmed(value)).append('"');
     }
@@ -343,7 +349,7 @@ final class Emitter {
       }
     }
 
-    body.append("        ").append(pkg).append('.').append(simple).append(' ').append(var);
+    body.append(INDENT).append(pkg).append('.').append(simple).append(' ').append(var);
     if (provided) {
       body.append(" = owner.").append(field).append(";\n");
       body.append("        java.util.Objects.requireNonNull(")
@@ -375,7 +381,7 @@ final class Emitter {
     }
     final String text = directText(element);
     if (!text.isEmpty() && !hasElementChildren(element)) {
-      body.append("        ")
+      body.append(INDENT)
           .append(var)
           .append(".setText(\"")
           .append(escapeTrimmed(text))
@@ -430,7 +436,7 @@ final class Emitter {
     final Map<String, String> attrs = attributes(element);
     final String field = attrs.remove("$field");
     for (final Map.Entry<String, String> attr : attrs.entrySet()) {
-      body.append("        ")
+      body.append(INDENT)
           .append(var)
           .append(".setAttribute(\"")
           .append(escapeTrimmed(attr.getKey()))
@@ -465,7 +471,7 @@ final class Emitter {
                 : child.getNodeValue().replaceAll("\\s+", " ");
         if (!text.isBlank() || hasElementSibling(child)) {
           final String target = domVars.contains(var) ? var : var + ".getElement()";
-          body.append("        ")
+          body.append(INDENT)
               .append(target)
               .append(".appendChild(com.google.gwt.dom.client.Document.get()")
               .append(".createTextNode(\"")
@@ -499,7 +505,7 @@ final class Emitter {
         throw new UiBinderProcessor.Failure(
             "a widget inside an HTML element needs an enclosing panel", owner);
       }
-      body.append("        ")
+      body.append(INDENT)
           .append(host)
           .append(".add(")
           .append(var)
@@ -509,15 +515,15 @@ final class Emitter {
       return;
     }
     if (parentIsDom) {
-      body.append("        ").append(parent).append(".appendChild(").append(var).append(");\n");
+      body.append(INDENT).append(parent).append(".appendChild(").append(var).append(");\n");
     } else if (childIsDom) {
-      body.append("        ")
+      body.append(INDENT)
           .append(parent)
           .append(".getElement().appendChild(")
           .append(var)
           .append(");\n");
     } else {
-      body.append("        ").append(parent).append(".add(").append(var).append(");\n");
+      body.append(INDENT).append(parent).append(".add(").append(var).append(");\n");
     }
   }
 
@@ -581,7 +587,7 @@ final class Emitter {
     // UiBinder's own pseudo-attributes, which are not setters at all
     if ("addStyleNames".equals(name)) {
       for (final String style : value.trim().split("\\s+")) {
-        body.append("        ")
+        body.append(INDENT)
             .append(var)
             .append(".addStyleName(\"")
             .append(escape(style))
@@ -591,7 +597,7 @@ final class Emitter {
     }
     if ("id".equals(name)) {
       final String expression = expression(value);
-      body.append("        ")
+      body.append(INDENT)
           .append(var)
           .append(".getElement().setId(")
           .append(expression != null ? expression : "\"" + escape(value) + "\"")
@@ -606,7 +612,7 @@ final class Emitter {
         // belong to the element. A test locating a widget by data-testid is the
         // main reason a template carries one, so passing them through matters.
         final String expression = expression(value);
-        body.append("        ")
+        body.append(INDENT)
             .append(var)
             .append(".getElement().setAttribute(\"")
             .append(escape(name))
@@ -618,7 +624,7 @@ final class Emitter {
       throw new UiBinderProcessor.Failure(
           simple + " has no " + setter + " for the " + name + " attribute", owner);
     }
-    body.append("        ")
+    body.append(INDENT)
         .append(var)
         .append('.')
         .append(setter)
@@ -722,7 +728,7 @@ final class Emitter {
       final String uri = attr.getNamespaceURI();
       final String name = attr.getLocalName() == null ? attr.getNodeName() : attr.getLocalName();
       if (UI_NS.equals(uri)) {
-        if ("field".equals(name)) {
+        if (FIELD_ATTRIBUTE.equals(name)) {
           attrs.put("$field", attr.getNodeValue());
         }
         continue;
@@ -833,7 +839,7 @@ final class Emitter {
                     + env.getTypeUtils().erasure(event),
                 method);
           }
-          out.append("        ")
+          out.append(INDENT)
               .append(var)
               .append('.')
               .append(binding.adder)

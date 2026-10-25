@@ -292,7 +292,8 @@ public class GenerateModulesMojo extends AbstractMojo {
           .append("public String getText() { return value; }\n")
           .append("private String loadText() { StringBuilder text = new StringBuilder();\n");
       // Build once, avoiding both constant-size limits and splitting UTF-16 surrogate pairs.
-      for (int start = 0; start < text.length(); ) {
+      int start = 0;
+      while (start < text.length()) {
         int end = Math.min(start + 8000, text.length());
         if (end < text.length()
             && Character.isHighSurrogate(text.charAt(end - 1))

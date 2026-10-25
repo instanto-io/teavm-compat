@@ -71,6 +71,7 @@ public class LifecycleRegressionTest {
   static class BadUnload extends Label {
     boolean fail = true;
 
+    @Override
     protected void onUnload() {
       if (fail) throw new IllegalStateException("test unload");
     }
@@ -86,6 +87,7 @@ public class LifecycleRegressionTest {
       try {
         parent.remove(child);
       } catch (RuntimeException expected) {
+        // The assertions below verify cleanup after the deliberately failing callback.
       }
       assertNull("exception must not leave stale parent ownership", child.getParent());
       assertEquals(0, parent.getWidgetCount());
@@ -136,6 +138,7 @@ public class LifecycleRegressionTest {
       provider.addDataDisplay(display);
       fail("duplicate display accepted");
     } catch (IllegalStateException expected) {
+      // Duplicate registration must fail without adding a second subscription.
     }
     display.setVisibleRange(1, 2);
     assertEquals(2, calls[0]);
@@ -171,6 +174,7 @@ public class LifecycleRegressionTest {
     try {
       manager.fireEvent(new E());
     } catch (RuntimeException expected) {
+      // Dispatch must notify the remaining handler before propagating this failure.
     }
     assertEquals("dispatch all handlers before propagating failures", 1, calls[0]);
   }
@@ -186,7 +190,9 @@ public class LifecycleRegressionTest {
             return false;
           }
 
-          public void onFrameLoad() {}
+          public void onFrameLoad() {
+            // This fixture tests submit unregistration and has no iframe.
+          }
         };
     FormPanelImpl impl = new FormPanelImpl();
     impl.hookEvents(null, form, host);

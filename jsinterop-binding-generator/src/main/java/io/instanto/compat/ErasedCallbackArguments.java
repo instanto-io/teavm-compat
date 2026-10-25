@@ -20,70 +20,96 @@ final class ErasedCallbackArguments {
     }
   }
 
+  private record CallSite(
+      Expression scope,
+      ClassOrInterfaceDeclaration owner,
+      ClassOrInterfaceType receiver,
+      ClassOrInterfaceDeclaration nativeType,
+      MethodDeclaration method,
+      NodeList<Type> arguments) {}
+
   String transform(String source) {
     var cu = StaticJavaParser.parse(source);
     boolean changed = false;
     int sequence = 0;
     for (var call : new ArrayList<>(cu.findAll(MethodCallExpr.class))) {
-      if (call.getScope().isEmpty()) continue;
-      var owner = call.findAncestor(ClassOrInterfaceDeclaration.class).orElse(null);
-      if (owner == null) continue;
-      Type receiver = receiverType(call.getScope().get(), call, owner);
-      if (receiver == null || !receiver.isClassOrInterfaceType()) continue;
-      var declared = receiver.asClassOrInterfaceType();
-      var arguments = declared.getTypeArguments().orElse(new NodeList<>());
-      if (arguments.isEmpty()) continue;
-      var nativeType = types.get(resolve(declared.getNameWithScope(), owner));
-      if (nativeType == null || nativeType.getAnnotationByName("JsType").isEmpty()) continue;
-      var annotation = nativeType.getAnnotationByName("JsType").get();
-      if (!(annotation instanceof NormalAnnotationExpr normal)
-          || normal.getPairs().stream()
-              .noneMatch(
-                  pair ->
-                      pair.getNameAsString().equals("isNative")
-                          && pair.getValue().isBooleanLiteralExpr()
-                          && pair.getValue().asBooleanLiteralExpr().getValue())) continue;
-      if (arguments.size() != nativeType.getTypeParameters().size()) continue;
-      List<MethodDeclaration> methods =
-          nativeType.getMethodsByName(call.getNameAsString()).stream()
-              .filter(
-                  m ->
-                      m.isNative()
-                          && m.getType().isVoidType()
-                          && m.getParameters().size() == call.getArguments().size())
-              .toList();
-      // Do not guess overload resolution. A unique native void setter is unambiguous.
-      if (methods.size() != 1) continue;
-      var method = methods.get(0);
-      boolean adapted = false;
-      for (int i = 0; i < method.getParameters().size(); i++) {
-        String parameter = method.getParameter(i).getTypeAsString();
-        int variable = -1;
-        for (int j = 0; j < nativeType.getTypeParameters().size(); j++) {
-          if (nativeType.getTypeParameter(j).getNameAsString().equals(parameter)) variable = j;
+      var site = callSite(call);
+      if (site != null) {
+        int next = adaptArguments(call, site, sequence);
+        if (next != sequence) {
+          var raw = site.receiver().clone();
+          raw.removeTypeArguments();
+          call.setScope(new EnclosedExpr(new CastExpr(raw, site.scope().clone())));
+          sequence = next;
+          changed = true;
         }
-        if (variable < 0) continue;
-        String functionName = resolve(arguments.get(variable).toString(), owner);
-        var function = types.get(functionName);
-        if (function == null || function.getAnnotationByName("JsFunction").isEmpty()) continue;
-        if (!function.getTypeParameters().isEmpty())
-          throw new IllegalArgumentException(
-              "Parameterized erased callback needs an explicit bridge: " + functionName);
-        String helper = "$erasedCallback" + sequence++;
-        addBridge(owner, function, functionName, helper);
-        call.setArgument(i, new MethodCallExpr(helper).addArgument(call.getArgument(i).clone()));
-        adapted = true;
-      }
-      if (adapted) {
-        // The helper produces a native JS function. Pass it as Object to the erased native setter,
-        // avoiding an intermediate cast back to the Java functor representation.
-        var raw = declared.clone();
-        raw.removeTypeArguments();
-        call.setScope(new EnclosedExpr(new CastExpr(raw, call.getScope().get().clone())));
-        changed = true;
       }
     }
     return changed ? cu.toString() : source;
+  }
+
+  private CallSite callSite(MethodCallExpr call) {
+    var scope = call.getScope().orElse(null);
+    var owner = call.findAncestor(ClassOrInterfaceDeclaration.class).orElse(null);
+    if (scope == null || owner == null) return null;
+    Type receiver = receiverType(scope, call, owner);
+    if (!(receiver instanceof ClassOrInterfaceType declared)) return null;
+    var arguments = declared.getTypeArguments().orElse(new NodeList<>());
+    var nativeType = types.get(resolve(declared.getNameWithScope(), owner));
+    if (arguments.isEmpty()
+        || !isNativeType(nativeType)
+        || arguments.size() != nativeType.getTypeParameters().size()) return null;
+    var methods =
+        nativeType.getMethodsByName(call.getNameAsString()).stream()
+            .filter(
+                m ->
+                    m.isNative()
+                        && m.getType().isVoidType()
+                        && m.getParameters().size() == call.getArguments().size())
+            .toList();
+    // Do not guess overload resolution. A unique native void setter is unambiguous.
+    return methods.size() == 1
+        ? new CallSite(scope, owner, declared, nativeType, methods.get(0), arguments)
+        : null;
+  }
+
+  private static boolean isNativeType(ClassOrInterfaceDeclaration type) {
+    if (type == null) return false;
+    var annotation = type.getAnnotationByName("JsType").orElse(null);
+    return annotation instanceof NormalAnnotationExpr normal
+        && normal.getPairs().stream()
+            .anyMatch(
+                pair ->
+                    pair.getNameAsString().equals("isNative")
+                        && pair.getValue().isBooleanLiteralExpr()
+                        && pair.getValue().asBooleanLiteralExpr().getValue());
+  }
+
+  private int adaptArguments(MethodCallExpr call, CallSite site, int sequence) {
+    for (int i = 0; i < site.method().getParameters().size(); i++) {
+      String parameter = site.method().getParameter(i).getTypeAsString();
+      int variable = typeParameterIndex(site.nativeType(), parameter);
+      if (variable >= 0) {
+        String functionName = resolve(site.arguments().get(variable).toString(), site.owner());
+        var function = types.get(functionName);
+        if (function != null && function.getAnnotationByName("JsFunction").isPresent()) {
+          if (!function.getTypeParameters().isEmpty())
+            throw new IllegalArgumentException(
+                "Parameterized erased callback needs an explicit bridge: " + functionName);
+          String helper = "$erasedCallback" + sequence++;
+          addBridge(site.owner(), function, functionName, helper);
+          call.setArgument(i, new MethodCallExpr(helper).addArgument(call.getArgument(i).clone()));
+        }
+      }
+    }
+    return sequence;
+  }
+
+  private static int typeParameterIndex(ClassOrInterfaceDeclaration type, String name) {
+    for (int i = 0; i < type.getTypeParameters().size(); i++) {
+      if (type.getTypeParameter(i).getNameAsString().equals(name)) return i;
+    }
+    return -1;
   }
 
   private void addBridge(
@@ -96,7 +122,9 @@ final class ErasedCallbackArguments {
     if (methods.size() != 1)
       throw new IllegalArgumentException("Expected a single callback method: " + functionName);
     var method = methods.get(0);
-    List<String> params = new ArrayList<>(), names = new ArrayList<>(), values = new ArrayList<>();
+    List<String> params = new ArrayList<>();
+    List<String> names = new ArrayList<>();
+    List<String> values = new ArrayList<>();
     for (int i = 0; i < method.getParameters().size(); i++) {
       String type = resolve(method.getParameter(i).getTypeAsString(), function);
       String name = "a" + i;
@@ -181,39 +209,57 @@ final class ErasedCallbackArguments {
     else if (scope.isFieldAccessExpr() && scope.asFieldAccessExpr().getScope().isThisExpr())
       name = scope.asFieldAccessExpr().getNameAsString();
     else return null;
-    // Fields are the common container case. Locals/parameters with the same name take precedence.
     if (scope.isNameExpr()) {
-      // Lambda/catch parameters can hide a field without appearing in the enclosing method's
-      // parameter list. Inferred lambda parameter types require symbol resolution; leave them
-      // alone.
-      for (Node node = call; node != owner; node = node.getParentNode().orElse(owner)) {
-        if (node instanceof LambdaExpr lambda)
-          for (var p : lambda.getParameters())
-            if (p.getNameAsString().equals(name)) return p.getType();
-        if (node instanceof CatchClause clause
-            && clause.getParameter().getNameAsString().equals(name))
-          return clause.getParameter().getType();
-      }
-      var callable = call.findAncestor(CallableDeclaration.class);
-      if (callable.isPresent()) {
-        for (var p : ((CallableDeclaration<?>) callable.get()).getParameters())
-          if (p.getNameAsString().equals(name)) return p.getType();
+      Type shadow = enclosingParameterType(call, owner, name);
+      if (shadow != null) return shadow;
+      var callable = call.findAncestor(CallableDeclaration.class).orElse(null);
+      if (callable != null) {
+        Type parameter = parameterType(((CallableDeclaration<?>) callable).getParameters(), name);
+        if (parameter != null) return parameter;
         var locals =
-            callable.get().findAll(VariableDeclarator.class).stream()
+            callable.findAll(VariableDeclarator.class).stream()
                 .filter(
-                    v ->
-                        v.getNameAsString().equals(name)
-                            && inScope(v, call)
-                            && v.getRange().isPresent()
-                            && call.getRange().isPresent()
-                            && v.getRange().get().begin.isBefore(call.getRange().get().begin))
+                    v -> v.getNameAsString().equals(name) && inScope(v, call) && precedes(v, call))
                 .toList();
-        if (locals.size() == 1) return locals.get(0).getType();
-        if (locals.size() > 1) return null;
+        if (!locals.isEmpty()) return locals.size() == 1 ? locals.get(0).getType() : null;
       }
     }
-    for (var field : owner.getFields())
-      for (var v : field.getVariables()) if (v.getNameAsString().equals(name)) return v.getType();
+    return owner.getFields().stream()
+        .flatMap(f -> f.getVariables().stream())
+        .filter(v -> v.getNameAsString().equals(name))
+        .map(VariableDeclarator::getType)
+        .findFirst()
+        .orElse(null);
+  }
+
+  private static boolean precedes(Node declaration, Node use) {
+    var declarationRange = declaration.getRange().orElse(null);
+    var useRange = use.getRange().orElse(null);
+    return declarationRange != null
+        && useRange != null
+        && declarationRange.begin.isBefore(useRange.begin);
+  }
+
+  private static Type parameterType(NodeList<Parameter> parameters, String name) {
+    return parameters.stream()
+        .filter(p -> p.getNameAsString().equals(name))
+        .map(Parameter::getType)
+        .findFirst()
+        .orElse(null);
+  }
+
+  private static Type enclosingParameterType(
+      MethodCallExpr call, ClassOrInterfaceDeclaration owner, String name) {
+    // Lambda and catch parameters may hide fields; inferred types deliberately remain unknown.
+    for (Node node = call; node != owner; node = node.getParentNode().orElse(owner)) {
+      if (node instanceof LambdaExpr lambda) {
+        Type type = parameterType(lambda.getParameters(), name);
+        if (type != null) return type;
+      }
+      if (node instanceof CatchClause clause
+          && clause.getParameter().getNameAsString().equals(name))
+        return clause.getParameter().getType();
+    }
     return null;
   }
 
@@ -242,15 +288,18 @@ final class ErasedCallbackArguments {
       scope = dot < 0 ? "" : scope.substring(0, dot);
     }
     for (var imp : cu.getImports()) {
-      String imported = imp.getNameAsString();
-      if (imp.isAsterisk()) {
-        if (types.containsKey(imported + "." + name)) return imported + "." + name;
-      } else {
-        String simple = imp.getName().getIdentifier();
-        if (name.equals(simple)) return imported;
-        if (name.startsWith(simple + ".")) return imported + name.substring(simple.length());
-      }
+      String resolved = importedName(imp, name);
+      if (resolved != null) return resolved;
     }
     return name;
+  }
+
+  private String importedName(ImportDeclaration imp, String name) {
+    String imported = imp.getNameAsString();
+    if (imp.isAsterisk())
+      return types.containsKey(imported + "." + name) ? imported + "." + name : null;
+    String simple = imp.getName().getIdentifier();
+    if (name.equals(simple)) return imported;
+    return name.startsWith(simple + ".") ? imported + name.substring(simple.length()) : null;
   }
 }

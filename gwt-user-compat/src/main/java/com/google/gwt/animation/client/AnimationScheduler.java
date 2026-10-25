@@ -53,18 +53,18 @@ public abstract class AnimationScheduler {
       cancelFrame(id);
       callback = null;
     }
+
+    @JSBody(
+        params = "callback",
+        script = "return window.requestAnimationFrame(function(){callback(Date.now());});")
+    private static native int request(Frame callback);
+
+    @JSBody(params = "id", script = "window.cancelAnimationFrame(id);")
+    private static native void cancelFrame(int id);
   }
 
   @JSFunctor
   private interface Frame extends JSObject {
     void execute(double timestamp);
   }
-
-  @JSBody(
-      params = "callback",
-      script = "return window.requestAnimationFrame(function(){callback(Date.now());});")
-  private static native int request(Frame callback);
-
-  @JSBody(params = "id", script = "window.cancelAnimationFrame(id);")
-  private static native void cancelFrame(int id);
 }

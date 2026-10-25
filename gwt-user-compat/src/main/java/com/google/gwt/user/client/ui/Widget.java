@@ -219,12 +219,14 @@ public class Widget extends UIObject
     return addDomHandler(handler, DoubleClickEvent.getType());
   }
 
+  @Override
   public void sinkEvents(int bits) {
     com.google.gwt.user.client.DOM.setEventListener(getElement(), this);
     com.google.gwt.user.client.Event.sinkEvents(
         getElement(), bits | com.google.gwt.user.client.Event.getEventsSunk(getElement()));
   }
 
+  @Override
   public void unsinkEvents(int bits) {
     com.google.gwt.user.client.Event.sinkEvents(
         getElement(), com.google.gwt.user.client.Event.getEventsSunk(getElement()) & ~bits);

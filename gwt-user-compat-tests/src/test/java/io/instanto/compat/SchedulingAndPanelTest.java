@@ -37,7 +37,7 @@ public class SchedulingAndPanelTest {
         });
     assertEquals(
         List.of("entry", "start", "nested-entry", "end", "finally", "nested-finally"), events);
-    Thread.sleep(80);
+    BrowserWait.until(() -> events.contains("deferred"));
     assertEquals("deferred", events.get(events.size() - 1));
   }
 
@@ -50,7 +50,7 @@ public class SchedulingAndPanelTest {
     Scheduler.runEntry(() -> {});
     assertEquals(2, repeats[0]);
     Scheduler.get().scheduleIncremental(() -> ++incremental[0] < 250);
-    Thread.sleep(150);
+    BrowserWait.until(() -> incremental[0] == 250);
     assertEquals(250, incremental[0]);
   }
 
@@ -105,6 +105,7 @@ public class SchedulingAndPanelTest {
     List<Double> values = new ArrayList<>();
     Animation animation =
         new Animation() {
+          @Override
           protected double interpolate(double progress) {
             return progress * 2;
           }

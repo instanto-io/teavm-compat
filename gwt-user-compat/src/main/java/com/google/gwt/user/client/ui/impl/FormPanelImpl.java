@@ -56,6 +56,8 @@ public class FormPanelImpl {
                   event -> com.google.gwt.core.client.Scheduler.runEntry(host::onFrameLoad));
   }
 
+  // The parameters are part of the GWT API; owned registrations identify the actual listeners.
+  @SuppressWarnings("java:S1172")
   public void unhookEvents(final Element iframe, final Element form) {
     if (submitRegistration != null) {
       submitRegistration.dispose();

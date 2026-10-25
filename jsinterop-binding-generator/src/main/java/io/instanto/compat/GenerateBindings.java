@@ -11,6 +11,12 @@ import java.util.jar.*;
 
 /** Deterministic JsInterop declaration to TeaVM JSO source adapter. */
 public final class GenerateBindings {
+  private static final String GLOBAL_NAMESPACE = "<global>";
+  private static final String JS_INTEROP_METHOD = "JsMethod";
+  private static final String JS_INTEROP_PROPERTY = "JsProperty";
+  private static final String TEAVM_METHOD = "JSMethod";
+  private static final String TEAVM_BODY = "JSBody";
+
   private static String value(AnnotationExpr a, String key, String fallback) {
     if (a instanceof NormalAnnotationExpr normal) {
       return normal.getPairs().stream()
@@ -83,7 +89,7 @@ public final class GenerateBindings {
                 ? "globalThis"
                 : "globalThis."
                     + ((!namespace.isEmpty()
-                            && !Set.of("JsPackage.GLOBAL", "GLOBAL", "<global>")
+                            && !Set.of("JsPackage.GLOBAL", "GLOBAL", GLOBAL_NAMESPACE)
                                 .contains(namespace))
                         ? namespace + "."
                         : "")
@@ -97,11 +103,11 @@ public final class GenerateBindings {
         // when the same declaration is inherited through both a class and an interface.
         for (MethodDeclaration method : c.getMethods()) {
           if ((method.isNative() || c.isInterface() && method.getBody().isEmpty())
-              && method.getAnnotationByName("JsMethod").isEmpty()
-              && method.getAnnotationByName("JsProperty").isEmpty()
-              && method.getAnnotationByName("JSMethod").isEmpty()
+              && method.getAnnotationByName(JS_INTEROP_METHOD).isEmpty()
+              && method.getAnnotationByName(JS_INTEROP_PROPERTY).isEmpty()
+              && method.getAnnotationByName(TEAVM_METHOD).isEmpty()
               && method.getAnnotationByName("JSProperty").isEmpty()
-              && method.getAnnotationByName("JSBody").isEmpty()) annotate(method, "@JSMethod");
+              && method.getAnnotationByName(TEAVM_BODY).isEmpty()) annotate(method, "@JSMethod");
         }
       }
       for (MethodDeclaration m : new ArrayList<>(c.getMethodsByName("cast"))) {
@@ -116,7 +122,7 @@ public final class GenerateBindings {
       }
       for (FieldDeclaration f : c.getFields()) {
         if (f.getAnnotationByName("JsOverlay").isPresent()) continue;
-        if (f.isStatic() && f.getAnnotationByName("JsProperty").isEmpty())
+        if (f.isStatic() && f.getAnnotationByName(JS_INTEROP_PROPERTY).isEmpty())
           annotate(f, "@JSProperty");
         for (var v : f.getVariables()) v.removeInitializer();
       }
@@ -158,13 +164,13 @@ public final class GenerateBindings {
     }
     for (AnnotationExpr a : new ArrayList<>(cu.findAll(AnnotationExpr.class))) {
       String n = a.getNameAsString();
-      if (n.equals("JsProperty") || n.equals("JsMethod")) {
+      if (n.equals(JS_INTEROP_PROPERTY) || n.equals(JS_INTEROP_METHOD)) {
         var owner = (NodeWithAnnotations<?>) a.getParentNode().orElseThrow();
         String name = value(a, "name", "");
         String ns = value(a, "namespace", "");
-        if (n.equals("JsMethod")
+        if (n.equals(JS_INTEROP_METHOD)
             && !ns.isEmpty()
-            && !Set.of("JsPackage.GLOBAL", "GLOBAL", "<global>").contains(ns)
+            && !Set.of("JsPackage.GLOBAL", "GLOBAL", GLOBAL_NAMESPACE).contains(ns)
             && owner instanceof MethodDeclaration method
             && method.isStatic()) {
           String member = name.isEmpty() ? method.getNameAsString() : name;
@@ -196,23 +202,30 @@ public final class GenerateBindings {
           String script = (method.getType().isVoidType() ? "" : "return ") + invocation + ";";
           method.addAnnotation(
               new NormalAnnotationExpr(
-                  new Name("JSBody"),
+                  new Name(TEAVM_BODY),
                   NodeList.nodeList(
                       new MemberValuePair("params", new ArrayInitializerExpr(parameters)),
                       new MemberValuePair("script", new StringLiteralExpr().setString(script)))));
           a.remove();
           continue;
         }
-        if (n.equals("JsMethod")
-            && (ns.equals("JsPackage.GLOBAL") || ns.equals("GLOBAL") || ns.equals("<global>")))
-          annotate(owner, "@JSTopLevel");
+        if (n.equals(JS_INTEROP_METHOD)
+            && (ns.equals("JsPackage.GLOBAL")
+                || ns.equals("GLOBAL")
+                || ns.equals(GLOBAL_NAMESPACE))) annotate(owner, "@JSTopLevel");
         annotate(
             owner,
             "@"
-                + (n.equals("JsProperty") ? "JSProperty" : "JSMethod")
+                + (n.equals(JS_INTEROP_PROPERTY) ? "JSProperty" : TEAVM_METHOD)
                 + (name.isEmpty() ? "" : "(\"" + name + "\")"));
       }
-      if (Set.of("JsType", "JsFunction", "JsOverlay", "JsProperty", "JsMethod", "JsConstructor")
+      if (Set.of(
+              "JsType",
+              "JsFunction",
+              "JsOverlay",
+              JS_INTEROP_PROPERTY,
+              JS_INTEROP_METHOD,
+              "JsConstructor")
           .contains(n)) a.remove();
     }
     // TeaVM erases generic functor arguments to wrapped JS values. Normalize promise
@@ -232,7 +245,7 @@ public final class GenerateBindings {
           bridge.getAnnotations().clear();
           annotate(bridge, "@JSMethod(\"" + nativeName + "\")");
           owner.addMember(bridge);
-          m.getAnnotations().removeIf(a -> a.getNameAsString().equals("JSMethod"));
+          m.getAnnotations().removeIf(a -> a.getNameAsString().equals(TEAVM_METHOD));
           m.setNative(false);
           if (owner.isInterface()) m.setDefault(true);
           List<String> args = new ArrayList<>();
@@ -263,7 +276,7 @@ public final class GenerateBindings {
       MethodDeclaration bridge = m.clone().setName(helper).setPublic(false).setPrivate(true);
       bridge.getParameter(bridge.getParameters().size() - 1).setType("JSObject");
       String jsName =
-          m.getAnnotationByName("JSMethod")
+          m.getAnnotationByName(TEAVM_METHOD)
               .map(
                   a ->
                       a.isSingleMemberAnnotationExpr()
@@ -273,8 +286,9 @@ public final class GenerateBindings {
                               .asString()
                           : m.getNameAsString())
               .orElse(m.getNameAsString());
-      bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals("JSMethod"));
-      if (!bridge.isAnnotationPresent("JSBody")) annotate(bridge, "@JSMethod(\"" + jsName + "\")");
+      bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals(TEAVM_METHOD));
+      if (!bridge.isAnnotationPresent(TEAVM_BODY))
+        annotate(bridge, "@JSMethod(\"" + jsName + "\")");
       owner.addMember(bridge);
       String args = last.getNameAsString();
       String prefix =
@@ -284,7 +298,8 @@ public final class GenerateBindings {
       if (!prefix.isEmpty()) prefix += ",";
       m.setNative(false);
       m.getAnnotations()
-          .removeIf(a -> Set.of("JSTopLevel", "JSMethod", "JSBody").contains(a.getNameAsString()));
+          .removeIf(
+              a -> Set.of("JSTopLevel", TEAVM_METHOD, TEAVM_BODY).contains(a.getNameAsString()));
       m.setBody(
           StaticJavaParser.parseBlock(
               "{JSObject[] nativeArgs=new JSObject["

@@ -54,12 +54,13 @@ public abstract class AbstractDataProvider<T> {
       throw new IllegalStateException("Display already added");
     var registration = display.addRangeChangeHandler(event -> onRangeChanged(display));
     registrations.put(display, registration);
+    boolean registered = false;
     try {
       if (rowCount >= 0) display.setRowCount(rowCount, rowCountExact);
       onRangeChanged(display);
-    } catch (RuntimeException | Error failure) {
-      removeDataDisplay(display);
-      throw failure;
+      registered = true;
+    } finally {
+      if (!registered) removeDataDisplay(display);
     }
   }
 

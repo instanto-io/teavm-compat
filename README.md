@@ -86,3 +86,19 @@ runtime finds through `GWT.create`. The
 
 The [generation and linking design](docs/UIBINDER.md) explains how the
 providers are discovered and linked into the browser application.
+
+### Browser coverage and Sonar
+
+The verification workflow collects JVM coverage with JaCoCo and browser coverage
+with Chromium's V8 execution counters. TeaVM's source maps map the executed and
+missed JavaScript locations back to owned Java source lines. The browser report
+is written to `target/browser-coverage.xml` and imported by Sonar alongside
+JaCoCo; it reports line coverage, not inferred Java branch coverage. Third-party
+sources are ignored, and collection fails if a compiled browser test fails or
+no owned source locations can be mapped.
+
+After `mvn clean install`, run `npm ci --prefix scripts/browser-coverage`,
+`npm test --prefix scripts/browser-coverage`, and
+`npm run collect --prefix scripts/browser-coverage`. Install the pinned Chromium
+revision with `scripts/browser-coverage/node_modules/.bin/playwright install chromium`
+if needed. Keep the coverage report from the same source revision as the analysis.

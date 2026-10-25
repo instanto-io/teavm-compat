@@ -38,7 +38,7 @@ public abstract class Panel extends Widget implements HasWidgets {
   public void clear() {
     java.util.List<Widget> children = new java.util.ArrayList<>();
     for (Widget child : this) children.add(child);
-    Lifecycle.forEach(children, child -> remove(child));
+    Lifecycle.forEach(children, this::remove);
   }
 
   @Override

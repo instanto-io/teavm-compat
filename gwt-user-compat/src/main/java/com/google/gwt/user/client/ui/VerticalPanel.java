@@ -3,8 +3,9 @@ package com.google.gwt.user.client.ui;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 
+// Preserve the public GWT hierarchy: callers rely on assignability to CellPanel and Panel.
+@SuppressWarnings("java:S110")
 public class VerticalPanel extends CellPanel implements InsertPanel.ForIsWidget {
-  public VerticalPanel() {}
 
   @Override
   public void add(Widget child) {

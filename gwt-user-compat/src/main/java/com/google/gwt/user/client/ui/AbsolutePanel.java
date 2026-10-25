@@ -5,13 +5,15 @@ import com.google.gwt.dom.client.Element;
 
 /** Positions children relative to this panel; (-1,-1) restores normal flow. */
 public class AbsolutePanel extends ComplexPanel {
+  private static final String POSITION = "position";
+
   public AbsolutePanel() {
     this(Document.get().createDivElement());
   }
 
   protected AbsolutePanel(Element element) {
     setElement(element);
-    element.getStyle().setProperty("position", "relative");
+    element.getStyle().setProperty(POSITION, "relative");
     element.getStyle().setProperty("overflow", "hidden");
   }
 
@@ -28,7 +30,7 @@ public class AbsolutePanel extends ComplexPanel {
     requireChild(widget);
     var style = widget.getElement().getStyle();
     boolean positioned = left != -1 || top != -1;
-    style.setProperty("position", positioned ? "absolute" : "");
+    style.setProperty(POSITION, positioned ? "absolute" : "");
     style.setProperty("left", positioned ? left + "px" : "");
     style.setProperty("top", positioned ? top + "px" : "");
   }
@@ -58,7 +60,7 @@ public class AbsolutePanel extends ComplexPanel {
       return super.remove(widget);
     } finally {
       var style = widget.getElement().getStyle();
-      style.setProperty("position", "");
+      style.setProperty(POSITION, "");
       style.setProperty("left", "");
       style.setProperty("top", "");
     }

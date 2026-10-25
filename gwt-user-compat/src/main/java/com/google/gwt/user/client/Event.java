@@ -41,7 +41,8 @@ public class Event extends NativeEvent {
       extends com.google.gwt.event.shared.GwtEvent<NativePreviewHandler> {
     private static final Type<NativePreviewHandler> TYPE = new Type<>();
     private final NativeEvent event;
-    private boolean canceled, consumed;
+    private boolean canceled;
+    private boolean consumed;
 
     NativePreviewEvent(NativeEvent event) {
       this.event = event;

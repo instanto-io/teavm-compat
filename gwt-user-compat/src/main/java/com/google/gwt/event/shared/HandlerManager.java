@@ -39,11 +39,11 @@ public class HandlerManager implements HasHandlers {
     }
 
     int count(GwtEvent.Type<?> type) {
-      return getHandlerCount(type);
+      return super.getHandlerCount(type);
     }
 
     <H> H handler(GwtEvent.Type<H> type, int index) {
-      return getHandler(type, index);
+      return super.getHandler(type, index);
     }
   }
 

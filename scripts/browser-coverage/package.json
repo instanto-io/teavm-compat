@@ -1,0 +1,14 @@
+{
+  "name": "teavm-compat-browser-coverage",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test coverage.test.mjs",
+    "collect": "node collect.mjs"
+  },
+  "dependencies": {
+    "@jridgewell/trace-mapping": "0.3.31",
+    "playwright": "1.55.0"
+  },
+  "version": "0.0.0"
+}
