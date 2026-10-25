@@ -86,19 +86,21 @@ final class CssSupport {
     while (content < css.length() && Character.isWhitespace(css.charAt(content))) content++;
     if (content == css.length()) return null;
     char first = css.charAt(content);
-    if (first == '\'' || first == '"') {
-      int end = literalEnd(css, content);
-      if (end <= content + 1 || css.charAt(end - 1) != first) return null;
-      String value = css.substring(content + 1, end - 1);
-      while (end < css.length() && Character.isWhitespace(css.charAt(end))) end++;
-      return end < css.length() && css.charAt(end) == ')'
-          ? new Url(start, end + 1, value.trim())
-          : null;
-    }
+    if (first == '\'' || first == '"') return quotedUrl(css, start, content, first);
     int end = css.indexOf(')', content);
     if (end < 0) return null;
     String value = css.substring(content, end).trim();
     return value.isEmpty() ? null : new Url(start, end + 1, value);
+  }
+
+  private static Url quotedUrl(String css, int start, int content, char quote) {
+    int end = literalEnd(css, content);
+    if (end <= content + 1 || css.charAt(end - 1) != quote) return null;
+    String value = css.substring(content + 1, end - 1);
+    while (end < css.length() && Character.isWhitespace(css.charAt(end))) end++;
+    return end < css.length() && css.charAt(end) == ')'
+        ? new Url(start, end + 1, value.trim())
+        : null;
   }
 
   private static boolean identifierStart(char c) {

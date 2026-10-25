@@ -14,7 +14,9 @@ public abstract class Animation {
   private Element element;
   private int generation;
 
-  protected Animation() {
+  // Keep the public constructor exposed by GWT's Animation API.
+  @SuppressWarnings("java:S5993")
+  public Animation() {
     this(AnimationScheduler.get());
   }
 

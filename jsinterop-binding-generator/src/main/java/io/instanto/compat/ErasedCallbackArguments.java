@@ -210,19 +210,8 @@ final class ErasedCallbackArguments {
       name = scope.asFieldAccessExpr().getNameAsString();
     else return null;
     if (scope.isNameExpr()) {
-      Type shadow = enclosingParameterType(call, owner, name);
+      Type shadow = localType(call, owner, name);
       if (shadow != null) return shadow;
-      var callable = call.findAncestor(CallableDeclaration.class).orElse(null);
-      if (callable != null) {
-        Type parameter = parameterType(((CallableDeclaration<?>) callable).getParameters(), name);
-        if (parameter != null) return parameter;
-        var locals =
-            callable.findAll(VariableDeclarator.class).stream()
-                .filter(
-                    v -> v.getNameAsString().equals(name) && inScope(v, call) && precedes(v, call))
-                .toList();
-        if (!locals.isEmpty()) return locals.size() == 1 ? locals.get(0).getType() : null;
-      }
     }
     return owner.getFields().stream()
         .flatMap(f -> f.getVariables().stream())
@@ -230,6 +219,22 @@ final class ErasedCallbackArguments {
         .map(VariableDeclarator::getType)
         .findFirst()
         .orElse(null);
+  }
+
+  private Type localType(MethodCallExpr call, ClassOrInterfaceDeclaration owner, String name) {
+    Type shadow = enclosingParameterType(call, owner, name);
+    if (shadow != null) return shadow;
+    var callable = call.findAncestor(CallableDeclaration.class).orElse(null);
+    if (callable == null) return null;
+    Type parameter = parameterType(((CallableDeclaration<?>) callable).getParameters(), name);
+    if (parameter != null) return parameter;
+    var locals =
+        callable.findAll(VariableDeclarator.class).stream()
+            .filter(v -> v.getNameAsString().equals(name) && inScope(v, call) && precedes(v, call))
+            .toList();
+    // An ambiguous local still shadows a field; keep it unresolved rather than falling back.
+    if (locals.size() > 1) return new UnknownType();
+    return locals.size() == 1 ? locals.get(0).getType() : null;
   }
 
   private static boolean precedes(Node declaration, Node use) {
