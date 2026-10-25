@@ -4,6 +4,8 @@ import java.util.*;
 
 /** Rewrites class selectors, preserving strings, comments, URLs and declaration whitespace. */
 final class CssSupport {
+  private static final String EXTERNAL_DIRECTIVE = "@external";
+
   record Styles(String css, Map<String, String> classes) {}
 
   private CssSupport() {}
@@ -46,18 +48,18 @@ final class CssSupport {
     boolean[] code = codePositions(css);
     StringBuilder result = new StringBuilder();
     int copied = 0;
-    int start = css.indexOf("@external");
+    int start = css.indexOf(EXTERNAL_DIRECTIVE);
     while (start >= 0) {
-      int content = start + "@external".length();
+      int content = start + EXTERNAL_DIRECTIVE.length();
       if (code[start] && content < css.length() && Character.isWhitespace(css.charAt(content))) {
         int end = css.indexOf(';', content);
         if (end < 0) break;
         external.addAll(Arrays.asList(css.substring(content, end).trim().split("[\\s,]+")));
         result.append(css, copied, start);
         copied = end + 1;
-        start = css.indexOf("@external", copied);
+        start = css.indexOf(EXTERNAL_DIRECTIVE, copied);
       } else {
-        start = css.indexOf("@external", content);
+        start = css.indexOf(EXTERNAL_DIRECTIVE, content);
       }
     }
     return result.append(css, copied, css.length()).toString();
@@ -103,15 +105,15 @@ final class CssSupport {
         : null;
   }
 
-  private static boolean identifierStart(char c) {
-    return Character.isLetter(c) || c == '_' || c == '-';
-  }
-
-  private static boolean identifierPart(char c) {
-    return Character.isLetterOrDigit(c) || c == '_' || c == '-';
-  }
-
   private static final class Scope {
+    private static boolean identifierStart(char c) {
+      return Character.isLetter(c) || c == '_' || c == '-';
+    }
+
+    private static boolean identifierPart(char c) {
+      return Character.isLetterOrDigit(c) || c == '_' || c == '-';
+    }
+
     private final String css;
     private final String prefix;
     private final Set<String> external;

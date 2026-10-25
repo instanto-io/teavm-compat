@@ -147,30 +147,41 @@ final class SafeHtmlTemplateGenerator {
     if (safeHtml) source.append(HTML_APPEND).append(value).append(".asString());\n");
     else {
       value = safeUri ? value + ".asString()" : "String.valueOf(" + value + ")";
-      if (context.attribute != null
-          && Set.of(
-                  "href",
-                  "src",
-                  "action",
-                  "formaction",
-                  "poster",
-                  "cite",
-                  "background",
-                  "data",
-                  "xlink:href")
-              .contains(context.attribute)) {
-        if (context.valueStart != placeholder.start()
-            || placeholder.end() >= template.length()
-            || template.charAt(placeholder.end()) != context.quote)
-          throw new IllegalArgumentException(
-              "URI placeholders must occupy the entire attribute value: " + method);
-        if (!safeUri) value = "com.google.gwt.safehtml.shared.UriUtils.sanitizeUri(" + value + ")";
-      }
+      value = uriValue(value, safeUri, context, template, placeholder, method);
       source
           .append("html.append(com.google.gwt.safehtml.shared.SafeHtmlUtils.htmlEscape(")
           .append(value)
           .append("));\n");
     }
+  }
+
+  private String uriValue(
+      String value,
+      boolean safeUri,
+      Context context,
+      String template,
+      Matcher placeholder,
+      ExecutableElement method) {
+    if (context.attribute != null
+        && Set.of(
+                "href",
+                "src",
+                "action",
+                "formaction",
+                "poster",
+                "cite",
+                "background",
+                "data",
+                "xlink:href")
+            .contains(context.attribute)) {
+      if (context.valueStart != placeholder.start()
+          || placeholder.end() >= template.length()
+          || template.charAt(placeholder.end()) != context.quote)
+        throw new IllegalArgumentException(
+            "URI placeholders must occupy the entire attribute value: " + method);
+      if (!safeUri) value = "com.google.gwt.safehtml.shared.UriUtils.sanitizeUri(" + value + ")";
+    }
+    return value;
   }
 
   private record Context(String attribute, char quote, int valueStart) {}

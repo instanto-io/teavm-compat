@@ -12,6 +12,8 @@ import java.util.jar.*;
 /** Deterministic JsInterop declaration to TeaVM JSO source adapter. */
 public final class GenerateBindings {
   private static final String GLOBAL_NAMESPACE = "<global>";
+  private static final String GLOBAL_CONSTANT = "GLOBAL";
+  private static final String QUALIFIED_GLOBAL_CONSTANT = "JsPackage.GLOBAL";
   private static final String JS_INTEROP_METHOD = "JsMethod";
   private static final String JS_INTEROP_PROPERTY = "JsProperty";
   private static final String TEAVM_METHOD = "JSMethod";
@@ -89,7 +91,7 @@ public final class GenerateBindings {
                 ? "globalThis"
                 : "globalThis."
                     + ((!namespace.isEmpty()
-                            && !Set.of("JsPackage.GLOBAL", "GLOBAL", GLOBAL_NAMESPACE)
+                            && !Set.of(QUALIFIED_GLOBAL_CONSTANT, GLOBAL_CONSTANT, GLOBAL_NAMESPACE)
                                 .contains(namespace))
                         ? namespace + "."
                         : "")
@@ -170,7 +172,7 @@ public final class GenerateBindings {
         String ns = value(a, "namespace", "");
         if (n.equals(JS_INTEROP_METHOD)
             && !ns.isEmpty()
-            && !Set.of("JsPackage.GLOBAL", "GLOBAL", GLOBAL_NAMESPACE).contains(ns)
+            && !Set.of(QUALIFIED_GLOBAL_CONSTANT, GLOBAL_CONSTANT, GLOBAL_NAMESPACE).contains(ns)
             && owner instanceof MethodDeclaration method
             && method.isStatic()) {
           String member = name.isEmpty() ? method.getNameAsString() : name;
@@ -210,8 +212,8 @@ public final class GenerateBindings {
           continue;
         }
         if (n.equals(JS_INTEROP_METHOD)
-            && (ns.equals("JsPackage.GLOBAL")
-                || ns.equals("GLOBAL")
+            && (ns.equals(QUALIFIED_GLOBAL_CONSTANT)
+                || ns.equals(GLOBAL_CONSTANT)
                 || ns.equals(GLOBAL_NAMESPACE))) annotate(owner, "@JSTopLevel");
         annotate(
             owner,

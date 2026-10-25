@@ -6,13 +6,15 @@ jobs:
   verify:
     runs-on: [self-hosted, instanto-container]
     env:
-      # The runner image ships the browsers read-only at this path. Without this,
-      # Playwright tries to install them again and fails writing its lock file.
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      # Runner images can carry different browser revisions; use the versions
+      # selected by this build in a writable, job-local cache.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0'
       # Read and published snapshots live on packages.instanto.io.
       FORGEJO_PACKAGE_USER: ${{ secrets.FORGEJO_PACKAGE_USER }}
       FORGEJO_PACKAGE_TOKEN: ${{ secrets.FORGEJO_PACKAGE_TOKEN }}
     steps:
+      - name: Allocate job-local browser cache
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/compat-test-browsers-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -79,4 +81,4 @@ jobs:
             target/browser-coverage.xml
       - name: Remove coverage browser cache
         if: always()
-        run: rm -rf -- "$RUNNER_TEMP/compat-coverage-browsers"
+        run: rm -rf -- "$RUNNER_TEMP/compat-coverage-browsers" "$PLAYWRIGHT_BROWSERS_PATH"
