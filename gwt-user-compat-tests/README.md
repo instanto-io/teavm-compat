@@ -33,6 +33,19 @@ mvn -pl gwt-user-compat-tests -am test
 They need Chrome. `teavm-junit` compiles the tests to JavaScript and runs them there,
 so this exercises the compiled artefact rather than the JVM.
 
+To run the same contracts in Firefox:
+
+```sh
+MOZ_MARIONETTE=1 mvn -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test
+```
+
+The environment variable enables Firefox's automation startup preferences in
+TeaVM's disposable browser profile. Without them, Mozilla Firefox 158 can leave
+the headless test window inactive and withhold native focus/blur events. CI sets
+it only for the Firefox step. The tests still require document activation,
+native event delivery, actual element focus, and handler removal; no synthetic
+focus events or skipped assertions are used.
+
 This repository does not contain the previously documented
 `native-gwt-baseline` profile or `gwt-api-browser-baseline` module. Original-GWT
 reference runs belong to the downstream widget repositories above. A passing

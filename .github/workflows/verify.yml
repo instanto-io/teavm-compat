@@ -45,6 +45,10 @@ jobs:
       - run: mvn -U -B -ntp -DskipTests install
       - run: mvn -U -B -ntp clean install
       - run: mvn -U -B -ntp -pl gwt-user-compat-tests -am -Dteavm.junit.js.runner=browser-firefox test
+        env:
+          # Apply Firefox's automation startup preferences to TeaVM's temporary
+          # profile so headless windows deliver native focus and blur events.
+          MOZ_MARIONETTE: '1'
       - run: mvn -U -B -ntp -Pproduction verify
       - uses: actions/setup-node@v4
         with:

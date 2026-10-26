@@ -84,9 +84,13 @@ public class PanelTimerAndModuleContractsTest {
       panel.setFocus(true);
       BrowserWait.until(() -> events.contains("focus"));
       assertTrue("Focus handler must receive the browser focus event", events.contains("focus"));
+      assertTrue(
+          "setFocus(true) must focus the panel", isActiveElement(panel.getElement().unwrap()));
       panel.setFocus(false);
       BrowserWait.until(() -> events.contains("blur"));
       assertTrue("Blur handler must receive the browser blur event", events.contains("blur"));
+      assertFalse(
+          "setFocus(false) must blur the panel", isActiveElement(panel.getElement().unwrap()));
       for (String type :
           List.of(
               "keydown",
@@ -110,6 +114,9 @@ public class PanelTimerAndModuleContractsTest {
       events.clear();
       panel.setFocus(true);
       BrowserWait.nextEventLoopTurn();
+      assertTrue(
+          "The panel must refocus after handler removal",
+          isActiveElement(panel.getElement().unwrap()));
       assertTrue("Removed focus handler must stay detached", events.isEmpty());
     } finally {
       panel.removeFromParent();
@@ -214,6 +221,9 @@ public class PanelTimerAndModuleContractsTest {
 
   @JSBody(script = "return document.hasFocus();")
   private static native boolean testDocumentHasFocus();
+
+  @JSBody(params = "element", script = "return document.activeElement === element;")
+  private static native boolean isActiveElement(JSObject element);
 
   @JSBody(
       params = {"element", "type"},
