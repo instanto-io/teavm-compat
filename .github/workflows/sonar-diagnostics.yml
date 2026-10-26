@@ -19,20 +19,27 @@ jobs:
       - name: Report gate conditions and open issues
         run: |
           python3 - <<'PY'
-          import json, os, urllib.parse, urllib.request
+          import json, os, urllib.error, urllib.parse, urllib.request
           host = os.environ['SONAR_HOST_URL']
           project = os.environ['GITHUB_REPOSITORY'].split('/')[-1]
           def get(path, **params):
               request = urllib.request.Request(host + path + '?' + urllib.parse.urlencode(params),
                   headers={'Authorization': 'Bearer ' + os.environ['SONAR_TOKEN']})
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  return json.load(response)
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  if error.code not in (401, 403):
+                      raise
+                  print('::warning::Cannot read ' + path + '. Configure SONAR_READ_TOKEN with Browse permission.')
+                  return {}
+          gate = get('/api/qualitygates/project_status', projectKey=project)
+          print('Gate:', json.dumps(gate.get('projectStatus', 'unavailable')))
           analyses = get('/api/project_analyses/search', project=project, ps=1)
           for analysis in analyses.get('analyses', []):
               print('Analysis:', json.dumps({key: analysis.get(key) for key in ('key', 'date', 'revision')}))
-          print('Gate:', json.dumps(get('/api/qualitygates/project_status', projectKey=project)['projectStatus']))
           issues = get('/api/issues/search', componentKeys=project, inNewCodePeriod='true', resolved='false', ps=100)
-          print('Open issues in new code:', issues.get('total'))
+          print('Open issues in new code:', issues.get('total', 'unavailable'))
           for issue in issues.get('issues', []):
               print(json.dumps({key: issue.get(key) for key in ('rule', 'severity', 'component', 'line', 'message')}))
           PY
