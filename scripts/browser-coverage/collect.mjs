@@ -3,7 +3,11 @@ import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 import { mergeCoverage, coverageXml } from './coverage.mjs';
+
+const { values } = parseArgs({ options: { 'exclude-module': { type: 'string', multiple: true, default: [] } } });
+const excludedModules = new Set(values['exclude-module']);
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const root = path.join(repo, 'gwt-user-compat-tests/target/teavm-tests/js');
@@ -21,7 +25,7 @@ async function files(directory) {
 async function ownedSources() {
   const sources = new Map();
   for (const module of await readdir(repo, { withFileTypes: true })) {
-    if (!module.isDirectory()) continue;
+    if (!module.isDirectory() || excludedModules.has(module.name)) continue;
     const sourceRoot = path.join(repo, module.name, 'src/main/java');
     try {
       for (const file of await files(sourceRoot)) {

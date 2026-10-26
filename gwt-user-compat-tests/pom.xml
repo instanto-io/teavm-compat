@@ -98,4 +98,61 @@
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
+  <profiles>
+    <profile>
+      <id>browser-coverage</id>
+      <properties>
+        <tea-coco.version>0.1.0-SNAPSHOT</tea-coco.version>
+        <tea-coco.mode>jacoco</tea-coco.mode>
+        <!-- Prepared browser classes must not also receive the JVM agent. -->
+        <jacoco.skip>true</jacoco.skip>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>io.instanto</groupId>
+          <artifactId>tea-coco</artifactId>
+          <version>${tea-coco.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build><plugins>
+        <plugin>
+          <groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId>
+          <executions><execution>
+            <id>preserve-jvm-coverage-for-browser-union</id>
+            <phase>initialize</phase><goals><goal>merge</goal></goals>
+            <configuration>
+              <skip>false</skip>
+              <fileSets><fileSet>
+                <directory>${maven.multiModuleProjectDirectory}</directory>
+                <includes><include>*/target/jacoco.exec</include></includes>
+              </fileSet></fileSets>
+              <destFile>${project.build.directory}/jvm-baseline.exec</destFile>
+            </configuration>
+          </execution></executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <classesDirectory>${project.build.directory}/teavm-coverage/jacoco/classes</classesDirectory>
+            <systemPropertyVariables>
+              <teavm.coverage.enabled>true</teavm.coverage.enabled>
+              <teavm.coverage.mode>jacoco</teavm.coverage.mode>
+              <teavm.coverage.dataDirectory>${project.build.directory}/teavm-coverage</teavm.coverage.dataDirectory>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>io.instanto</groupId><artifactId>tea-coco-maven-plugin</artifactId>
+          <version>${tea-coco.version}</version>
+          <configuration>
+            <sourceRoots><sourceRoot>${project.basedir}/../gwt-user-compat/src/main/java</sourceRoot></sourceRoots>
+            <dependencyIncludes><dependencyInclude>io.instanto:gwt-user-compat</dependencyInclude></dependencyIncludes>
+            <executionData><file>${project.build.directory}/jvm-baseline.exec</file></executionData>
+          </configuration>
+          <executions><execution><goals><goal>prepare</goal><goal>report</goal></goals></execution></executions>
+        </plugin>
+      </plugins></build>
+    </profile>
+  </profiles>
 </project>

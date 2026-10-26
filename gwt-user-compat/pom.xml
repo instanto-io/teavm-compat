@@ -47,4 +47,13 @@
       </resource>
     </resources>
   </build>
+  <profiles>
+    <profile>
+      <id>browser-coverage</id>
+      <properties>
+        <!-- Own this module's complete JVM/browser union; no overlapping JVM-only XML. -->
+        <sonar.coverage.jacoco.xmlReportPaths>${maven.multiModuleProjectDirectory}/gwt-user-compat-tests/target/teavm-coverage.xml</sonar.coverage.jacoco.xmlReportPaths>
+      </properties>
+    </profile>
+  </profiles>
 </project>

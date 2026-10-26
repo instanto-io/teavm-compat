@@ -57,7 +57,13 @@ jobs:
           npm ci --prefix scripts/browser-coverage --ignore-scripts
           npm test --prefix scripts/browser-coverage
           scripts/browser-coverage/node_modules/.bin/playwright install chromium
-          npm run collect --prefix scripts/browser-coverage
+          npm run collect --prefix scripts/browser-coverage -- --exclude-module gwt-user-compat
+      - name: Measure GWT runtime branches with Tea-Coco and merge JVM probes
+        run: |
+          mvn -U -B -ntp -Pbrowser-coverage -pl gwt-user-compat-tests verify
+          mvn -B -ntp -pl gwt-user-compat org.jacoco:jacoco-maven-plugin:0.8.15:report \
+            -Djacoco.dataFile="$PWD/gwt-user-compat-tests/target/jvm-baseline.exec"
+          python3 scripts/check-gwt-coverage.py
       - name: SonarQube Quality Gate
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
@@ -67,18 +73,30 @@ jobs:
           set -euo pipefail
           : "${SONAR_TOKEN:?SONAR_TOKEN is required for the main-branch quality gate}"
           repo_name="${GITHUB_REPOSITORY#*/}"
-          mvn --batch-mode --no-transfer-progress sonar:sonar \
+          mvn --batch-mode --no-transfer-progress -Pbrowser-coverage sonar:sonar \
             -Dsonar.projectKey="$repo_name" \
             -Dsonar.projectName="$repo_name" \
             -Dsonar.qualitygate.wait=true
-      - uses: actions/upload-artifact@v4
+      - name: Publish verification reports to packages.instanto.io
         if: always()
-        with:
-          name: compatibility-verification
-          path: |
-            **/target/surefire-reports/**
-            **/target/spotbugs/**
-            target/browser-coverage.xml
+        run: |
+          python3 -m unittest discover -s .github/scripts -p 'test_publish_report.py'
+          python3 - <<'PYREPORT'
+          from pathlib import Path
+          import shutil
+          destination = Path('target/compatibility-verification')
+          patterns = ['*/target/surefire-reports/*', '*/target/spotbugs/*',
+                      'target/browser-coverage.xml', 'gwt-user-compat-tests/target/teavm-coverage.xml*',
+                      'gwt-user-compat-tests/target/compiler-evidence.json']
+          for pattern in patterns:
+              for source in Path('.').glob(pattern):
+                  if source.is_file() and not source.is_symlink():
+                      output = destination / source
+                      output.parent.mkdir(parents=True, exist_ok=True)
+                      shutil.copyfile(source, output)
+          PYREPORT
+          python3 .github/scripts/publish_report.py --name compatibility-verification \
+            --path target/compatibility-verification
       - name: Remove coverage browser cache
         if: always()
         run: rm -rf -- "$RUNNER_TEMP/compat-coverage-browsers" "$PLAYWRIGHT_BROWSERS_PATH"
