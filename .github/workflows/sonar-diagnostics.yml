@@ -1,0 +1,38 @@
+name: Explain compatibility quality gate
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Verify compatibility libraries]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  diagnostics:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_READ_TOKEN || secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: https://sonar.instanto.io
+    steps:
+      - name: Report gate conditions and open issues
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          host = os.environ['SONAR_HOST_URL']
+          project = os.environ['GITHUB_REPOSITORY'].split('/')[-1]
+          def get(path, **params):
+              request = urllib.request.Request(host + path + '?' + urllib.parse.urlencode(params),
+                  headers={'Authorization': 'Bearer ' + os.environ['SONAR_TOKEN']})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          analyses = get('/api/project_analyses/search', project=project, ps=1)
+          for analysis in analyses.get('analyses', []):
+              print('Analysis:', json.dumps({key: analysis.get(key) for key in ('key', 'date', 'revision')}))
+          print('Gate:', json.dumps(get('/api/qualitygates/project_status', projectKey=project)['projectStatus']))
+          issues = get('/api/issues/search', componentKeys=project, inNewCodePeriod='true', resolved='false', ps=100)
+          print('Open issues in new code:', issues.get('total'))
+          for issue in issues.get('issues', []):
+              print(json.dumps({key: issue.get(key) for key in ('rule', 'severity', 'component', 'line', 'message')}))
+          PY
