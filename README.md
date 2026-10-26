@@ -89,14 +89,14 @@ providers are discovered and linked into the browser application.
 
 ### Browser coverage and Sonar
 
-The verification workflow uses Tea-Coco's original-bytecode JaCoCo mode for
+The verification workflow uses TeaCoCo's original-bytecode JaCoCo mode for
 `gwt-user-compat`. Its existing 67 browser contract tests run through TeaVMTestRunner;
 the resulting probes are merged with matching JVM JaCoCo execution data before
 reporting line and branch coverage. The original class denominator remains intact,
 including methods that no browser test reaches. Production JARs are not instrumented.
 
 Other modules retain Chromium source-map line coverage. The generic collector
-omits `gwt-user-compat` when Tea-Coco owns its coverage, and a pre-Sonar check rejects
+omits `gwt-user-compat` when TeaCoCo owns its coverage, and a pre-Sonar check rejects
 overlapping reports or changed original-bytecode denominators. Sonar's existing
 quality gate is unchanged. See [the coverage guide](docs/BROWSER-COVERAGE.md) for
 local commands, report ownership, failure handling and limitations.

@@ -1,9 +1,9 @@
 # Browser coverage
 
 `browser-coverage` is an opt-in Maven profile enabled by CI for the existing
-`gwt-user-compat-tests` suite. It uses Tea-Coco 0.1.0-SNAPSHOT, JaCoCo 0.8.15 and
+`gwt-user-compat-tests` suite. It uses TeaCoCo 0.1.0-SNAPSHOT, JaCoCo 0.8.15 and
 TeaVMTestRunner. No application source changes, test annotations or compiler fork
-are required. Resolve the Tea-Coco dependency and plugin from packages.instanto.io
+are required. Resolve the TeaCoCo dependency and plugin from packages.instanto.io
 using the same authenticated Maven settings as the org parents.
 
 ## Local run
@@ -26,7 +26,7 @@ The baseline build must precede coverage and use the same sources/classes. The
 profile merges the reactor's `*/target/jacoco.exec` files into the test module's
 `target/jvm-baseline.exec`, then prepares test-only copies of the resolved
 `gwt-user-compat` artifact. Original packaged classes are unchanged. Do not clean
-between the baseline and coverage commands. Tea-Coco rejects mismatched JVM/class
+between the baseline and coverage commands. TeaCoCo rejects mismatched JVM/class
 identities rather than combining incompatible measurements.
 
 Only the browser test module disables the JVM JaCoCo agent: these class copies
@@ -57,7 +57,7 @@ The profile generates `teavm-coverage.xml.exec` for the raw union and
 compiler locations do not prove exact branch elimination; omitted methods remain
 missed in the standard report. Branches use JaCoCo's C1 definition, not MC/DC or
 all-path coverage. The existing source-map collector remains available without
-exclusions when running without Tea-Coco, but do not import both for this module.
+exclusions when running without TeaCoCo, but do not import both for this module.
 
 CI diagnostics are archived to packages.instanto.io with per-run/attempt names
 and SHA-256 download verification. The job summary links the archive. The uploader

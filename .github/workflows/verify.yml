@@ -62,7 +62,7 @@ jobs:
           npm test --prefix scripts/browser-coverage
           scripts/browser-coverage/node_modules/.bin/playwright install chromium
           npm run collect --prefix scripts/browser-coverage -- --exclude-module gwt-user-compat
-      - name: Measure GWT runtime branches with Tea-Coco and merge JVM probes
+      - name: Measure GWT runtime branches with TeaCoCo and merge JVM probes
         run: |
           mvn -U -B -ntp -Pbrowser-coverage -pl gwt-user-compat-tests verify
           mvn -B -ntp -pl gwt-user-compat org.jacoco:jacoco-maven-plugin:0.8.15:report \
