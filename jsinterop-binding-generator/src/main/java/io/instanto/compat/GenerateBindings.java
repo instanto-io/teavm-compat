@@ -308,12 +308,17 @@ public final class GenerateBindings {
   private static void adaptObjectVarargs(CompilationUnit cu) {
     int index = 0;
     for (var method : new ArrayList<>(cu.findAll(MethodDeclaration.class))) {
-      if (!method.isNative() || method.getParameters().isEmpty()) continue;
+      if (!hasObjectVarargs(method)) continue;
       var last = method.getParameter(method.getParameters().size() - 1);
-      if (!last.isVarArgs() || !last.getType().toString().equals("Object")) continue;
       var owner = method.findAncestor(ClassOrInterfaceDeclaration.class).orElseThrow();
       if (!owner.isInterface()) adaptVarargsMethod(cu, owner, method, last, index++);
     }
+  }
+
+  private static boolean hasObjectVarargs(MethodDeclaration method) {
+    if (!method.isNative() || method.getParameters().isEmpty()) return false;
+    var last = method.getParameter(method.getParameters().size() - 1);
+    return last.isVarArgs() && last.getType().toString().equals("Object");
   }
 
   private static void adaptVarargsMethod(

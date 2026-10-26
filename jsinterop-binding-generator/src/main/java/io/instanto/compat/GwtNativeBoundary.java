@@ -8,6 +8,11 @@ import java.util.*;
 
 /** Bridges GWT DOM wrappers at native method boundaries while retaining the public Java API. */
 public final class GwtNativeBoundary {
+  private static final String TEAVM_BODY = "JSBody";
+  private static final String TEAVM_PROPERTY = "JSProperty";
+  private static final String TEAVM_METHOD = "JSMethod";
+  private static final String JAVA_OBJECT = "Object";
+
   private final Set<String> overlays;
 
   private GwtNativeBoundary(Set<String> overlays) {
@@ -81,12 +86,12 @@ public final class GwtNativeBoundary {
   private boolean needsBoundary(
       MethodDeclaration method, boolean nativeOwner, Map<String, String> imported) {
     if (!method.isNative()) return false;
-    boolean body = method.isAnnotationPresent("JSBody");
+    boolean body = method.isAnnotationPresent(TEAVM_BODY);
     if (!nativeOwner && !body) return false;
-    boolean property = method.isAnnotationPresent("JSProperty");
+    boolean property = method.isAnnotationPresent(TEAVM_PROPERTY);
     boolean result =
         isGwt(method.getTypeAsString(), imported)
-            || (method.getTypeAsString().equals("Object") && !property)
+            || (method.getTypeAsString().equals(JAVA_OBJECT) && !property)
             || (body && !nativeOwner && !method.isStatic());
     return result
         || method.getParameters().stream()
@@ -110,18 +115,18 @@ public final class GwtNativeBoundary {
         .getAnnotations()
         .removeIf(
             a ->
-                Set.of("JSMethod", "JSProperty", "JSTopLevel", "JSBody")
+                Set.of(TEAVM_METHOD, TEAVM_PROPERTY, "JSTopLevel", TEAVM_BODY)
                     .contains(a.getNameAsString()));
     method.setBody(StaticJavaParser.parseBlock("{" + setup + "}"));
   }
 
   private static MethodDeclaration createBridge(
       ClassOrInterfaceDeclaration owner, MethodDeclaration method, boolean nativeOwner, int index) {
-    boolean body = method.isAnnotationPresent("JSBody");
+    boolean body = method.isAnnotationPresent(TEAVM_BODY);
     MethodDeclaration bridge = method.clone();
     bridge.setName("$gwtBridge" + index).setPublic(false).setProtected(false).setPrivate(true);
     String jsName = method.getNameAsString();
-    var annotation = method.getAnnotationByName("JSMethod");
+    var annotation = method.getAnnotationByName(TEAVM_METHOD);
     if (annotation.isPresent() && annotation.get().isSingleMemberAnnotationExpr())
       jsName =
           annotation
@@ -130,8 +135,8 @@ public final class GwtNativeBoundary {
               .getMemberValue()
               .asStringLiteralExpr()
               .asString();
-    bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals("JSMethod"));
-    if (!body && bridge.getAnnotationByName("JSProperty").isEmpty())
+    bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals(TEAVM_METHOD));
+    if (!body && bridge.getAnnotationByName(TEAVM_PROPERTY).isEmpty())
       bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSMethod(\"" + jsName + "\")"));
     if (body && !nativeOwner) {
       requireExplicitReceiver(owner, method);
@@ -142,7 +147,7 @@ public final class GwtNativeBoundary {
 
   private static void requireExplicitReceiver(
       ClassOrInterfaceDeclaration owner, MethodDeclaration method) {
-    var jsBody = method.getAnnotationByName("JSBody").orElseThrow().asNormalAnnotationExpr();
+    var jsBody = method.getAnnotationByName(TEAVM_BODY).orElseThrow().asNormalAnnotationExpr();
     for (var pair : jsBody.getPairs()) {
       if (pair.getNameAsString().equals("script")
           && pair.getValue().asStringLiteralExpr().asString().matches("(?s).*\\bthis\\b.*"))
@@ -167,7 +172,7 @@ public final class GwtNativeBoundary {
         String rawType = nativeType(parameter.getTypeAsString(), imported);
         bridge.getParameter(i).setType(rawType);
         args.add(unwrapArgument(parameter, rawType, i, setup));
-      } else if (isObjectValue(parameter) && !method.isAnnotationPresent("JSProperty")) {
+      } else if (isObjectValue(parameter) && !method.isAnnotationPresent(TEAVM_PROPERTY)) {
         bridge.getParameter(i).setType("jsinterop.base.Any");
         args.add("jsinterop.base.Js.asAny(" + name + ")");
       } else args.add(name);
@@ -218,7 +223,7 @@ public final class GwtNativeBoundary {
       if (method.getType().isArrayType()) {
         appendArrayResult(type, bridge.getTypeAsString(), call, setup, imported);
       } else setup.append("return ").append(wrap(type, call, imported)).append(";");
-    } else if (method.getTypeAsString().equals("Object")) {
+    } else if (method.getTypeAsString().equals(JAVA_OBJECT)) {
       setup.append("return jsinterop.base.Js.cast(").append(call).append(");");
     } else setup.append(method.getType().isVoidType() ? "" : "return ").append(call).append(";");
   }
@@ -240,7 +245,7 @@ public final class GwtNativeBoundary {
   }
 
   private static boolean isObjectValue(Parameter parameter) {
-    return parameter.getTypeAsString().equals("Object") && !parameter.isVarArgs();
+    return parameter.getTypeAsString().equals(JAVA_OBJECT) && !parameter.isVarArgs();
   }
 
   private static String qualified(String type, Map<String, String> imports) {
