@@ -50,7 +50,7 @@ public class PanelTimerAndModuleContractsTest {
   }
 
   @Test
-  public void focusPanelDispatchesRegisteredEventsAndRemovesHandlers() {
+  public void focusPanelDispatchesRegisteredEventsAndRemovesHandlers() throws Exception {
     Label child = new Label("content");
     FocusPanel panel = new FocusPanel(child);
     List<String> events = new ArrayList<>();
@@ -77,10 +77,16 @@ public class PanelTimerAndModuleContractsTest {
       assertEquals(3, panel.getTabIndex());
       panel.setAccessKey('t');
       assertEquals("t", panel.getElement().getPropertyString("accessKey"));
+      // TeaVM runs tests inside an iframe. Activate its document before testing native
+      // focus delivery, and await the events instead of assuming activation finished at entry.
+      focusTestDocument();
+      BrowserWait.until(PanelTimerAndModuleContractsTest::testDocumentHasFocus);
       panel.setFocus(true);
-      assertTrue(events.contains("focus"));
+      BrowserWait.until(() -> events.contains("focus"));
+      assertTrue("Focus handler must receive the browser focus event", events.contains("focus"));
       panel.setFocus(false);
-      assertTrue(events.contains("blur"));
+      BrowserWait.until(() -> events.contains("blur"));
+      assertTrue("Blur handler must receive the browser blur event", events.contains("blur"));
       for (String type :
           List.of(
               "keydown",
@@ -103,7 +109,8 @@ public class PanelTimerAndModuleContractsTest {
       focus.removeHandler();
       events.clear();
       panel.setFocus(true);
-      assertTrue(events.isEmpty());
+      BrowserWait.nextEventLoopTurn();
+      assertTrue("Removed focus handler must stay detached", events.isEmpty());
     } finally {
       panel.removeFromParent();
     }
@@ -201,6 +208,12 @@ public class PanelTimerAndModuleContractsTest {
     module.whenReady(() -> fail("Failed module retried"));
     assertFalse(module.isReady());
   }
+
+  @JSBody(script = "window.focus();")
+  private static native void focusTestDocument();
+
+  @JSBody(script = "return document.hasFocus();")
+  private static native boolean testDocumentHasFocus();
 
   @JSBody(
       params = {"element", "type"},
