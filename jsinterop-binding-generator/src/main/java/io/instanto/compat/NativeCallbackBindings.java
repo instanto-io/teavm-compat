@@ -89,8 +89,7 @@ public final class NativeCallbackBindings {
       imports.put("$scope", owner.getFullyQualifiedName().orElse(""));
       int next = 0;
       for (var method : new ArrayList<>(owner.getMethods())) {
-        if ((!method.isNative() && !(owner.isInterface() && method.getBody().isEmpty()))
-            || method.getAnnotationByName("JSBody").isPresent()) continue;
+        if (!method.isNative() && !(owner.isInterface() && method.getBody().isEmpty())) continue;
         List<Shape> shapes = new ArrayList<>();
         for (var p : method.getParameters()) shapes.add(shape(p.getType(), imports));
         Shape result = shape(method.getType(), imports);
@@ -114,7 +113,9 @@ public final class NativeCallbackBindings {
                             .asStringLiteralExpr()
                             .asString())
                 .orElse(method.getNameAsString());
-        if (method.getAnnotationByName(TEAVM_PROPERTY).isPresent()) {
+        if (method.getAnnotationByName("JSBody").isPresent()) {
+          bridge.addAnnotation(method.getAnnotationByName("JSBody").orElseThrow().clone());
+        } else if (method.getAnnotationByName(TEAVM_PROPERTY).isPresent()) {
           bridge.addAnnotation(method.getAnnotationByName(TEAVM_PROPERTY).orElseThrow().clone());
         } else {
           bridge.addAnnotation(
@@ -203,7 +204,9 @@ public final class NativeCallbackBindings {
         method
             .getAnnotations()
             .removeIf(
-                a -> Set.of("JSMethod", TEAVM_PROPERTY).contains(a.getName().getIdentifier()));
+                a ->
+                    Set.of("JSMethod", TEAVM_PROPERTY, "JSBody")
+                        .contains(a.getName().getIdentifier()));
         if (owner.isInterface()) method.setDefault(true);
         method.setBody(StaticJavaParser.parseBlock(body));
         changed = true;

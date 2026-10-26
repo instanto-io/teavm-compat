@@ -8,17 +8,36 @@ public final class BindingPipeline {
   private final JsInteropNames names;
   private final ErasedCallbackArguments erasedCallbacks;
   private final boolean legacyJsni;
+  private final GwtOverlayTypes overlays;
 
   public BindingPipeline(Collection<String> sources, boolean legacyJsni) {
     this.legacyJsni = legacyJsni;
-    names = new JsInteropNames(sources);
-    erasedCallbacks = new ErasedCallbackArguments(sources);
-    callbacks = new NativeCallbackBindings(sources);
+    overlays = withJava17(() -> new GwtOverlayTypes(sources));
+    names = withJava17(() -> new JsInteropNames(sources));
+    erasedCallbacks = withJava17(() -> new ErasedCallbackArguments(sources));
+    callbacks = withJava17(() -> new NativeCallbackBindings(sources));
   }
 
   public String transform(String source) {
-    String nativeSource = legacyJsni ? LegacyNativeBodies.transform(source) : source;
-    return callbacks.transform(
-        GenerateBindings.transform(names.transform(erasedCallbacks.transform(nativeSource))));
+    return withJava17(
+        () -> {
+          String nativeSource = legacyJsni ? LegacyNativeBodies.transform(source) : source;
+          return callbacks.transform(
+              GenerateBindings.transform(
+                  overlays.transform(names.transform(erasedCallbacks.transform(nativeSource))),
+                  overlays.types()));
+        });
+  }
+
+  /** Modern GWT accepts Java 17 sources. Keep parser settings local to each adaptation call. */
+  private static <T> T withJava17(java.util.function.Supplier<T> action) {
+    var configuration = com.github.javaparser.StaticJavaParser.getParserConfiguration();
+    var previous = configuration.getLanguageLevel();
+    configuration.setLanguageLevel(com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_17);
+    try {
+      return action.get();
+    } finally {
+      configuration.setLanguageLevel(previous);
+    }
   }
 }

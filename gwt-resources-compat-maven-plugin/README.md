@@ -177,7 +177,16 @@ example with `build-helper-maven-plugin`'s `add-source`) instead of `sourceRoot`
 Older code that still uses JSNI can set `<legacyJsni>true</legacyJsni>`: JSNI bodies become
 `@JSBody` first. A body that calls into Java through `@Class::member` cannot be translated,
 so the build fails naming the file; give that callback a `@JsFunction` type and call it as a
-function instead.
+function instead. Java 17 source syntax, including records, is accepted.
+
+Direct subclasses of GWT `JavaScriptObject` with empty no-argument constructors
+can remain in the canonical sources. The adapter generates TeaVM wrapper
+constructors and converts native arguments and results, including nulls. Native
+instance operations should delegate to static JSNI helpers with an explicit
+receiver argument. Nested overlays and stateful constructors are rejected;
+arbitrary overlay casts and inherited overlay hierarchies are not implemented.
+`@JsFunction` callbacks passed to JSNI helpers receive the same GWT-object
+conversion as callbacks passed to JsInterop methods.
 
 JsInterop `name` and `namespace` attributes can use string constants from the
 adapted source set, including imported constants and string concatenation.

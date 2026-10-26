@@ -8,10 +8,27 @@ import java.util.*;
 
 /** Bridges GWT DOM wrappers at native method boundaries while retaining the public Java API. */
 public final class GwtNativeBoundary {
-  private GwtNativeBoundary() {}
+  private final Set<String> overlays;
+
+  private GwtNativeBoundary(Set<String> overlays) {
+    this.overlays = overlays;
+  }
 
   static void adapt(CompilationUnit cu) {
+    adapt(cu, Set.of());
+  }
+
+  static void adapt(CompilationUnit cu, Set<String> overlays) {
+    new GwtNativeBoundary(overlays).transform(cu);
+  }
+
+  private void transform(CompilationUnit cu) {
     Map<String, String> imported = new HashMap<>();
+    String pkg = cu.getPackageDeclaration().map(p -> p.getNameAsString() + ".").orElse("");
+    for (String overlay : overlays) {
+      if (overlay.substring(0, overlay.lastIndexOf('.') + 1).equals(pkg))
+        imported.put(overlay.substring(overlay.lastIndexOf('.') + 1), overlay);
+    }
     cu.getImports().forEach(i -> imported.put(i.getName().getIdentifier(), i.getNameAsString()));
     for (ClassOrInterfaceDeclaration owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
       boolean nativeOwner = owner.getAnnotationByName("JSClass").isPresent();
@@ -171,19 +188,20 @@ public final class GwtNativeBoundary {
     return imports.getOrDefault(base, base);
   }
 
-  private static boolean isGwt(String type, Map<String, String> imports) {
-    return Set.of(
-            "com.google.gwt.dom.client.Element",
-            "com.google.gwt.dom.client.Node",
-            "com.google.gwt.core.client.JavaScriptObject",
-            "com.google.gwt.core.client.JsDate",
-            "com.google.gwt.dom.client.NativeEvent",
-            "com.google.gwt.user.client.Event",
-            "com.google.gwt.user.client.Element",
-            "com.google.gwt.core.client.JsArrayNumber",
-            "com.google.gwt.core.client.JsArrayString",
-            "com.google.gwt.core.client.JsArrayMixed")
-        .contains(qualified(type, imports));
+  private boolean isGwt(String type, Map<String, String> imports) {
+    return overlays.contains(qualified(type, imports))
+        || Set.of(
+                "com.google.gwt.dom.client.Element",
+                "com.google.gwt.dom.client.Node",
+                "com.google.gwt.core.client.JavaScriptObject",
+                "com.google.gwt.core.client.JsDate",
+                "com.google.gwt.dom.client.NativeEvent",
+                "com.google.gwt.user.client.Event",
+                "com.google.gwt.user.client.Element",
+                "com.google.gwt.core.client.JsArrayNumber",
+                "com.google.gwt.core.client.JsArrayString",
+                "com.google.gwt.core.client.JsArrayMixed")
+            .contains(qualified(type, imports));
   }
 
   private static String nativeType(String type, Map<String, String> imports) {
@@ -199,7 +217,7 @@ public final class GwtNativeBoundary {
     return base + (type.endsWith("[]") ? "[]" : "");
   }
 
-  private static String wrap(String type, String value, Map<String, String> imports) {
+  private String wrap(String type, String value, Map<String, String> imports) {
     return switch (qualified(type, imports)) {
       case "com.google.gwt.dom.client.Element" ->
           "com.google.gwt.dom.client.Element.as(com.google.gwt.core.client.JavaScriptObject.of("
@@ -225,7 +243,11 @@ public final class GwtNativeBoundary {
           "com.google.gwt.core.client.JsArrayString",
           "com.google.gwt.core.client.JsArrayMixed" ->
           qualified(type, imports) + ".of(" + value + ")";
-      default -> throw new IllegalArgumentException("Unsupported native GWT return: " + type);
+      default -> {
+        if (!overlays.contains(qualified(type, imports)))
+          throw new IllegalArgumentException("Unsupported native GWT return: " + type);
+        yield qualified(type, imports) + ".$wrapNative(" + value + ")";
+      }
     };
   }
 }

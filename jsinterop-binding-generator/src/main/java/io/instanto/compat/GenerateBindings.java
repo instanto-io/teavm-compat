@@ -39,6 +39,10 @@ public final class GenerateBindings {
   }
 
   public static String transform(String source) {
+    return transform(source, Set.of());
+  }
+
+  static String transform(String source, Set<String> overlays) {
     CompilationUnit cu = StaticJavaParser.parse(source);
     boolean eventFactory = false;
     if (source.contains("com.google.gwt.event.dom.client.DomEvent")) {
@@ -58,7 +62,7 @@ public final class GenerateBindings {
     }
     if (!source.contains("jsinterop.annotations")) {
       if (!source.contains("@JSBody")) return eventFactory ? cu.toString() : source;
-      GwtNativeBoundary.adapt(cu);
+      GwtNativeBoundary.adapt(cu, overlays);
       return cu.toString();
     }
     cu.addImport("org.teavm.jso.*");
@@ -265,7 +269,7 @@ public final class GenerateBindings {
         }
       }
     }
-    GwtNativeBoundary.adapt(cu);
+    GwtNativeBoundary.adapt(cu, overlays);
     int varargIndex = 0;
     for (MethodDeclaration m : new ArrayList<>(cu.findAll(MethodDeclaration.class))) {
       if (!m.isNative() || m.getParameters().isEmpty()) continue;

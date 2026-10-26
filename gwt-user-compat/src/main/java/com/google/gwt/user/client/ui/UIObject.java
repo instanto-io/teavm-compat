@@ -165,6 +165,12 @@ public abstract class UIObject {
     return getElement().getAttribute("title");
   }
 
+  /** Sets CSS dimensions through the overridable width and height setters, as GWT does. */
+  public void setSize(final String width, final String height) {
+    setWidth(width);
+    setHeight(height);
+  }
+
   public void setWidth(final String width) {
     getElement().getStyle().setProperty("width", width);
   }

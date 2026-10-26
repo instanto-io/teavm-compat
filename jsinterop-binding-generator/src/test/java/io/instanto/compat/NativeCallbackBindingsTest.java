@@ -12,6 +12,24 @@ public class NativeCallbackBindingsTest {
           + " Callback<A,B> { Object invoke(A first,B second); }";
 
   @Test
+  public void adaptsJsniCallbackArgumentsWhilePreservingTheScript() {
+    String callback =
+        "package example; import com.google.gwt.core.client.JavaScriptObject; "
+            + "import jsinterop.annotations.JsFunction; class Native { @JsFunction interface Done {"
+            + "void call(JavaScriptObject value); }}";
+    String source =
+        "package example; class Api { static native void listen(Native.Done done) "
+            + "/*-{ $wnd.subscribe(done); }-*/;}";
+    String result = new BindingPipeline(List.of(callback, source), true).transform(source);
+    assertTrue(result, result.contains("JavaScriptObject.of(a0)"));
+    assertTrue(result, result.contains("window.subscribe(done);"));
+    var owner = StaticJavaParser.parse(result).getClassByName("Api").orElseThrow();
+    assertFalse(owner.getMethodsByName("listen").get(0).isNative());
+    assertFalse(owner.getMethodsByName("listen").get(0).isAnnotationPresent("JSBody"));
+    assertTrue(owner.getMethodsByName("listen$callback0").get(0).isAnnotationPresent("JSBody"));
+  }
+
+  @Test
   public void rawCallbackUsesItsNativeUpperBoundRatherThanObject() {
     String event =
         "package example; import jsinterop.annotations.*; @JsType(isNative=true) class Event {}";
