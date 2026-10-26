@@ -23,6 +23,19 @@ public final class GwtNativeBoundary {
   }
 
   private void transform(CompilationUnit cu) {
+    Map<String, String> imported = nativeImports(cu);
+    for (var owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
+      boolean nativeOwner = owner.isAnnotationPresent("JSClass");
+      if (nativeOwner) adaptFieldGetters(owner, imported);
+      int index = 0;
+      for (var method : new ArrayList<>(owner.getMethods())) {
+        if (needsBoundary(method, nativeOwner, imported))
+          adaptMethod(owner, method, nativeOwner, index++, imported);
+      }
+    }
+  }
+
+  private Map<String, String> nativeImports(CompilationUnit cu) {
     Map<String, String> imported = new HashMap<>();
     String pkg = cu.getPackageDeclaration().map(p -> p.getNameAsString() + ".").orElse("");
     for (String overlay : overlays) {
@@ -30,153 +43,200 @@ public final class GwtNativeBoundary {
         imported.put(overlay.substring(overlay.lastIndexOf('.') + 1), overlay);
     }
     cu.getImports().forEach(i -> imported.put(i.getName().getIdentifier(), i.getNameAsString()));
-    for (ClassOrInterfaceDeclaration owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
-      boolean nativeOwner = owner.getAnnotationByName("JSClass").isPresent();
-      if (nativeOwner) {
-        // Overlay accessors for native DOM fields need the same wrapper boundary as methods.
-        for (var field : owner.getFields()) {
-          for (var variable : field.getVariables()) {
-            if (!isGwt(variable.getTypeAsString(), imported)) continue;
-            String name = variable.getNameAsString();
-            for (var getter : owner.getMethods()) {
-              if (!getter.getParameters().isEmpty()
-                  || getter.getBody().isEmpty()
-                  || !getter.getTypeAsString().equals(variable.getTypeAsString())) continue;
-              var statements = getter.getBody().orElseThrow().getStatements();
-              if (statements.size() != 1 || !statements.get(0).isReturnStmt()) continue;
-              var expression = statements.get(0).asReturnStmt().getExpression().orElse(null);
-              if (expression == null
-                  || !(expression.toString().equals(name)
-                      || expression.toString().equals("this." + name))) continue;
-              getter.removeBody();
-              getter.setNative(true);
-              getter.addAnnotation(
-                  StaticJavaParser.parseAnnotation("@JSProperty(\"" + name + "\")"));
-            }
-          }
-        }
-      }
-      int index = 0;
-      for (MethodDeclaration method : new ArrayList<>(owner.getMethods())) {
-        if (!method.isNative()) continue;
-        boolean body = method.getAnnotationByName("JSBody").isPresent();
-        if (!nativeOwner && !body) continue;
-        boolean boundary =
-            isGwt(method.getTypeAsString(), imported)
-                || (method.getTypeAsString().equals("Object")
-                    && method.getAnnotationByName("JSProperty").isEmpty())
-                || (body && !nativeOwner && !method.isStatic());
-        for (Parameter p : method.getParameters()) {
-          boundary |=
-              isGwt(p.getTypeAsString(), imported)
-                  || (isObjectValue(p) && method.getAnnotationByName("JSProperty").isEmpty());
-        }
-        if (!boundary) continue;
-        MethodDeclaration bridge = method.clone();
-        bridge
-            .setName("$gwtBridge" + index++)
-            .setPublic(false)
-            .setProtected(false)
-            .setPrivate(true);
-        String jsName = method.getNameAsString();
-        var annotation = method.getAnnotationByName("JSMethod");
-        if (annotation.isPresent() && annotation.get().isSingleMemberAnnotationExpr())
-          jsName =
-              annotation
-                  .get()
-                  .asSingleMemberAnnotationExpr()
-                  .getMemberValue()
-                  .asStringLiteralExpr()
-                  .asString();
-        bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals("JSMethod"));
-        if (!body && bridge.getAnnotationByName("JSProperty").isEmpty())
-          bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSMethod(\"" + jsName + "\")"));
-        if (body && !nativeOwner) {
-          var jsBody = method.getAnnotationByName("JSBody").orElseThrow().asNormalAnnotationExpr();
-          for (var pair : jsBody.getPairs()) {
-            if (pair.getNameAsString().equals("script")
-                && pair.getValue().asStringLiteralExpr().asString().matches("(?s).*\\bthis\\b.*"))
-              throw new IllegalArgumentException(
-                  "JSNI receiver needs an explicit bridge: "
-                      + owner.getNameAsString()
-                      + "."
-                      + method.getNameAsString());
-          }
-          bridge.setStatic(true);
-        }
-        StringBuilder setup = new StringBuilder();
-        List<String> args = new ArrayList<>();
-        for (int i = 0; i < method.getParameters().size(); i++) {
-          Parameter p = method.getParameter(i);
-          String n = p.getNameAsString();
-          if (isGwt(p.getTypeAsString(), imported)) {
-            boolean array = p.isVarArgs() || p.getType().isArrayType();
-            String rawType = nativeType(p.getTypeAsString(), imported);
-            bridge.getParameter(i).setType(rawType);
-            if (array) {
-              String base = rawType.replace("[]", "");
-              setup
-                  .append(base)
-                  .append("[] $raw")
-                  .append(i)
-                  .append(" = ")
-                  .append(n)
-                  .append(" == null ? null : new ")
-                  .append(base)
-                  .append("[")
-                  .append(n)
-                  .append(".length];")
-                  .append("if (")
-                  .append(n)
-                  .append(" != null) for(int j=0;j<")
-                  .append(n)
-                  .append(".length;j++) $raw")
-                  .append(i)
-                  .append("[j] = ")
-                  .append(n)
-                  .append("[j] == null ? null : ")
-                  .append(n)
-                  .append("[j].unwrap();");
-              args.add("$raw" + i);
-            } else args.add(n + " == null ? null : " + n + ".unwrap()");
-          } else if (isObjectValue(p) && method.getAnnotationByName("JSProperty").isEmpty()) {
-            bridge.getParameter(i).setType("jsinterop.base.Any");
-            args.add("jsinterop.base.Js.asAny(" + n + ")");
-          } else args.add(n);
-        }
-        String call = bridge.getNameAsString() + "(" + String.join(",", args) + ")";
-        if (isGwt(method.getTypeAsString(), imported)) {
-          String type = method.getTypeAsString();
-          bridge.setType(nativeType(type, imported));
-          if (method.getType().isArrayType()) {
-            String base = type.replace("[]", "");
-            setup
-                .append(bridge.getTypeAsString())
-                .append(" $result = ")
-                .append(call)
-                .append("; if($result==null) return null;")
-                .append(type)
-                .append(" $wrapped = new ")
-                .append(base)
-                .append("[$result.length]; for(int j=0;j<$result.length;j++) $wrapped[j]=")
-                .append(wrap(base, "$result[j]", imported))
-                .append(";return $wrapped;");
-          } else setup.append("return ").append(wrap(type, call, imported)).append(";");
-        } else if (method.getTypeAsString().equals("Object")) {
-          setup.append("return jsinterop.base.Js.cast(").append(call).append(");");
-        } else
-          setup.append(method.getType().isVoidType() ? "" : "return ").append(call).append(";");
-        owner.addMember(bridge);
-        method.setNative(false);
-        method
-            .getAnnotations()
-            .removeIf(
-                a ->
-                    Set.of("JSMethod", "JSProperty", "JSTopLevel", "JSBody")
-                        .contains(a.getNameAsString()));
-        method.setBody(StaticJavaParser.parseBlock("{" + setup + "}"));
+    return imported;
+  }
+
+  private void adaptFieldGetters(ClassOrInterfaceDeclaration owner, Map<String, String> imported) {
+    // Overlay accessors for native DOM fields need the same wrapper boundary as methods.
+    for (var field : owner.getFields()) {
+      for (var variable : field.getVariables()) {
+        if (isGwt(variable.getTypeAsString(), imported)) adaptFieldGetter(owner, variable);
       }
     }
+  }
+
+  private static void adaptFieldGetter(
+      ClassOrInterfaceDeclaration owner, VariableDeclarator variable) {
+    for (var getter : owner.getMethods()) {
+      if (!returnsField(getter, variable)) continue;
+      getter.removeBody();
+      getter.setNative(true);
+      getter.addAnnotation(
+          StaticJavaParser.parseAnnotation("@JSProperty(\"" + variable.getNameAsString() + "\")"));
+    }
+  }
+
+  private static boolean returnsField(MethodDeclaration getter, VariableDeclarator variable) {
+    if (!getter.getParameters().isEmpty()
+        || getter.getBody().isEmpty()
+        || !getter.getTypeAsString().equals(variable.getTypeAsString())) return false;
+    var statements = getter.getBody().orElseThrow().getStatements();
+    if (statements.size() != 1 || !statements.get(0).isReturnStmt()) return false;
+    var expression = statements.get(0).asReturnStmt().getExpression().orElse(null);
+    String name = variable.getNameAsString();
+    return expression != null
+        && (expression.toString().equals(name) || expression.toString().equals("this." + name));
+  }
+
+  private boolean needsBoundary(
+      MethodDeclaration method, boolean nativeOwner, Map<String, String> imported) {
+    if (!method.isNative()) return false;
+    boolean body = method.isAnnotationPresent("JSBody");
+    if (!nativeOwner && !body) return false;
+    boolean property = method.isAnnotationPresent("JSProperty");
+    boolean result =
+        isGwt(method.getTypeAsString(), imported)
+            || (method.getTypeAsString().equals("Object") && !property)
+            || (body && !nativeOwner && !method.isStatic());
+    return result
+        || method.getParameters().stream()
+            .anyMatch(p -> isGwt(p.getTypeAsString(), imported) || (isObjectValue(p) && !property));
+  }
+
+  private void adaptMethod(
+      ClassOrInterfaceDeclaration owner,
+      MethodDeclaration method,
+      boolean nativeOwner,
+      int index,
+      Map<String, String> imported) {
+    MethodDeclaration bridge = createBridge(owner, method, nativeOwner, index);
+    StringBuilder setup = new StringBuilder();
+    List<String> args = adaptArguments(method, bridge, imported, setup);
+    String call = bridge.getNameAsString() + "(" + String.join(",", args) + ")";
+    appendResult(method, bridge, call, setup, imported);
+    owner.addMember(bridge);
+    method.setNative(false);
+    method
+        .getAnnotations()
+        .removeIf(
+            a ->
+                Set.of("JSMethod", "JSProperty", "JSTopLevel", "JSBody")
+                    .contains(a.getNameAsString()));
+    method.setBody(StaticJavaParser.parseBlock("{" + setup + "}"));
+  }
+
+  private static MethodDeclaration createBridge(
+      ClassOrInterfaceDeclaration owner, MethodDeclaration method, boolean nativeOwner, int index) {
+    boolean body = method.isAnnotationPresent("JSBody");
+    MethodDeclaration bridge = method.clone();
+    bridge.setName("$gwtBridge" + index).setPublic(false).setProtected(false).setPrivate(true);
+    String jsName = method.getNameAsString();
+    var annotation = method.getAnnotationByName("JSMethod");
+    if (annotation.isPresent() && annotation.get().isSingleMemberAnnotationExpr())
+      jsName =
+          annotation
+              .get()
+              .asSingleMemberAnnotationExpr()
+              .getMemberValue()
+              .asStringLiteralExpr()
+              .asString();
+    bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals("JSMethod"));
+    if (!body && bridge.getAnnotationByName("JSProperty").isEmpty())
+      bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSMethod(\"" + jsName + "\")"));
+    if (body && !nativeOwner) {
+      requireExplicitReceiver(owner, method);
+      bridge.setStatic(true);
+    }
+    return bridge;
+  }
+
+  private static void requireExplicitReceiver(
+      ClassOrInterfaceDeclaration owner, MethodDeclaration method) {
+    var jsBody = method.getAnnotationByName("JSBody").orElseThrow().asNormalAnnotationExpr();
+    for (var pair : jsBody.getPairs()) {
+      if (pair.getNameAsString().equals("script")
+          && pair.getValue().asStringLiteralExpr().asString().matches("(?s).*\\bthis\\b.*"))
+        throw new IllegalArgumentException(
+            "JSNI receiver needs an explicit bridge: "
+                + owner.getNameAsString()
+                + "."
+                + method.getNameAsString());
+    }
+  }
+
+  private List<String> adaptArguments(
+      MethodDeclaration method,
+      MethodDeclaration bridge,
+      Map<String, String> imported,
+      StringBuilder setup) {
+    List<String> args = new ArrayList<>();
+    for (int i = 0; i < method.getParameters().size(); i++) {
+      Parameter parameter = method.getParameter(i);
+      String name = parameter.getNameAsString();
+      if (isGwt(parameter.getTypeAsString(), imported)) {
+        String rawType = nativeType(parameter.getTypeAsString(), imported);
+        bridge.getParameter(i).setType(rawType);
+        args.add(unwrapArgument(parameter, rawType, i, setup));
+      } else if (isObjectValue(parameter) && !method.isAnnotationPresent("JSProperty")) {
+        bridge.getParameter(i).setType("jsinterop.base.Any");
+        args.add("jsinterop.base.Js.asAny(" + name + ")");
+      } else args.add(name);
+    }
+    return args;
+  }
+
+  private static String unwrapArgument(
+      Parameter parameter, String rawType, int i, StringBuilder setup) {
+    String n = parameter.getNameAsString();
+    if (!parameter.isVarArgs() && !parameter.getType().isArrayType())
+      return n + " == null ? null : " + n + ".unwrap()";
+    String base = rawType.replace("[]", "");
+    setup
+        .append(base)
+        .append("[] $raw")
+        .append(i)
+        .append(" = ")
+        .append(n)
+        .append(" == null ? null : new ")
+        .append(base)
+        .append("[")
+        .append(n)
+        .append(".length];")
+        .append("if (")
+        .append(n)
+        .append(" != null) for(int j=0;j<")
+        .append(n)
+        .append(".length;j++) $raw")
+        .append(i)
+        .append("[j] = ")
+        .append(n)
+        .append("[j] == null ? null : ")
+        .append(n)
+        .append("[j].unwrap();");
+    return "$raw" + i;
+  }
+
+  private void appendResult(
+      MethodDeclaration method,
+      MethodDeclaration bridge,
+      String call,
+      StringBuilder setup,
+      Map<String, String> imported) {
+    if (isGwt(method.getTypeAsString(), imported)) {
+      String type = method.getTypeAsString();
+      bridge.setType(nativeType(type, imported));
+      if (method.getType().isArrayType()) {
+        appendArrayResult(type, bridge.getTypeAsString(), call, setup, imported);
+      } else setup.append("return ").append(wrap(type, call, imported)).append(";");
+    } else if (method.getTypeAsString().equals("Object")) {
+      setup.append("return jsinterop.base.Js.cast(").append(call).append(");");
+    } else setup.append(method.getType().isVoidType() ? "" : "return ").append(call).append(";");
+  }
+
+  private void appendArrayResult(
+      String type, String rawType, String call, StringBuilder setup, Map<String, String> imported) {
+    String base = type.replace("[]", "");
+    setup
+        .append(rawType)
+        .append(" $result = ")
+        .append(call)
+        .append("; if($result==null) return null;")
+        .append(type)
+        .append(" $wrapped = new ")
+        .append(base)
+        .append("[$result.length]; for(int j=0;j<$result.length;j++) $wrapped[j]=")
+        .append(wrap(base, "$result[j]", imported))
+        .append(";return $wrapped;");
   }
 
   private static boolean isObjectValue(Parameter parameter) {

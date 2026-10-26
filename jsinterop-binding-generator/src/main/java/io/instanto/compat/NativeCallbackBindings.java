@@ -7,6 +7,7 @@ import java.util.*;
 
 /** Adapts generic JsFunction arguments using their original functional declarations. */
 public final class NativeCallbackBindings {
+  private static final String TEAVM_BODY = "JSBody";
   private static final String TEAVM_PROPERTY = "JSProperty";
 
   private record Function(
@@ -113,8 +114,8 @@ public final class NativeCallbackBindings {
                             .asStringLiteralExpr()
                             .asString())
                 .orElse(method.getNameAsString());
-        if (method.getAnnotationByName("JSBody").isPresent()) {
-          bridge.addAnnotation(method.getAnnotationByName("JSBody").orElseThrow().clone());
+        if (method.getAnnotationByName(TEAVM_BODY).isPresent()) {
+          bridge.addAnnotation(method.getAnnotationByName(TEAVM_BODY).orElseThrow().clone());
         } else if (method.getAnnotationByName(TEAVM_PROPERTY).isPresent()) {
           bridge.addAnnotation(method.getAnnotationByName(TEAVM_PROPERTY).orElseThrow().clone());
         } else {
@@ -205,7 +206,7 @@ public final class NativeCallbackBindings {
             .getAnnotations()
             .removeIf(
                 a ->
-                    Set.of("JSMethod", TEAVM_PROPERTY, "JSBody")
+                    Set.of("JSMethod", TEAVM_PROPERTY, TEAVM_BODY)
                         .contains(a.getName().getIdentifier()));
         if (owner.isInterface()) method.setDefault(true);
         method.setBody(StaticJavaParser.parseBlock(body));
