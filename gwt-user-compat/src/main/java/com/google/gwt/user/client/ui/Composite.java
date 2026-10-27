@@ -35,6 +35,18 @@ public abstract class Composite extends Widget {
     return widget;
   }
 
+  /**
+   * Installs the widget tree of a {@code @Templated} composite built by generated code.
+   *
+   * <p>Template composition builds the widget tree outside the composite, so generated binders
+   * cannot call the protected {@link #initWidget} themselves. This keeps the once-only guarantee
+   * while letting generated template code compose the composite's widget, as Errai's template
+   * support does through its own native bridge.
+   */
+  public static void initTemplate(final Composite composite, final Widget widget) {
+    composite.initWidget(widget);
+  }
+
   protected void initWidget(final Widget widget) {
     if (this.widget != null) {
       throw new IllegalStateException("initWidget() may only be called once");
