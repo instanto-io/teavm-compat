@@ -347,16 +347,28 @@ public class Element extends com.google.gwt.dom.client.Node {
     return element.getClassName();
   }
 
-  public void addClassName(final String className) {
-    if (className != null && !className.isEmpty()) {
-      element.getClassList().add(className);
+  /**
+   * Adds a class name, returning whether the element changed, exactly like GWT itself. Callers
+   * compiled against real GWT link against this signature.
+   */
+  public boolean addClassName(final String className) {
+    if (className == null || className.isEmpty() || hasClassName(className)) {
+      return false;
     }
+    element.getClassList().add(className);
+    return true;
   }
 
-  public void removeClassName(final String className) {
-    if (className != null && !className.isEmpty()) {
-      element.getClassList().remove(className);
+  /**
+   * Removes a class name, returning whether the element changed, exactly like GWT itself. Callers
+   * compiled against real GWT link against this signature.
+   */
+  public boolean removeClassName(final String className) {
+    if (className == null || className.isEmpty() || !hasClassName(className)) {
+      return false;
     }
+    element.getClassList().remove(className);
+    return true;
   }
 
   public boolean hasClassName(final String className) {

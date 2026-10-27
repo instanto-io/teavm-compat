@@ -62,6 +62,17 @@ public class Widget extends UIObject
     return this;
   }
 
+  /**
+   * Returns the widget's element as the legacy user-space type, exactly like GWT itself.
+   *
+   * <p>Libraries compiled against real GWT call this signature; resolving to the narrower {@code
+   * com.google.gwt.dom.client.Element} instead breaks TeaVM linking of their bytecode.
+   */
+  @Override
+  public com.google.gwt.user.client.Element getElement() {
+    return com.google.gwt.user.client.Element.as(super.getElement());
+  }
+
   public Widget getParent() {
     return parent;
   }

@@ -9,7 +9,7 @@ import org.teavm.jso.dom.html.HTMLElement;
  *
  * @param <T> the node type the list holds
  */
-public class NodeList<T> {
+public class NodeList<T extends Node> {
 
   private final JSObject list;
   private final java.util.function.Function<HTMLElement, T> wrap;

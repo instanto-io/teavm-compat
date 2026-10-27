@@ -88,8 +88,13 @@ public final class Document {
     return createElement("h" + size);
   }
 
-  public Element createPushButtonElement() {
-    return createElement("button");
+  /**
+   * Returns a button element typed as real GWT does. Libraries compiled against real GWT call this
+   * signature; resolving to the plain {@link Element} instead breaks TeaVM linking of their
+   * bytecode.
+   */
+  public ButtonElement createPushButtonElement() {
+    return ButtonElement.as(createElement("button"));
   }
 
   public AnchorElement createAnchorElement() {
