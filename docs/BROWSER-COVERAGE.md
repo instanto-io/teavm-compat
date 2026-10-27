@@ -3,8 +3,31 @@
 `browser-coverage` is an opt-in Maven profile enabled by CI for the existing
 `gwt-user-compat-tests` suite. It uses TeaCoCo 0.1.0-SNAPSHOT, JaCoCo 0.8.15 and
 TeaVMTestRunner. No application source changes, test annotations or compiler fork
-are required. Resolve the TeaCoCo dependency and plugin from packages.instanto.io
-using the same authenticated Maven settings as the org parents.
+are required. Resolve `io.instanto:teacoco-maven-plugin:0.1.0-SNAPSHOT` from
+packages.instanto.io using the same authenticated Maven settings as the org parents.
+The plugin supplies the `teacoco` runtime; no separate test dependency is needed.
+
+Binding the plugin's `prepare` and `report` goals enables coverage in its default
+JaCoCo mode. It configures Surefire's coverage properties, runtime classpath and
+prepared classes automatically. This module only specifies which library and
+sources to measure, plus the saved JVM coverage to merge:
+
+```xml
+<plugin>
+  <groupId>io.instanto</groupId>
+  <artifactId>teacoco-maven-plugin</artifactId>
+  <version>${teacoco.version}</version>
+  <configuration>
+    <sourceRoots><sourceRoot>${project.basedir}/../gwt-user-compat/src/main/java</sourceRoot></sourceRoots>
+    <dependencyIncludes><dependencyInclude>io.instanto:gwt-user-compat</dependencyInclude></dependencyIncludes>
+    <executionData><file>${project.build.directory}/jvm-baseline.exec</file></executionData>
+  </configuration>
+  <executions><execution><goals><goal>prepare</goal><goal>report</goal></goals></execution></executions>
+</plugin>
+```
+
+Here `executionData` is the JVM baseline produced by the profile's JaCoCo merge
+step. TeaCoCo collects the current browser run automatically.
 
 ## Local run
 
@@ -29,11 +52,12 @@ profile merges the reactor's `*/target/jacoco.exec` files into the test module's
 between the baseline and coverage commands. TeaCoCo rejects mismatched JVM/class
 identities rather than combining incompatible measurements.
 
-Only the browser test module disables the JVM JaCoCo agent: these class copies
-already contain probes. Ordinary JVM builds remain unchanged. The normal
+TeaCoCo removes the JVM JaCoCo agent from the selected Surefire browser execution:
+these class copies already contain probes. No `jacoco.skip` override is needed.
+Ordinary JVM builds remain unchanged. The normal
 verification workflow still runs its regular browser and production checks before
 the extra instrumented pass. If browser tests fail, Maven stops before reporting;
-run `mvn -Pbrowser-coverage -pl gwt-user-compat-tests tea-coco:report` separately to
+run `mvn -Pbrowser-coverage -pl gwt-user-compat-tests io.instanto:teacoco-maven-plugin:0.1.0-SNAPSHOT:report` separately to
 inspect available evidence while preserving the original test failure. Do not run
 `prepare` again before that collection.
 
