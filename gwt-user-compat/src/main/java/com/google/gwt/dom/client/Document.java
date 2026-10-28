@@ -30,6 +30,7 @@ import org.teavm.jso.dom.html.HTMLDocument;
 import org.teavm.jso.dom.html.HTMLElement;
 
 public final class Document {
+  private static final String BUTTON_TAG = "button";
   private static final Document INSTANCE = new Document();
 
   private Document() {}
@@ -94,7 +95,7 @@ public final class Document {
    * bytecode.
    */
   public ButtonElement createPushButtonElement() {
-    return ButtonElement.as(createElement("button"));
+    return ButtonElement.as(createElement(BUTTON_TAG));
   }
 
   public AnchorElement createAnchorElement() {
@@ -340,7 +341,7 @@ public final class Document {
             altKey,
             shiftKey,
             metaKey,
-            button == NativeEvent.BUTTON_MIDDLE ? 1 : button == NativeEvent.BUTTON_RIGHT ? 2 : 0,
+            toNativeMouseButton(button),
             relatedTarget == null ? null : relatedTarget.unwrap()));
   }
 
@@ -427,13 +428,13 @@ public final class Document {
   private static native org.teavm.jso.dom.events.Event newEvent(String type);
 
   public Element createSubmitButtonElement() {
-    final Element button = createElement("button");
+    final Element button = createElement(BUTTON_TAG);
     button.setAttribute("type", "submit");
     return button;
   }
 
   public Element createResetButtonElement() {
-    final Element button = createElement("button");
+    final Element button = createElement(BUTTON_TAG);
     button.setAttribute("type", "reset");
     return button;
   }
@@ -458,6 +459,16 @@ public final class Document {
     return TableSectionElement.as(createElement("tfoot"));
   }
 
+  private static int toNativeMouseButton(int button) {
+    return switch (button) {
+      case NativeEvent.BUTTON_MIDDLE -> 1;
+      case NativeEvent.BUTTON_RIGHT -> 2;
+      default -> 0;
+    };
+  }
+
+  // This public signature must match GWT's Document API for source and binary compatibility.
+  @SuppressWarnings("java:S107")
   public NativeEvent createMouseUpEvent(
       int detail,
       int screenX,

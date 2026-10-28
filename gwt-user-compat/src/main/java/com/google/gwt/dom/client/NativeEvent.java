@@ -159,16 +159,16 @@ public class NativeEvent implements io.instanto.compat.NativeHandle {
   public static final int BUTTON_MIDDLE = 4;
 
   public int getScreenX() {
-    return event instanceof MouseEvent ? ((MouseEvent) event).getScreenX() : 0;
+    return event instanceof MouseEvent mouseEvent ? mouseEvent.getScreenX() : 0;
   }
 
   public int getScreenY() {
-    return event instanceof MouseEvent ? ((MouseEvent) event).getScreenY() : 0;
+    return event instanceof MouseEvent mouseEvent ? mouseEvent.getScreenY() : 0;
   }
 
   public int getButton() {
-    if (!(event instanceof MouseEvent)) return 0;
-    return switch (((MouseEvent) event).getButton()) {
+    if (!(event instanceof MouseEvent mouseEvent)) return 0;
+    return switch (mouseEvent.getButton()) {
       case 0 -> BUTTON_LEFT;
       case 1 -> BUTTON_MIDDLE;
       case 2 -> BUTTON_RIGHT;

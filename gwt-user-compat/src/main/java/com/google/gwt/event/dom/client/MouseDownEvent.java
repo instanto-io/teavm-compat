@@ -24,6 +24,8 @@
  */
 package com.google.gwt.event.dom.client;
 
+// GWT requires this event hierarchy; flattening it would break consumer type contracts.
+@SuppressWarnings("java:S110")
 public class MouseDownEvent extends MouseEvent<MouseDownHandler> {
 
   private static final Type<MouseDownHandler> TYPE = new Type<>("mousedown", MouseDownEvent::new);

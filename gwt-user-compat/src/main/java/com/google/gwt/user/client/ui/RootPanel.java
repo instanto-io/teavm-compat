@@ -43,6 +43,8 @@ import java.util.Set;
  * them a last onUnload -- the moment a widget releases a plugin, a timer or a listener it put
  * somewhere outside its own element.
  */
+// RootPanel must remain an AbsolutePanel, matching the GWT widget hierarchy.
+@SuppressWarnings("java:S110")
 public final class RootPanel extends AbsolutePanel {
 
   private static final Map<String, RootPanel> ROOTS = new HashMap<>();
