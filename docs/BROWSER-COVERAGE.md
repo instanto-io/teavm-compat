@@ -3,8 +3,8 @@
 `browser-coverage` is an opt-in Maven profile enabled by CI for the existing
 `gwt-user-compat-tests` suite. It uses TeaCoCo 0.1.0-SNAPSHOT, JaCoCo 0.8.15 and
 TeaVMTestRunner. No application source changes, test annotations or compiler fork
-are required. Resolve `io.instanto:teacoco-maven-plugin:0.1.0-SNAPSHOT` from
-packages.instanto.io using the same authenticated Maven settings as the org parents.
+are required. TeaCoCo is not yet published to Maven Central; until it is, install
+`io.instanto:teacoco-maven-plugin:0.1.0-SNAPSHOT` locally from a TeaCoCo clone.
 The plugin supplies the `teacoco` runtime; no separate test dependency is needed.
 
 Binding the plugin's `prepare` and `report` goals enables coverage in its default
@@ -83,7 +83,7 @@ missed in the standard report. Branches use JaCoCo's C1 definition, not MC/DC or
 all-path coverage. The existing source-map collector remains available without
 exclusions when running without TeaCoCo, but do not import both for this module.
 
-CI diagnostics are archived to packages.instanto.io with per-run/attempt names
+CI diagnostics are archived to Instanto's private package store with per-run/attempt names
 and SHA-256 download verification. The job summary links the archive. The uploader
 and its tests are copied from instanto-poms revision `8e1edc2`; update them together.
 Quality gates, thresholds and source exclusions are unchanged.
