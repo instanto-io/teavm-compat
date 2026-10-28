@@ -204,3 +204,10 @@ Native adaptation also resolves raw callback type parameters to their declared
 upper bound and annotates implicit native JsInterop methods for TeaVM. These
 paths are exercised by the [Tealeaf port](https://github.com/instanto-io/tealeaf),
 including Java event callbacks and methods inherited through native interfaces.
+
+Unbounded generic native results use the same conversion as `Object`, including converting an
+absent JavaScript value to Java `null`. When a native class implements an interface declaring the
+same getter, the generated conversion is inherited from that interface. This preserves the Java
+interface relationship without overriding a TeaVM overlay implementation. Generic property
+getters retain their original JavaScript property names. The Elemental2 collection browser tests
+cover missing entries, stored Java object identity, strings and iterator result properties.

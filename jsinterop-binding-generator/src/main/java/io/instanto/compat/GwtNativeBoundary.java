@@ -31,10 +31,18 @@ public final class GwtNativeBoundary {
     Map<String, String> imported = nativeImports(cu);
     for (var owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
       boolean nativeOwner = owner.isAnnotationPresent("JSClass");
+      boolean nativeInterface =
+          owner.isInterface()
+              && !owner.isAnnotationPresent("JSFunctor")
+              && owner.getExtendedTypes().stream()
+                  .anyMatch(t -> t.getNameAsString().equals("JSObject"));
       if (nativeOwner) adaptFieldGetters(owner, imported);
       int index = 0;
       for (var method : new ArrayList<>(owner.getMethods())) {
-        if (needsBoundary(method, nativeOwner, imported))
+        if (nativeInterface && method.getBody().isEmpty() && isErasedResult(method)) {
+          method.setNative(true);
+          adaptMethod(owner, method, true, index++, imported);
+        } else if (needsBoundary(method, nativeOwner, imported))
           adaptMethod(owner, method, nativeOwner, index++, imported);
       }
     }
@@ -91,6 +99,7 @@ public final class GwtNativeBoundary {
     boolean property = method.isAnnotationPresent(TEAVM_PROPERTY);
     boolean result =
         isGwt(method.getTypeAsString(), imported)
+            || isErasedResult(method)
             || (method.getTypeAsString().equals(JAVA_OBJECT) && !property)
             || (body && !nativeOwner && !method.isStatic());
     return result
@@ -108,9 +117,32 @@ public final class GwtNativeBoundary {
     StringBuilder setup = new StringBuilder();
     List<String> args = adaptArguments(method, bridge, imported, setup);
     String call = bridge.getNameAsString() + "(" + String.join(",", args) + ")";
+    if (owner.isInterface()) {
+      String helper = "$NativeResult" + index;
+      String variables =
+          owner.getTypeParameters().isEmpty()
+              ? ""
+              : "<"
+                  + String.join(
+                      ",",
+                      owner.getTypeParameters().stream().map(p -> p.getNameAsString()).toList())
+                  + ">";
+      call = "jsinterop.base.Js.<" + helper + variables + ">uncheckedCast(this)." + call;
+    }
     appendResult(method, bridge, call, setup, imported);
-    owner.addMember(bridge);
+    if (owner.isInterface()) {
+      var helper =
+          new ClassOrInterfaceDeclaration()
+              .setInterface(true)
+              .setPublic(true)
+              .setName("$NativeResult" + index)
+              .addExtendedType("org.teavm.jso.JSObject");
+      owner.getTypeParameters().forEach(p -> helper.addTypeParameter(p.clone()));
+      helper.addMember(bridge);
+      owner.addMember(helper);
+    } else owner.addMember(bridge);
     method.setNative(false);
+    if (owner.isInterface()) method.setDefault(true).setAbstract(false);
     method
         .getAnnotations()
         .removeIf(
@@ -125,6 +157,15 @@ public final class GwtNativeBoundary {
     boolean body = method.isAnnotationPresent(TEAVM_BODY);
     MethodDeclaration bridge = method.clone();
     bridge.setName("$gwtBridge" + index).setPublic(false).setProtected(false).setPrivate(true);
+    if (owner.isInterface()) {
+      bridge.setName("$gwtBridge" + owner.getNameAsString() + index);
+      bridge
+          .setPrivate(false)
+          .setPublic(true)
+          .setNative(false)
+          .setAbstract(false)
+          .setDefault(false);
+    }
     String jsName = method.getNameAsString();
     var annotation = method.getAnnotationByName(TEAVM_METHOD);
     if (annotation.isPresent() && annotation.get().isSingleMemberAnnotationExpr())
@@ -136,6 +177,21 @@ public final class GwtNativeBoundary {
               .asStringLiteralExpr()
               .asString();
     bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals(TEAVM_METHOD));
+    var property = bridge.getAnnotationByName(TEAVM_PROPERTY);
+    if (property.isPresent() && property.get().isMarkerAnnotationExpr()) {
+      String original = method.getNameAsString();
+      String stem =
+          original.startsWith("is")
+              ? original.substring(2)
+              : original.startsWith("get") || original.startsWith("set")
+                  ? original.substring(3)
+                  : "";
+      if (stem.isEmpty())
+        throw new IllegalArgumentException("Cannot infer native property: " + original);
+      String name = Character.toLowerCase(stem.charAt(0)) + stem.substring(1);
+      property.get().remove();
+      bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSProperty(\"" + name + "\")"));
+    }
     if (!body && bridge.getAnnotationByName(TEAVM_PROPERTY).isEmpty())
       bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSMethod(\"" + jsName + "\")"));
     if (body && !nativeOwner) {
@@ -223,9 +279,27 @@ public final class GwtNativeBoundary {
       if (method.getType().isArrayType()) {
         appendArrayResult(type, bridge.getTypeAsString(), call, setup, imported);
       } else setup.append("return ").append(wrap(type, call, imported)).append(";");
-    } else if (method.getTypeAsString().equals(JAVA_OBJECT)) {
+    } else if (method.getTypeAsString().equals(JAVA_OBJECT) || isErasedResult(method)) {
+      if (isErasedResult(method)) bridge.setType(JAVA_OBJECT);
       setup.append("return jsinterop.base.Js.cast(").append(call).append(");");
     } else setup.append(method.getType().isVoidType() ? "" : "return ").append(call).append(";");
+  }
+
+  /** An unbounded native type variable has the same undefined/null boundary as Object. */
+  static boolean isErasedResult(MethodDeclaration method) {
+    String result = method.getTypeAsString();
+    var parameters = new ArrayList<>(method.getTypeParameters());
+    method
+        .findAncestor(ClassOrInterfaceDeclaration.class)
+        .ifPresent(owner -> parameters.addAll(owner.getTypeParameters()));
+    return parameters.stream()
+        .anyMatch(
+            p ->
+                p.getNameAsString().equals(result)
+                    && (p.getTypeBound().isEmpty()
+                        || (p.getTypeBound().size() == 1
+                            && Set.of("Object", "java.lang.Object")
+                                .contains(p.getTypeBound().get(0).asString()))));
   }
 
   private void appendArrayResult(

@@ -77,6 +77,30 @@ public class SourceAdapterTest {
   }
 
   @Test
+  public void genericNativeResultsUseTheObjectConversionBoundary() throws Exception {
+    Path in = folder.newFolder("generic-results").toPath();
+    Path out = folder.getRoot().toPath().resolve("adapted-results");
+    write(
+        in,
+        "p/Lookup.java",
+        """
+        package p;
+        import jsinterop.annotations.JsType;
+        @JsType(isNative=true, namespace="", name="Map")
+        public class Lookup<V> {
+          public native V get(String key);
+          public native <T> T read(String key);
+        }
+        """);
+    SourceAdapter.adapt(in, out, false);
+    String adapted = Files.readString(out.resolve("p/Lookup.java"));
+    assertTrue(adapted, adapted.contains("public V get(String key)"));
+    assertTrue(adapted, adapted.contains("return jsinterop.base.Js.cast($gwtBridge0(key));"));
+    assertTrue(adapted, adapted.contains("Object $gwtBridge0(String key)"));
+    assertTrue(adapted, adapted.contains("return jsinterop.base.Js.cast($gwtBridge1(key));"));
+  }
+
+  @Test
   public void callbackDeclarationsFeedTheSourceAdaptationPipeline() throws Exception {
     Path in = folder.newFolder("callbacks").toPath();
     Path out = folder.getRoot().toPath().resolve("adapted-callbacks");

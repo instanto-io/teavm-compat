@@ -9,9 +9,11 @@ public final class BindingPipeline {
   private final ErasedCallbackArguments erasedCallbacks;
   private final boolean legacyJsni;
   private final GwtOverlayTypes overlays;
+  private final NativeInheritedResults inheritedResults;
 
   public BindingPipeline(Collection<String> sources, boolean legacyJsni) {
     this.legacyJsni = legacyJsni;
+    inheritedResults = withJava17(() -> new NativeInheritedResults(sources));
     overlays = withJava17(() -> new GwtOverlayTypes(sources));
     names = withJava17(() -> new JsInteropNames(sources));
     erasedCallbacks = withJava17(() -> new ErasedCallbackArguments(sources));
@@ -24,7 +26,9 @@ public final class BindingPipeline {
           String nativeSource = legacyJsni ? LegacyNativeBodies.transform(source) : source;
           return callbacks.transform(
               GenerateBindings.transform(
-                  overlays.transform(names.transform(erasedCallbacks.transform(nativeSource))),
+                  overlays.transform(
+                      names.transform(
+                          erasedCallbacks.transform(inheritedResults.transform(nativeSource)))),
                   overlays.types()));
         });
   }
