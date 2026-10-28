@@ -17,7 +17,7 @@ public class DragDropCompatibilityTest {
   @Test
   public void mouseEventsCarryRelativeCoordinatesAndGwtButtonFlags() {
     AbsolutePanel panel = new AbsolutePanel();
-    FocusPanel handle = new FocusPanel();
+    Label handle = new Label("drag handle");
     RootPanel.get().add(panel);
     panel.add(handle, 31, 47);
     handle.setPixelSize(100, 60);
