@@ -75,7 +75,8 @@ final class BrowserEventBridge {
           if (capture != null
               && (event.getType().startsWith("mouse")
                   || event.getType().equals("click")
-                  || event.getType().equals("dblclick"))) {
+                  || event.getType().equals("dblclick")
+                  || event.getType().startsWith("touch"))) {
             dispatchCaptured(listeners, capture.unwrap(), nativeEvent);
             nativeEvent.stopPropagation();
           }
@@ -176,7 +177,7 @@ final class BrowserEventBridge {
   @JSBody(
       params = "handler",
       script =
-          "var names=['click','dblclick','mousedown','mouseup','mousemove','mouseover','mouseout','keydown','keyup','keypress','touchstart','touchmove','touchend','touchcancel','focus','blur','contextmenu'];names.forEach(function(n){document.addEventListener(n,handler,true);});return"
+          "var names=['click','dblclick','mousedown','mouseup','mousemove','mouseover','mouseout','keydown','keyup','keypress','touchstart','touchmove','touchend','touchcancel','focus','blur','contextmenu'];names.forEach(function(n){document.addEventListener(n,handler,{capture:true,passive:false});});return"
               + " {names:names,handler:handler};")
   private static native JSObject hookDocument(NativeHandler handler);
 

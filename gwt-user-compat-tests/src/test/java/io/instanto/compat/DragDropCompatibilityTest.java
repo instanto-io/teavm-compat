@@ -110,4 +110,47 @@ public class DragDropCompatibilityTest {
       panel.removeFromParent();
     }
   }
+
+  @Test
+  public void captureRoutesTouchEventsAndAllowsPreventingNativeScrolling() {
+    FocusPanel captured = new FocusPanel();
+    Label originalTarget = new Label("original touch target");
+    RootPanel.get().add(captured);
+    RootPanel.get().add(originalTarget);
+    java.util.List<String> capturedEvents = new java.util.ArrayList<>();
+    java.util.List<String> originalEvents = new java.util.ArrayList<>();
+    captured.addTouchStartHandler(e -> capturedEvents.add("touchstart"));
+    captured.addTouchMoveHandler(
+        e -> {
+          capturedEvents.add("touchmove");
+          e.preventDefault();
+        });
+    captured.addTouchEndHandler(e -> capturedEvents.add("touchend"));
+    captured.addTouchCancelHandler(e -> capturedEvents.add("touchcancel"));
+    originalTarget.addTouchMoveHandler(e -> originalEvents.add("touchmove"));
+    try {
+      DOM.setCapture(captured.getElement());
+      for (String type : java.util.List.of("touchstart", "touchmove", "touchend", "touchcancel")) {
+        boolean prevented = fireTouch(originalTarget.getElement().unwrap(), type);
+        assertEquals(type.equals("touchmove"), prevented);
+      }
+      assertEquals(
+          java.util.List.of("touchstart", "touchmove", "touchend", "touchcancel"), capturedEvents);
+      assertTrue(originalEvents.isEmpty());
+      DOM.releaseCapture(captured.getElement());
+      assertFalse(fireTouch(originalTarget.getElement().unwrap(), "touchmove"));
+      assertEquals(java.util.List.of("touchmove"), originalEvents);
+      assertEquals(4, capturedEvents.size());
+    } finally {
+      DOM.releaseCapture(captured.getElement());
+      captured.removeFromParent();
+      originalTarget.removeFromParent();
+    }
+  }
+
+  @org.teavm.jso.JSBody(
+      params = {"target", "type"},
+      script =
+          "var e=new Event(type,{bubbles:true,cancelable:true});target.dispatchEvent(e);return e.defaultPrevented;")
+  private static native boolean fireTouch(org.teavm.jso.dom.html.HTMLElement target, String type);
 }
