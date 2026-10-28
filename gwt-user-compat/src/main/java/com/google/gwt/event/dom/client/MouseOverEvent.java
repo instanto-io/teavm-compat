@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class MouseOverEvent extends DomEvent<MouseOverHandler> {
+public class MouseOverEvent extends MouseEvent<MouseOverHandler> {
 
   private static final Type<MouseOverHandler> TYPE = new Type<>("mouseover", MouseOverEvent::new);
 

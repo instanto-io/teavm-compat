@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class MouseMoveEvent extends DomEvent<MouseMoveHandler> {
+public class MouseMoveEvent extends MouseEvent<MouseMoveHandler> {
 
   private static final Type<MouseMoveHandler> TYPE = new Type<>("mousemove", MouseMoveEvent::new);
 

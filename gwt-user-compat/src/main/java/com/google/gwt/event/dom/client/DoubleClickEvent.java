@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class DoubleClickEvent extends DomEvent<DoubleClickHandler> {
+public class DoubleClickEvent extends MouseEvent<DoubleClickHandler> {
 
   private static final Type<DoubleClickHandler> TYPE =
       new Type<>("dblclick", DoubleClickEvent::new);

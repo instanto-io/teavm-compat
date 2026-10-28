@@ -110,7 +110,7 @@ public class Widget extends UIObject
 
   /** Receives a browser event before dispatching it to this widget's handlers. */
   public void onBrowserEvent(final com.google.gwt.user.client.Event event) {
-    DomEvent.fireNativeEvent(event, this);
+    DomEvent.fireNativeEvent(event, this, getElement());
   }
 
   protected void onEnsureDebugId(final String baseId) {

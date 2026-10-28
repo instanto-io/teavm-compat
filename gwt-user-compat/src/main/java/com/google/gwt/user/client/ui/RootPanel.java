@@ -43,7 +43,7 @@ import java.util.Set;
  * them a last onUnload -- the moment a widget releases a plugin, a timer or a listener it put
  * somewhere outside its own element.
  */
-public final class RootPanel extends ComplexPanel {
+public final class RootPanel extends AbsolutePanel {
 
   private static final Map<String, RootPanel> ROOTS = new HashMap<>();
   private static final Set<Widget> TO_DETACH = new LinkedHashSet<>();

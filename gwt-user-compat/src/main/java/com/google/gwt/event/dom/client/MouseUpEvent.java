@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class MouseUpEvent extends DomEvent<MouseUpHandler> {
+public class MouseUpEvent extends MouseEvent<MouseUpHandler> {
 
   private static final Type<MouseUpHandler> TYPE = new Type<>("mouseup", MouseUpEvent::new);
 

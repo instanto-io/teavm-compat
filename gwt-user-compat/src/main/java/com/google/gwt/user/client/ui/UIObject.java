@@ -256,4 +256,10 @@ public abstract class UIObject {
   public int getOffsetHeight() {
     return getElement().getOffsetHeight();
   }
+
+  /** Sets dimensions in CSS pixels; negative dimensions restore automatic sizing. */
+  public void setPixelSize(int width, int height) {
+    setWidth(width < 0 ? "" : width + "px");
+    setHeight(height < 0 ? "" : height + "px");
+  }
 }

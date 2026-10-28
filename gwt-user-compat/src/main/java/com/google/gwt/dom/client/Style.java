@@ -565,4 +565,29 @@ public final class Style {
   public void clearTableLayout() {
     clearProperty("tableLayout");
   }
+
+  public enum BorderStyle implements HasCssName {
+    NONE,
+    HIDDEN,
+    DOTTED,
+    DASHED,
+    SOLID,
+    DOUBLE,
+    GROOVE,
+    RIDGE,
+    INSET,
+    OUTSET;
+
+    public String getCssName() {
+      return name().toLowerCase(java.util.Locale.ROOT);
+    }
+  }
+
+  public void setBorderStyle(BorderStyle value) {
+    setProperty("borderStyle", value.getCssName());
+  }
+
+  public void setPropertyPx(String name, int value) {
+    setProperty(name, value + "px");
+  }
 }

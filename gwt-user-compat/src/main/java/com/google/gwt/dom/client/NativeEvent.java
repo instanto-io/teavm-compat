@@ -153,4 +153,26 @@ public class NativeEvent implements io.instanto.compat.NativeHandle {
       params = {"e", "name"},
       script = "return e[name];")
   private static native double gesture(Event event, String name);
+
+  public static final int BUTTON_LEFT = 1;
+  public static final int BUTTON_RIGHT = 2;
+  public static final int BUTTON_MIDDLE = 4;
+
+  public int getScreenX() {
+    return event instanceof MouseEvent ? ((MouseEvent) event).getScreenX() : 0;
+  }
+
+  public int getScreenY() {
+    return event instanceof MouseEvent ? ((MouseEvent) event).getScreenY() : 0;
+  }
+
+  public int getButton() {
+    if (!(event instanceof MouseEvent)) return 0;
+    return switch (((MouseEvent) event).getButton()) {
+      case 0 -> BUTTON_LEFT;
+      case 1 -> BUTTON_MIDDLE;
+      case 2 -> BUTTON_RIGHT;
+      default -> 0;
+    };
+  }
 }

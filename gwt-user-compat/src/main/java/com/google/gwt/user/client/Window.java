@@ -232,4 +232,8 @@ public final class Window {
     }
     return SCROLL_HANDLERS.addHandler(ScrollEvent.TYPE, handler);
   }
+
+  /** Browser status text; modern browsers may ignore this legacy property. */
+  @org.teavm.jso.JSBody(params = "text", script = "window.status = text;")
+  public static native void setStatus(String text);
 }

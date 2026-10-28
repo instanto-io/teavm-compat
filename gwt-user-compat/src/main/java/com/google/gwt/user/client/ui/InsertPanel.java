@@ -25,7 +25,7 @@
 package com.google.gwt.user.client.ui;
 
 /** A panel that accepts children at a specific index. */
-public interface InsertPanel {
+public interface InsertPanel extends IndexedPanel {
 
   void add(Widget child);
 

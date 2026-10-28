@@ -575,4 +575,19 @@ public class Element extends com.google.gwt.dom.client.Node {
       params = {"el", "selectors"},
       script = "return el.querySelectorAll(selectors);")
   private static native JSObject rawQuerySelectorAll(HTMLElement el, String selectors);
+
+  public String getNodeName() {
+    return element.getNodeName();
+  }
+
+  public Element getOffsetParent() {
+    return wrap(offsetParent(element));
+  }
+
+  public void dispatchEvent(NativeEvent event) {
+    element.dispatchEvent(event.unwrap());
+  }
+
+  @JSBody(params = "element", script = "return element.offsetParent;")
+  private static native HTMLElement offsetParent(HTMLElement element);
 }

@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class ClickEvent extends DomEvent<ClickHandler> {
+public class ClickEvent extends MouseEvent<ClickHandler> {
 
   private static final Type<ClickHandler> TYPE = new Type<>("click", ClickEvent::new);
 

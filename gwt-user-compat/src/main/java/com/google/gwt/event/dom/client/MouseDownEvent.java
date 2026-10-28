@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class MouseDownEvent extends DomEvent<MouseDownHandler> {
+public class MouseDownEvent extends MouseEvent<MouseDownHandler> {
 
   private static final Type<MouseDownHandler> TYPE = new Type<>("mousedown", MouseDownEvent::new);
 

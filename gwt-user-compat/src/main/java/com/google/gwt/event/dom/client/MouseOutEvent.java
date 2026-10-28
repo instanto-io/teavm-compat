@@ -24,7 +24,7 @@
  */
 package com.google.gwt.event.dom.client;
 
-public class MouseOutEvent extends DomEvent<MouseOutHandler> {
+public class MouseOutEvent extends MouseEvent<MouseOutHandler> {
 
   private static final Type<MouseOutHandler> TYPE = new Type<>("mouseout", MouseOutEvent::new);
 

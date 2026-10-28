@@ -340,7 +340,7 @@ public final class Document {
             altKey,
             shiftKey,
             metaKey,
-            button,
+            button == NativeEvent.BUTTON_MIDDLE ? 1 : button == NativeEvent.BUTTON_RIGHT ? 2 : 0,
             relatedTarget == null ? null : relatedTarget.unwrap()));
   }
 
@@ -456,5 +456,21 @@ public final class Document {
 
   public TableSectionElement createTFootElement() {
     return TableSectionElement.as(createElement("tfoot"));
+  }
+
+  public NativeEvent createMouseUpEvent(
+      int detail,
+      int screenX,
+      int screenY,
+      int clientX,
+      int clientY,
+      boolean ctrl,
+      boolean alt,
+      boolean shift,
+      boolean meta,
+      int button) {
+    return createMouseEvent(
+        "mouseup", true, true, detail, screenX, screenY, clientX, clientY, ctrl, alt, shift, meta,
+        button, null);
   }
 }

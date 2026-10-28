@@ -188,4 +188,12 @@ public final class DOM {
   public static Element createTH() {
     return createElement("th");
   }
+
+  public static boolean isOrHasChild(Element parent, Element child) {
+    return parent.isOrHasChild(child);
+  }
+
+  public static String getStyleAttribute(Element element, String name) {
+    return element.getStyle().getProperty(name);
+  }
 }
