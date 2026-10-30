@@ -54,6 +54,12 @@ public class Widget extends UIObject
   private HandlerManager handlerManager;
   private boolean attached;
 
+  /** The DOM element the cached legacy wrapper was created from. */
+  private com.google.gwt.dom.client.Element elementSource;
+
+  /** Cached legacy view of {@link #elementSource}. */
+  private com.google.gwt.user.client.Element userElement;
+
   /** One native listener per DOM event name; it re-dispatches through the handler manager. */
   private final Set<String> nativeListeners = new HashSet<>();
 
@@ -70,7 +76,19 @@ public class Widget extends UIObject
    */
   @Override
   public com.google.gwt.user.client.Element getElement() {
-    return com.google.gwt.user.client.Element.as(super.getElement());
+    final com.google.gwt.dom.client.Element source = super.getElement();
+    if (source == null) {
+      elementSource = null;
+      userElement = null;
+      return null;
+    }
+    // GWT elements are identity objects: repeated calls for the same widget must
+    // return the same wrapper, including when an event reports its target.
+    if (source != elementSource) {
+      elementSource = source;
+      userElement = com.google.gwt.user.client.Element.as(source);
+    }
+    return userElement;
   }
 
   public Widget getParent() {

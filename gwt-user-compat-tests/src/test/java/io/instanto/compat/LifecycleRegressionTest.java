@@ -32,6 +32,30 @@ public class LifecycleRegressionTest {
   }
 
   @Test
+  public void widgetElementsKeepGwtIdentityAcrossCallsAndNativeEvents() {
+    TextBox source = new TextBox();
+    assertSame(
+        "repeated getElement calls must return the same GWT element",
+        source.getElement(),
+        source.getElement());
+    int[] calls = {0};
+    source.addKeyUpHandler(
+        event -> {
+          assertEquals(65, event.getNativeKeyCode());
+          assertSame(
+              "an event's relative element must be the widget element",
+              source.getElement(),
+              event.getRelativeElement());
+          calls[0]++;
+        });
+    com.google.gwt.event.dom.client.DomEvent.fireNativeEvent(
+        Document.get().createKeyUpEvent(true, false, true, false, 65),
+        source,
+        source.getElement());
+    assertEquals("one native key delivery", 1, calls[0]);
+  }
+
+  @Test
   public void removedDisplayStopsRequestingData() {
     CellList<String> display = new CellList<>(new TextCell());
     int[] calls = {0};

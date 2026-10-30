@@ -53,6 +53,18 @@ public class NativeCallbackBindingsTest {
   }
 
   @Test
+  public void callbackParameterFromTheDeclaringPackageIsQualifiedAcrossPackages() {
+    String event =
+        "package example; import jsinterop.annotations.*; @JsType(isNative=true) class Event {}";
+    String callback =
+        "package example; import jsinterop.annotations.*; @JsFunction interface Handler { Object call(Event event); }";
+    String query = "package consumer; class Query { native void on(example.Handler handler); }";
+    String result = new NativeCallbackBindings(List.of(callback, query, event)).transform(query);
+    assertTrue(result, result.contains("(example.Event) jsinterop.base.Js.cast(a0)"));
+    assertFalse(result, result.contains("(Event) jsinterop.base.Js.cast(a0)"));
+  }
+
+  @Test
   public void typedCallbacksConvertDomNodesAndBoxedNumbers() {
     String source =
         "import example.Callback; import com.google.gwt.dom.client.Element; import org.teavm.jso.*;"

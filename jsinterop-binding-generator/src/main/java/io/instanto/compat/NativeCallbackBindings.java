@@ -21,6 +21,38 @@ public final class NativeCallbackBindings {
 
   private final Map<String, Function> functions = new LinkedHashMap<>();
 
+  /** Java names that must never be prefixed with the declaring package. */
+  private static final Set<String> LANGUAGE_TYPES =
+      Set.of(
+          "void",
+          "boolean",
+          "byte",
+          "short",
+          "int",
+          "long",
+          "float",
+          "double",
+          "char",
+          "String",
+          "CharSequence",
+          "Object",
+          "Number",
+          "Integer",
+          "Long",
+          "Double",
+          "Float",
+          "Boolean",
+          "Byte",
+          "Short",
+          "Character",
+          "Void",
+          "Class",
+          "Throwable",
+          "Exception",
+          "RuntimeException",
+          "Iterable",
+          "Comparable");
+
   public NativeCallbackBindings(Collection<String> declarations) {
     for (String source : declarations)
       for (var type : StaticJavaParser.parse(source).findAll(ClassOrInterfaceDeclaration.class))
@@ -31,22 +63,30 @@ public final class NativeCallbackBindings {
       cu.getImports().stream()
           .filter(i -> !i.isAsterisk())
           .forEach(i -> declarationImports.put(i.getName().getIdentifier(), i.getNameAsString()));
+      String packageName =
+          cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
       for (var type : cu.findAll(ClassOrInterfaceDeclaration.class)) {
         type.getFullyQualifiedName().ifPresent(name -> declarationsByName.put(name, type));
         if (type.getAnnotationByName("JsFunction").isEmpty()) continue;
-        registerFunction(type, declarationImports);
+        registerFunction(type, declarationImports, packageName);
       }
     }
   }
 
   private void registerFunction(
-      ClassOrInterfaceDeclaration type, Map<String, String> declarationImports) {
+      ClassOrInterfaceDeclaration type,
+      Map<String, String> declarationImports,
+      String packageName) {
     var methods =
         type.getMethods().stream().filter(m -> !m.isStatic() && m.getBody().isEmpty()).toList();
     if (methods.size() != 1)
       throw new IllegalArgumentException("Expected single JsFunction method: " + type.getName());
     var method = methods.get(0);
     String name = type.getFullyQualifiedName().orElseThrow();
+    Set<String> variables =
+        type.getTypeParameters().stream()
+            .map(t -> t.getNameAsString())
+            .collect(java.util.stream.Collectors.toSet());
     functions.put(
         name,
         new Function(
@@ -63,9 +103,41 @@ public final class NativeCallbackBindings {
                 .toList(),
             method.getNameAsString(),
             method.getParameters().stream()
-                .map(p -> qualified(p.getTypeAsString(), declarationImports))
+                .map(
+                    p ->
+                        declarationType(
+                            p.getTypeAsString(), declarationImports, packageName, variables))
                 .toList(),
-            qualified(method.getTypeAsString(), declarationImports)));
+            declarationType(
+                method.getTypeAsString(), declarationImports, packageName, variables)));
+  }
+
+  /**
+   * Resolves a type written in the callback declaration. Types are often used without an import
+   * because they live in the declaration's own package; carrying that package forward is required
+   * when the bridge is emitted into a class from another package.
+   */
+  private static String declarationType(
+      String type,
+      Map<String, String> imports,
+      String packageName,
+      Set<String> variables) {
+    if (variables.contains(type)) return type;
+    return packageQualified(type, imports, packageName);
+  }
+
+  private static String packageQualified(
+      String type, Map<String, String> imports, String packageName) {
+    if (type.contains(".")
+        || LANGUAGE_TYPES.contains(type)
+        || type.indexOf('[') >= 0
+        || type.indexOf('<') >= 0
+        || type.indexOf('>') >= 0
+        || type.indexOf('?') >= 0) return imports.getOrDefault(type, type);
+    String imported = imports.get(type);
+    if (imported != null) return imported;
+    // A one-letter name is almost certainly a type variable, which must stay unqualified.
+    return packageName.isEmpty() || type.length() < 2 ? type : packageName + "." + type;
   }
 
   private String boundName(
@@ -85,6 +157,8 @@ public final class NativeCallbackBindings {
     var cu = StaticJavaParser.parse(source);
     Map<String, String> imports = new HashMap<>();
     cu.getImports().forEach(i -> imports.put(i.getName().getIdentifier(), i.getNameAsString()));
+    String packageName =
+        cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
     boolean changed = false;
     for (var owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
       imports.put("$scope", owner.getFullyQualifiedName().orElse(""));
@@ -92,8 +166,8 @@ public final class NativeCallbackBindings {
       for (var method : new ArrayList<>(owner.getMethods())) {
         if (!method.isNative() && !(owner.isInterface() && method.getBody().isEmpty())) continue;
         List<Shape> shapes = new ArrayList<>();
-        for (var p : method.getParameters()) shapes.add(shape(p.getType(), imports));
-        Shape result = shape(method.getType(), imports);
+        for (var p : method.getParameters()) shapes.add(shape(p.getType(), imports, packageName));
+        Shape result = shape(method.getType(), imports, packageName);
         if (result == null && shapes.stream().allMatch(Objects::isNull)) continue;
         if (!method.isStatic() && inheritedAdapter(owner, method, new HashSet<>())) {
           method.remove();
@@ -250,7 +324,7 @@ public final class NativeCallbackBindings {
 
   private record Shape(Function function, List<String> args, String result, String key) {}
 
-  private Shape shape(Type type, Map<String, String> imports) {
+  private Shape shape(Type type, Map<String, String> imports, String packageName) {
     if (!type.isClassOrInterfaceType()) return null;
     var declared = type.asClassOrInterfaceType();
     String name = resolveFunctionName(declared, imports);
@@ -269,8 +343,13 @@ public final class NativeCallbackBindings {
       variables.put(
           function.variables.get(i),
           parameters.isEmpty() ? function.bounds.get(i) : parameters.get(i).toString());
-    var args = function.args.stream().map(t -> variables.getOrDefault(t, t)).toList();
-    String result = variables.getOrDefault(function.result, function.result);
+    var args =
+        function.args.stream()
+            .map(t -> packageQualified(variables.getOrDefault(t, t), imports, packageName))
+            .toList();
+    String result =
+        packageQualified(
+            variables.getOrDefault(function.result, function.result), imports, packageName);
     if (args.stream().noneMatch(t -> needsBridge(t, imports)) && !needsBridge(result, imports))
       return null;
     String key =
