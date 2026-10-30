@@ -100,3 +100,10 @@ omits `gwt-user-compat` when TeaCoCo owns its coverage, and a pre-Sonar check re
 overlapping reports or changed original-bytecode denominators. Sonar's existing
 quality gate is unchanged. See [the coverage guide](docs/BROWSER-COVERAGE.md) for
 local commands, report ownership, failure handling and limitations.
+
+## Quality
+
+SpotBugs runs on every build. High-priority findings fail the build, and all findings are published to [code scanning](https://github.com/instanto-io/teavm-compat/security/code-scanning). SonarQube analysis runs on `main` against the organisation's private instance; maintainers see the gate, coverage and issue counts in the workflow summary. The Sonar quality gate is advisory, so a snapshot still publishes when only that gate fails.
+
+See [Actions](https://github.com/instanto-io/teavm-compat/actions) for the latest verification and quality summary.
+
