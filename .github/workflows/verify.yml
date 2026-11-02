@@ -70,7 +70,11 @@ jobs:
             -Djacoco.dataFile="$PWD/gwt-user-compat-tests/target/jvm-baseline.exec"
           python3 scripts/check-gwt-coverage.py
       - name: SonarQube Quality Gate
+        # The gate is advisory: it reports the server-side conditions without
+        # blocking verification, so a new gate rule cannot stop snapshot
+        # publication. SpotBugs High remains the blocking quality gate.
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonar.instanto.io
