@@ -13,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      SONAR_TOKEN: ${{ secrets.SONAR_READ_TOKEN || secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: https://sonar.instanto.io
+      SONAR_ANALYSIS_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_READ_TOKEN: ${{ secrets.SONAR_READ_TOKEN }}
     steps:
       - name: Report gate conditions and open issues
         run: |
@@ -22,24 +23,57 @@ jobs:
           import json, os, urllib.error, urllib.parse, urllib.request
           host = os.environ['SONAR_HOST_URL']
           project = os.environ['GITHUB_REPOSITORY'].split('/')[-1]
+          tokens = [token for token in
+                    (os.environ.get('SONAR_READ_TOKEN'), os.environ.get('SONAR_ANALYSIS_TOKEN'))
+                    if token]
+          state = {'token': None}
+
           def get(path, **params):
-              request = urllib.request.Request(host + path + '?' + urllib.parse.urlencode(params),
-                  headers={'Authorization': 'Bearer ' + os.environ['SONAR_TOKEN']})
-              try:
-                  with urllib.request.urlopen(request, timeout=30) as response:
-                      return json.load(response)
-              except urllib.error.HTTPError as error:
-                  if error.code not in (401, 403):
-                      raise
-                  print('::warning::Cannot read ' + path + '. Configure SONAR_READ_TOKEN with Browse permission.')
-                  return {}
+              """Read an API endpoint, falling back when a token lacks Browse."""
+              for token in ([state['token']] if state['token'] else tokens):
+                  request = urllib.request.Request(
+                      host + path + '?' + urllib.parse.urlencode(params),
+                      headers={'Authorization': 'Bearer ' + token})
+                  try:
+                      with urllib.request.urlopen(request, timeout=30) as response:
+                          state['token'] = token
+                          return json.load(response)
+                  except urllib.error.HTTPError as error:
+                      if error.code not in (401, 403):
+                          raise
+              print('::warning::Cannot read ' + path + '. Configure SONAR_READ_TOKEN with Browse permission.')
+              return {}
+
           gate = get('/api/qualitygates/project_status', projectKey=project)
-          print('Gate:', json.dumps(gate.get('projectStatus', 'unavailable')))
+          status = gate.get('projectStatus', {})
+          print('Gate status:', status.get('status', 'unavailable'))
+          for condition in status.get('conditions', []):
+              print('Condition:', json.dumps({
+                  'metric': condition.get('metricKey'),
+                  'status': condition.get('status'),
+                  'comparator': condition.get('comparator'),
+                  'threshold': condition.get('errorThreshold'),
+                  'actual': condition.get('actualValue'),
+                  'period': condition.get('periodIndex'),
+              }))
+          measures = get('/api/measures/component', component=project, metricKeys=','.join([
+              'new_coverage', 'new_duplicated_lines_density', 'new_bugs',
+              'new_vulnerabilities', 'new_code_smells', 'new_reliability_rating',
+              'new_security_rating', 'new_maintainability_rating',
+              'coverage', 'duplicated_lines_density',
+          ]))
+          for measure in measures.get('component', {}).get('measures', []):
+              print('Measure:', measure.get('metric'), '=', measure.get('value'),
+                    measure.get('period', {}).get('value', ''))
           analyses = get('/api/project_analyses/search', project=project, ps=1)
           for analysis in analyses.get('analyses', []):
               print('Analysis:', json.dumps({key: analysis.get(key) for key in ('key', 'date', 'revision')}))
-          issues = get('/api/issues/search', componentKeys=project, inNewCodePeriod='true', resolved='false', ps=100)
+          issues = get('/api/issues/search', componentKeys=project, inNewCodePeriod='true',
+                       resolved='false', ps=100)
           print('Open issues in new code:', issues.get('total', 'unavailable'))
           for issue in issues.get('issues', []):
-              print(json.dumps({key: issue.get(key) for key in ('rule', 'severity', 'component', 'line', 'message')}))
+              print('Issue:', json.dumps({
+                  key: issue.get(key) for key in
+                  ('rule', 'severity', 'component', 'line', 'message', 'effort')
+              }))
           PY
