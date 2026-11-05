@@ -9,6 +9,10 @@
   </parent>
   <artifactId>teavm-compat-bom</artifactId>
   <packaging>pom</packaging>
+
+  <properties>
+    <instanto.repository>teavm-compat</instanto.repository>
+  </properties>
   <dependencyManagement>
     <dependencies><dependency><groupId>io.instanto</groupId><artifactId>gwt-uibinder-processor</artifactId><version>${project.version}</version></dependency>
       <dependency>

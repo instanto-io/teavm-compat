@@ -36,6 +36,7 @@
     </repository>
   </distributionManagement>
   <properties>
+    <instanto.repository>teavm-compat</instanto.repository>
     <spotbugs.skip>false</spotbugs.skip>
     <!-- Browser execution is measured separately from JVM JaCoCo reports. -->
     <sonar.coverageReportPaths>${maven.multiModuleProjectDirectory}/target/browser-coverage.xml</sonar.coverageReportPaths>
