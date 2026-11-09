@@ -1,13 +1,10 @@
 name: Publish
 
 # Publishes the compatibility library snapshots to packages.instanto.io, the
-# destination every project inherits from instanto-org-pom. Downstream ports pin
-# the snapshot, so every push to main that verifies cleanly republishes it.
+# destination every project inherits from instanto-org-pom.
 
 on:
-  workflow_run:
-    workflows: [ Verify compatibility libraries ]
-    types: [ completed ]
+  push:
     branches: [ main ]
   workflow_dispatch:
 
@@ -18,13 +15,12 @@ permissions:
 jobs:
   snapshots:
     name: packages.instanto.io
-    if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
     uses: instanto-io/instanto-poms/.github/workflows/maven-build.yml@main
     with:
       name: Deploy snapshots to packages.instanto.io
       goals: clean deploy
-      maven-args: -DskipTests
+      fast-deploy: true
+      downstream-checks: false
+      sonar: false
       timeout-minutes: 30
     secrets: inherit
