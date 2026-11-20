@@ -47,6 +47,8 @@ import org.w3c.dom.NodeList;
  * generics and overloads.
  */
 final class Emitter {
+  private static final String FIELD_TEXT = "$field";
+
   private static final String FIELD_ATTRIBUTE = "field";
   private static final String INDENT = "        ";
 
@@ -325,7 +327,7 @@ final class Emitter {
             + className.substring(1)
             + (++counter);
     final Map<String, String> attrs = attributes(element);
-    final String field = attrs.remove("$field");
+    final String field = attrs.remove(FIELD_TEXT);
 
     final boolean provided = isProvided(field);
 
@@ -434,7 +436,7 @@ final class Emitter {
     }
 
     final Map<String, String> attrs = attributes(element);
-    final String field = attrs.remove("$field");
+    final String field = attrs.remove(FIELD_TEXT);
     for (final Map.Entry<String, String> attr : attrs.entrySet()) {
       body.append(INDENT)
           .append(var)
@@ -729,7 +731,7 @@ final class Emitter {
       final String name = attr.getLocalName() == null ? attr.getNodeName() : attr.getLocalName();
       if (UI_NS.equals(uri)) {
         if (FIELD_ATTRIBUTE.equals(name)) {
-          attrs.put("$field", attr.getNodeValue());
+          attrs.put(FIELD_TEXT, attr.getNodeValue());
         }
         continue;
       }
