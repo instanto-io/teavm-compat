@@ -28,6 +28,8 @@ import org.teavm.jso.dom.html.HTMLElement;
 
 /** Typed browser view of a optgroup element. */
 public class OptGroupElement extends Element {
+  private static final String DISABLED_ATTRIBUTE = "disabled";
+
   public static final String TAG = "optgroup";
 
   public OptGroupElement(HTMLElement element) {
@@ -44,7 +46,7 @@ public class OptGroupElement extends Element {
   }
 
   public String getDisabled() {
-    return getPropertyString("disabled");
+    return getPropertyString(DISABLED_ATTRIBUTE);
   }
 
   public String getLabel() {
@@ -52,15 +54,15 @@ public class OptGroupElement extends Element {
   }
 
   public boolean isDisabled() {
-    return getPropertyBoolean("disabled");
+    return getPropertyBoolean(DISABLED_ATTRIBUTE);
   }
 
   public void setDisabled(boolean disabled) {
-    setPropertyBoolean("disabled", disabled);
+    setPropertyBoolean(DISABLED_ATTRIBUTE, disabled);
   }
 
   public void setDisabled(String disabled) {
-    setPropertyString("disabled", disabled);
+    setPropertyString(DISABLED_ATTRIBUTE, disabled);
   }
 
   public void setLabel(String label) {
