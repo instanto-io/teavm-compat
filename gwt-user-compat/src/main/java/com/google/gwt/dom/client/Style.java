@@ -27,6 +27,25 @@ package com.google.gwt.dom.client;
 import org.teavm.jso.dom.html.HTMLElement;
 
 public final class Style {
+  private static final String WIDTH = "width";
+  private static final String FONT_SIZE = "font-size";
+  private static final String DISPLAY = "display";
+  private static final String FLOAT = "float";
+  private static final String BOTTOM_TEXT = "bottom";
+  private static final String HEIGHT = "height";
+  private static final String Z_INDEX = "z-index";
+  private static final String POSITION_STYLE_PROPERTY = "position";
+  private static final String FONT_WEIGHT = "font-weight";
+  private static final String VERTICAL_ALIGN = "vertical-align";
+  private static final String VISIBILITY = "visibility";
+  private static final String OVERFLOW = "overflow";
+  private static final String CURSOR = "cursor";
+  private static final String OPACITY = "opacity";
+  private static final String MARGIN_PROPERTY = "margin";
+  private static final String PADDING = "padding";
+  private static final String LINE_HEIGHT = "line-height";
+  private static final String BACKGROUND_COLOR = "background-color";
+
   public enum Unit {
     PX("px"),
     PCT("%"),
@@ -131,11 +150,11 @@ public final class Style {
   }
 
   public void setFontSize(final double value, final Unit unit) {
-    setProperty("font-size", value, unit);
+    setProperty(FONT_SIZE, value, unit);
   }
 
   public void setDisplay(final Display display) {
-    setProperty("display", display == null ? "" : display.getCssName());
+    setProperty(DISPLAY, display == null ? "" : display.getCssName());
   }
 
   public String getProperty(final String name) {
@@ -148,7 +167,7 @@ public final class Style {
 
   private static String cssProperty(String name) {
     if (name.startsWith("--")) return name;
-    if (name.equals("cssFloat") || name.equals("styleFloat")) return "float";
+    if (name.equals("cssFloat") || name.equals("styleFloat")) return FLOAT;
     StringBuilder result = new StringBuilder();
     for (int i = 0; i < name.length(); i++) {
       char c = name.charAt(i);
@@ -167,7 +186,7 @@ public final class Style {
   }
 
   public void setBottom(final double value, final Unit unit) {
-    setProperty("bottom", value, unit);
+    setProperty(BOTTOM_TEXT, value, unit);
   }
 
   public void setLeft(final double value, final Unit unit) {
@@ -179,19 +198,19 @@ public final class Style {
   }
 
   public void setWidth(final double value, final Unit unit) {
-    setProperty("width", value, unit);
+    setProperty(WIDTH, value, unit);
   }
 
   public void setHeight(final double value, final Unit unit) {
-    setProperty("height", value, unit);
+    setProperty(HEIGHT, value, unit);
   }
 
   public void setZIndex(final int value) {
-    setProperty("z-index", Integer.toString(value));
+    setProperty(Z_INDEX, Integer.toString(value));
   }
 
   public void setPosition(final Position position) {
-    setProperty("position", position == null ? "" : position.getCssName());
+    setProperty(POSITION_STYLE_PROPERTY, position == null ? "" : position.getCssName());
   }
 
   public void clearProperty(final String name) {
@@ -219,15 +238,15 @@ public final class Style {
   }
 
   public String getWidth() {
-    return getProperty("width");
+    return getProperty(WIDTH);
   }
 
   public String getHeight() {
-    return getProperty("height");
+    return getProperty(HEIGHT);
   }
 
   public String getDisplay() {
-    return getProperty("display");
+    return getProperty(DISPLAY);
   }
 
   public String getTop() {
@@ -239,7 +258,7 @@ public final class Style {
   }
 
   public String getZIndex() {
-    return getProperty("z-index");
+    return getProperty(Z_INDEX);
   }
 
   public void setWhiteSpace(final WhiteSpace whiteSpace) {
@@ -286,7 +305,7 @@ public final class Style {
   }
 
   public void setFloat(Float value) {
-    setProperty("float", value.getCssName());
+    setProperty(FLOAT, value.getCssName());
   }
 
   public enum FontWeight implements HasCssName {
@@ -306,7 +325,7 @@ public final class Style {
   }
 
   public void setFontWeight(FontWeight value) {
-    setProperty("font-weight", value.getCssName());
+    setProperty(FONT_WEIGHT, value.getCssName());
   }
 
   public enum VerticalAlign implements HasCssName {
@@ -316,7 +335,7 @@ public final class Style {
     TOP("top"),
     TEXT_TOP("text-top"),
     MIDDLE("middle"),
-    BOTTOM("bottom"),
+    BOTTOM(BOTTOM_TEXT),
     TEXT_BOTTOM("text-bottom");
     private final String cssName;
 
@@ -330,7 +349,7 @@ public final class Style {
   }
 
   public void setVerticalAlign(VerticalAlign value) {
-    setProperty("vertical-align", value.getCssName());
+    setProperty(VERTICAL_ALIGN, value.getCssName());
   }
 
   public enum Visibility implements HasCssName {
@@ -348,7 +367,7 @@ public final class Style {
   }
 
   public void setVisibility(Visibility value) {
-    setProperty("visibility", value.getCssName());
+    setProperty(VISIBILITY, value.getCssName());
   }
 
   public enum Overflow implements HasCssName {
@@ -368,7 +387,7 @@ public final class Style {
   }
 
   public void setOverflow(Overflow value) {
-    setProperty("overflow", value.getCssName());
+    setProperty(OVERFLOW, value.getCssName());
   }
 
   public enum Cursor implements HasCssName {
@@ -402,83 +421,83 @@ public final class Style {
   }
 
   public void setCursor(Cursor value) {
-    setProperty("cursor", value.getCssName());
+    setProperty(CURSOR, value.getCssName());
   }
 
   public void clearFloat() {
-    clearProperty("float");
+    clearProperty(FLOAT);
   }
 
   public String getFontWeight() {
-    return getProperty("font-weight");
+    return getProperty(FONT_WEIGHT);
   }
 
   public void clearFontWeight() {
-    clearProperty("font-weight");
+    clearProperty(FONT_WEIGHT);
   }
 
   public String getVerticalAlign() {
-    return getProperty("vertical-align");
+    return getProperty(VERTICAL_ALIGN);
   }
 
   public void clearVerticalAlign() {
-    clearProperty("vertical-align");
+    clearProperty(VERTICAL_ALIGN);
   }
 
   public String getVisibility() {
-    return getProperty("visibility");
+    return getProperty(VISIBILITY);
   }
 
   public void clearVisibility() {
-    clearProperty("visibility");
+    clearProperty(VISIBILITY);
   }
 
   public String getOverflow() {
-    return getProperty("overflow");
+    return getProperty(OVERFLOW);
   }
 
   public void clearOverflow() {
-    clearProperty("overflow");
+    clearProperty(OVERFLOW);
   }
 
   public String getCursor() {
-    return getProperty("cursor");
+    return getProperty(CURSOR);
   }
 
   public void clearCursor() {
-    clearProperty("cursor");
+    clearProperty(CURSOR);
   }
 
   public String getOpacity() {
-    return getProperty("opacity");
+    return getProperty(OPACITY);
   }
 
   public void clearOpacity() {
-    clearProperty("opacity");
+    clearProperty(OPACITY);
   }
 
   public String getPosition() {
-    return getProperty("position");
+    return getProperty(POSITION_STYLE_PROPERTY);
   }
 
   public void clearPosition() {
-    clearProperty("position");
+    clearProperty(POSITION_STYLE_PROPERTY);
   }
 
   public void clearHeight() {
-    clearProperty("height");
+    clearProperty(HEIGHT);
   }
 
   public void clearWidth() {
-    clearProperty("width");
+    clearProperty(WIDTH);
   }
 
   public void clearZIndex() {
-    clearProperty("z-index");
+    clearProperty(Z_INDEX);
   }
 
   public void clearBottom() {
-    clearProperty("bottom");
+    clearProperty(BOTTOM_TEXT);
   }
 
   public void clearLeft() {
@@ -486,67 +505,67 @@ public final class Style {
   }
 
   public String getFontSize() {
-    return getProperty("font-size");
+    return getProperty(FONT_SIZE);
   }
 
   public void clearFontSize() {
-    clearProperty("font-size");
+    clearProperty(FONT_SIZE);
   }
 
   public String getMargin() {
-    return getProperty("margin");
+    return getProperty(MARGIN_PROPERTY);
   }
 
   public void clearMargin() {
-    clearProperty("margin");
+    clearProperty(MARGIN_PROPERTY);
   }
 
   public String getPadding() {
-    return getProperty("padding");
+    return getProperty(PADDING);
   }
 
   public void clearPadding() {
-    clearProperty("padding");
+    clearProperty(PADDING);
   }
 
   public String getLineHeight() {
-    return getProperty("line-height");
+    return getProperty(LINE_HEIGHT);
   }
 
   public void clearLineHeight() {
-    clearProperty("line-height");
+    clearProperty(LINE_HEIGHT);
   }
 
   public String getBackgroundColor() {
-    return getProperty("background-color");
+    return getProperty(BACKGROUND_COLOR);
   }
 
   public void clearBackgroundColor() {
-    clearProperty("background-color");
+    clearProperty(BACKGROUND_COLOR);
   }
 
   public void clearDisplay() {
-    clearProperty("display");
+    clearProperty(DISPLAY);
   }
 
   public void setMargin(double value, Unit unit) {
-    setProperty("margin", value, unit);
+    setProperty(MARGIN_PROPERTY, value, unit);
   }
 
   public void setPadding(double value, Unit unit) {
-    setProperty("padding", value, unit);
+    setProperty(PADDING, value, unit);
   }
 
   public void setLineHeight(double value, Unit unit) {
-    setProperty("line-height", value, unit);
+    setProperty(LINE_HEIGHT, value, unit);
   }
 
   public void setOpacity(double value) {
-    setProperty("opacity", Double.toString(value));
+    setProperty(OPACITY, Double.toString(value));
   }
 
   public void setBackgroundColor(String value) {
-    setProperty("background-color", value);
+    setProperty(BACKGROUND_COLOR, value);
   }
 
   public enum TableLayout {
