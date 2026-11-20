@@ -28,6 +28,8 @@ import org.teavm.jso.dom.html.HTMLElement;
 
 /** Typed browser view of a style element. */
 public class StyleElement extends Element {
+  private static final String DISABLED_ATTRIBUTE = "disabled";
+
   public static final String TAG = "style";
 
   public StyleElement(HTMLElement element) {
@@ -48,7 +50,7 @@ public class StyleElement extends Element {
   }
 
   public boolean getDisabled() {
-    return getPropertyBoolean("disabled");
+    return getPropertyBoolean(DISABLED_ATTRIBUTE);
   }
 
   public String getMedia() {
@@ -60,7 +62,7 @@ public class StyleElement extends Element {
   }
 
   public boolean isDisabled() {
-    return getPropertyBoolean("disabled");
+    return getPropertyBoolean(DISABLED_ATTRIBUTE);
   }
 
   public void setCssText(String cssText) {
@@ -68,7 +70,7 @@ public class StyleElement extends Element {
   }
 
   public void setDisabled(boolean disabled) {
-    setPropertyBoolean("disabled", disabled);
+    setPropertyBoolean(DISABLED_ATTRIBUTE, disabled);
   }
 
   public void setMedia(String media) {
