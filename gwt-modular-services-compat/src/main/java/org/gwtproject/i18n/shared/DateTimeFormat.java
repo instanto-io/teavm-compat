@@ -35,6 +35,10 @@ import org.gwtproject.i18n.shared.cldr.impl.BrowserDateTimeFormatInfo;
  * TimeFormatter.DefaultFormatter} can extend it, matching the GWT API shape.
  */
 public class DateTimeFormat {
+  private static final String MEDIUM = "medium";
+  private static final String TWO_DIGIT_FORMAT = "2-digit";
+  private static final String MINUTE = "minute";
+  private static final String HOUR12 = "hour12";
 
   // ---- sentinel prefix ----
   private static final String DTF_PREFIX = "dtf:";
@@ -184,7 +188,7 @@ public class DateTimeFormat {
       case BrowserDateTimeFormatInfo.DATE_LONG:
         return JsIntlDateTimeFormatOptions.forDateStyle("long");
       case BrowserDateTimeFormatInfo.DATE_MEDIUM:
-        return JsIntlDateTimeFormatOptions.forDateStyle("medium");
+        return JsIntlDateTimeFormatOptions.forDateStyle(MEDIUM);
       case BrowserDateTimeFormatInfo.DATE_SHORT:
         return JsIntlDateTimeFormatOptions.forDateStyle("short");
       case BrowserDateTimeFormatInfo.TIME_FULL:
@@ -192,34 +196,34 @@ public class DateTimeFormat {
       case BrowserDateTimeFormatInfo.TIME_LONG:
         return JsIntlDateTimeFormatOptions.forTimeStyle("long");
       case BrowserDateTimeFormatInfo.TIME_MEDIUM:
-        return JsIntlDateTimeFormatOptions.forTimeStyle("medium");
+        return JsIntlDateTimeFormatOptions.forTimeStyle(MEDIUM);
       case BrowserDateTimeFormatInfo.TIME_SHORT:
         return JsIntlDateTimeFormatOptions.forTimeStyle("short");
       case BrowserDateTimeFormatInfo.TIME_H24MS:
         return JsIntlDateTimeFormatOptions.create()
-            .set("hour", "2-digit")
-            .set("minute", "2-digit")
-            .set("second", "2-digit")
-            .set("hour12", false);
+            .set("hour", TWO_DIGIT_FORMAT)
+            .set(MINUTE, TWO_DIGIT_FORMAT)
+            .set("second", TWO_DIGIT_FORMAT)
+            .set(HOUR12, false);
       case BrowserDateTimeFormatInfo.TIME_H24M:
         return JsIntlDateTimeFormatOptions.create()
-            .set("hour", "2-digit")
-            .set("minute", "2-digit")
-            .set("hour12", false);
+            .set("hour", TWO_DIGIT_FORMAT)
+            .set(MINUTE, TWO_DIGIT_FORMAT)
+            .set(HOUR12, false);
       case BrowserDateTimeFormatInfo.TIME_H12MS:
         return JsIntlDateTimeFormatOptions.create()
             .set("hour", "numeric")
-            .set("minute", "2-digit")
-            .set("second", "2-digit")
-            .set("hour12", true);
+            .set(MINUTE, TWO_DIGIT_FORMAT)
+            .set("second", TWO_DIGIT_FORMAT)
+            .set(HOUR12, true);
       case BrowserDateTimeFormatInfo.TIME_H12M:
         return JsIntlDateTimeFormatOptions.create()
             .set("hour", "numeric")
-            .set("minute", "2-digit")
-            .set("hour12", true);
+            .set(MINUTE, TWO_DIGIT_FORMAT)
+            .set(HOUR12, true);
       default:
         // Unknown sentinel — fall back to medium date style
-        return JsIntlDateTimeFormatOptions.forDateStyle("medium");
+        return JsIntlDateTimeFormatOptions.forDateStyle(MEDIUM);
     }
   }
 
