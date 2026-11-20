@@ -77,6 +77,6 @@ public class TextAreaElement extends Element {
       return false;
     }
     final String tag = element.getTagName();
-    return "textarea".equalsIgnoreCase(tag);
+    return TAG.equalsIgnoreCase(tag);
   }
 }
