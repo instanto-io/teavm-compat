@@ -7,6 +7,9 @@ import java.util.*;
 
 /** Adapts generic JsFunction arguments using their original functional declarations. */
 public final class NativeCallbackBindings {
+  private static final String COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT =
+      "com.google.gwt.dom.client.Element";
+
   private static final String TEAVM_BODY = "JSBody";
   private static final String TEAVM_PROPERTY = "JSProperty";
 
@@ -389,7 +392,7 @@ public final class NativeCallbackBindings {
             "java.lang.Integer",
             "java.lang.Double",
             "java.lang.Boolean",
-            "com.google.gwt.dom.client.Element",
+            COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT,
             "com.google.gwt.core.client.JavaScriptObject")
         .contains(qualified(type, imports));
   }
@@ -428,7 +431,7 @@ public final class NativeCallbackBindings {
           "java.lang.Double.valueOf(jsinterop.base.Js.asDouble(" + value + "))";
       case "Boolean", "java.lang.Boolean" ->
           "java.lang.Boolean.valueOf(jsinterop.base.Js.asBoolean(" + value + "))";
-      case "com.google.gwt.dom.client.Element" ->
+      case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT ->
           "com.google.gwt.dom.client.Element.as(com.google.gwt.core.client.JavaScriptObject.of("
               + value
               + "))";
@@ -446,7 +449,7 @@ public final class NativeCallbackBindings {
 
   private static String outbound(String type, String value, Map<String, String> imports) {
     return switch (qualified(type, imports)) {
-      case "com.google.gwt.dom.client.Element", "com.google.gwt.core.client.JavaScriptObject" ->
+      case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, "com.google.gwt.core.client.JavaScriptObject" ->
           "com.google.gwt.core.client.JavaScriptObject.unwrapNullable(" + value + ")";
       case "void", "boolean", "byte", "short", "int", "long", "float", "double", "char", "String" ->
           value;
