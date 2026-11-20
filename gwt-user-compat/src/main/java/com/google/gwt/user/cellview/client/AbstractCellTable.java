@@ -39,6 +39,7 @@ import java.util.Set;
 
 /** Renders rows and columns into a table element and routes events back to the cells. */
 public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
+  private static final String CLASS_ATTRIBUTE_PREFIX = " class=\"";
 
   private final List<Column<T, ?>> columns = new ArrayList<>();
   private final List<Header<?>> headers = new ArrayList<>();
@@ -239,7 +240,7 @@ public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
         }
       }
       sb.appendHtmlConstant(
-          "<" + tag + (classes.length() == 0 ? "" : " class=\"" + classes + "\"") + ">");
+          "<" + tag + (classes.length() == 0 ? "" : CLASS_ATTRIBUTE_PREFIX + classes + "\"") + ">");
       if (header != null) {
         header.render(new Cell.Context(0, i, null), sb);
       }
@@ -289,7 +290,7 @@ public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
         }
       }
       sb.appendHtmlConstant(
-          "<tr" + (rowClass.length() == 0 ? "" : " class=\"" + rowClass + "\"") + ">");
+          "<tr" + (rowClass.length() == 0 ? "" : CLASS_ATTRIBUTE_PREFIX + rowClass + "\"") + ">");
       for (int c = 0; c < columns.size(); c++) {
         final Column<T, ?> column = columns.get(c);
         final Cell.Context context = new Cell.Context(absoluteIndex, c, getRowKey(value));
@@ -297,7 +298,7 @@ public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
         final String align = column.getHorizontalAlignment();
         sb.appendHtmlConstant(
             "<td"
-                + (cellStyles == null ? "" : " class=\"" + cellStyles + "\"")
+                + (cellStyles == null ? "" : CLASS_ATTRIBUTE_PREFIX + cellStyles + "\"")
                 + (align == null ? "" : " style=\"text-align:" + align + "\"")
                 + ">");
         column.render(context, value, sb);
