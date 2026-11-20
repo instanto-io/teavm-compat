@@ -28,6 +28,8 @@ import org.teavm.jso.dom.html.HTMLElement;
 
 /** Typed browser view of a link element. */
 public class LinkElement extends Element {
+  private static final String DISABLED_ATTRIBUTE = "disabled";
+
   public static final String TAG = "link";
 
   public LinkElement(HTMLElement element) {
@@ -44,7 +46,7 @@ public class LinkElement extends Element {
   }
 
   public boolean getDisabled() {
-    return getPropertyBoolean("disabled");
+    return getPropertyBoolean(DISABLED_ATTRIBUTE);
   }
 
   public String getHref() {
@@ -72,11 +74,11 @@ public class LinkElement extends Element {
   }
 
   public boolean isDisabled() {
-    return getPropertyBoolean("disabled");
+    return getPropertyBoolean(DISABLED_ATTRIBUTE);
   }
 
   public void setDisabled(boolean disabled) {
-    setPropertyBoolean("disabled", disabled);
+    setPropertyBoolean(DISABLED_ATTRIBUTE, disabled);
   }
 
   public void setHref(String href) {
