@@ -11,6 +11,11 @@ import java.util.jar.*;
 
 /** Deterministic JsInterop declaration to TeaVM JSO source adapter. */
 public final class GenerateBindings {
+  private static final String JSOBJECT = "JSObject";
+  private static final String VALUE = "value";
+  private static final String JS_OVERLAY = "JsOverlay";
+  private static final String JAVA_FILE_SUFFIX = ".java";
+
   private static final String GLOBAL_NAMESPACE = "<global>";
   private static final String GLOBAL_CONSTANT = "GLOBAL";
   private static final String QUALIFIED_GLOBAL_CONSTANT = "JsPackage.GLOBAL";
@@ -91,9 +96,9 @@ public final class GenerateBindings {
     String namespace = jsType.map(a -> value(a, "namespace", "")).orElse("");
     boolean global = name.equals("goog.global");
     addStandardConstructors(c);
-    if (c.isInterface()) c.addExtendedType("JSObject");
+    if (c.isInterface()) c.addExtendedType(JSOBJECT);
     else {
-      c.addImplementedType("JSObject");
+      c.addImplementedType(JSOBJECT);
       String qualified =
           global
               ? "globalThis"
@@ -117,9 +122,9 @@ public final class GenerateBindings {
     if (c.getNameAsString().equals("JsDate") && !c.isInterface()) {
       for (int count = 1; count <= 7; count++) {
         var ctor = c.addConstructor(Modifier.Keyword.PUBLIC);
-        for (int i = 0; i < count; i++) ctor.addParameter("double", "value" + i);
+        for (int i = 0; i < count; i++) ctor.addParameter("double", VALUE + i);
       }
-      c.addConstructor(Modifier.Keyword.PUBLIC).addParameter("String", "value");
+      c.addConstructor(Modifier.Keyword.PUBLIC).addParameter("String", VALUE);
     }
     if (c.getNameAsString().equals("JsArray") && !c.isInterface()) {
       // TeaVM 0.15 spreads varargs methods, but not native constructors.
@@ -143,7 +148,7 @@ public final class GenerateBindings {
 
   private static void removeOverlayCasts(ClassOrInterfaceDeclaration c) {
     for (MethodDeclaration m : new ArrayList<>(c.getMethodsByName("cast"))) {
-      if (m.getAnnotationByName("JsOverlay").isPresent()
+      if (m.getAnnotationByName(JS_OVERLAY).isPresent()
           && m.getParameters().isEmpty()
           && m.getTypeParameters().size() == 1
           && m.getBody()
@@ -156,7 +161,7 @@ public final class GenerateBindings {
 
   private static void adaptNativeFields(ClassOrInterfaceDeclaration c) {
     for (FieldDeclaration f : c.getFields()) {
-      if (f.getAnnotationByName("JsOverlay").isPresent()) continue;
+      if (f.getAnnotationByName(JS_OVERLAY).isPresent()) continue;
       if (f.isStatic() && f.getAnnotationByName(JS_INTEROP_PROPERTY).isEmpty())
         annotate(f, "@JSProperty");
       for (var v : f.getVariables()) v.removeInitializer();
@@ -191,7 +196,7 @@ public final class GenerateBindings {
     var bridge =
         owner.addMethod(
             helper, Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.NATIVE);
-    bridge.setType("JSObject").addParameter(type, "value").removeBody();
+    bridge.setType(JSOBJECT).addParameter(type, VALUE).removeBody();
     annotate(bridge, "@JSBody(params=\"value\",script=\"return value;\")");
   }
 
@@ -203,7 +208,7 @@ public final class GenerateBindings {
     if (Set.of(
             "JsType",
             "JsFunction",
-            "JsOverlay",
+            JS_OVERLAY,
             JS_INTEROP_PROPERTY,
             JS_INTEROP_METHOD,
             "JsConstructor")
@@ -330,7 +335,7 @@ public final class GenerateBindings {
     String helper = "$nativeVarargs" + varargIndex;
     cu.addImport("jsinterop.base.Js");
     MethodDeclaration bridge = m.clone().setName(helper).setPublic(false).setPrivate(true);
-    bridge.getParameter(bridge.getParameters().size() - 1).setType("JSObject");
+    bridge.getParameter(bridge.getParameters().size() - 1).setType(JSOBJECT);
     String jsName =
         m.getAnnotationByName(TEAVM_METHOD)
             .map(
@@ -381,14 +386,15 @@ public final class GenerateBindings {
         throw new IllegalArgumentException("Inputs and output must be separate");
       if (Files.isDirectory(input)) {
         try (var files = Files.walk(input)) {
-          for (Path file : files.filter(f -> f.toString().endsWith(".java")).sorted().toList())
+          for (Path file :
+              files.filter(f -> f.toString().endsWith(JAVA_FILE_SUFFIX)).sorted().toList())
             sources.put(out.resolve(input.relativize(file)), Files.readString(file));
         }
       } else {
         try (JarFile jar = new JarFile(input.toFile())) {
           for (var entry :
               jar.stream()
-                  .filter(e -> e.getName().endsWith(".java"))
+                  .filter(e -> e.getName().endsWith(JAVA_FILE_SUFFIX))
                   .sorted(Comparator.comparing(JarEntry::getName))
                   .toList()) {
             Path destination = out.resolve(entry.getName()).normalize();
@@ -411,7 +417,7 @@ public final class GenerateBindings {
     StringBuilder manifest = new StringBuilder();
     var digest = java.security.MessageDigest.getInstance("SHA-256");
     try (var files = Files.walk(out)) {
-      for (Path file : files.filter(f -> f.toString().endsWith(".java")).sorted().toList())
+      for (Path file : files.filter(f -> f.toString().endsWith(JAVA_FILE_SUFFIX)).sorted().toList())
         manifest
             .append(java.util.HexFormat.of().formatHex(digest.digest(Files.readAllBytes(file))))
             .append("  ")
