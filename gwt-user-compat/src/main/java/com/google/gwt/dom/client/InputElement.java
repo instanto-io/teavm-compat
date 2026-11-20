@@ -97,6 +97,6 @@ public class InputElement extends Element {
       return false;
     }
     final String tag = element.getTagName();
-    return "input".equalsIgnoreCase(tag);
+    return TAG.equalsIgnoreCase(tag);
   }
 }
