@@ -38,6 +38,8 @@ import java.util.Map;
  * same, so a format string written for GWT behaves the same.
  */
 public class DateTimeFormat {
+  private static final String HH_MM_SS = "HH:mm:ss";
+  private static final String HH_MM = "HH:mm";
 
   /** The predefined formats GWT offers. */
   public enum PredefinedFormat {
@@ -49,17 +51,17 @@ public class DateTimeFormat {
     DATE_SHORT("dd/MM/yy"),
     TIME_FULL("HH:mm:ss zzzz"),
     TIME_LONG("HH:mm:ss z"),
-    TIME_MEDIUM("HH:mm:ss"),
-    TIME_SHORT("HH:mm"),
+    TIME_MEDIUM(HH_MM_SS),
+    TIME_SHORT(HH_MM),
     DATE_TIME_FULL("EEEE, d MMMM yyyy HH:mm:ss zzzz"),
     DATE_TIME_LONG("d MMMM yyyy HH:mm:ss z"),
     DATE_TIME_MEDIUM("d MMM yyyy HH:mm:ss"),
     DATE_TIME_SHORT("dd/MM/yy HH:mm"),
     DAY("d"),
-    HOUR_MINUTE("HH:mm"),
-    HOUR_MINUTE_SECOND("HH:mm:ss"),
-    HOUR24_MINUTE("HH:mm"),
-    HOUR24_MINUTE_SECOND("HH:mm:ss"),
+    HOUR_MINUTE(HH_MM),
+    HOUR_MINUTE_SECOND(HH_MM_SS),
+    HOUR24_MINUTE(HH_MM),
+    HOUR24_MINUTE_SECOND(HH_MM_SS),
     MINUTE_SECOND("mm:ss"),
     MONTH("MMMM"),
     MONTH_ABBR("MMM"),
