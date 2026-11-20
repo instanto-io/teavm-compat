@@ -7,6 +7,8 @@ import jsinterop.base.*;
 
 /** Native browser compatibility assertions. */
 public final class BindingContracts {
+  private static final String PROBE = "probe";
+
   static void check(boolean condition, String name) {
     if (!condition) throw new IllegalStateException("Binding contract: " + name);
   }
@@ -33,15 +35,15 @@ public final class BindingContracts {
     check("object".equals(Js.typeof(null)), "null");
     int[] calls = {0};
     EventListener listener = e -> calls[0]++;
-    element.addEventListener("probe", listener);
-    element.dispatchEvent(new Event("probe"));
-    element.removeEventListener("probe", listener);
-    element.dispatchEvent(new Event("probe"));
+    element.addEventListener(PROBE, listener);
+    element.dispatchEvent(new Event(PROBE));
+    element.removeEventListener(PROBE, listener);
+    element.dispatchEvent(new Event(PROBE));
     check(calls[0] == 1, "callback removal identity");
-    element.addEventListener("probe", listener, true);
-    element.dispatchEvent(new Event("probe"));
-    element.removeEventListener("probe", listener, true);
-    element.dispatchEvent(new Event("probe"));
+    element.addEventListener(PROBE, listener, true);
+    element.dispatchEvent(new Event(PROBE));
+    element.removeEventListener(PROBE, listener, true);
+    element.dispatchEvent(new Event(PROBE));
     check(calls[0] == 2, "capture callback removal identity");
     CustomEventInit<Object> init = CustomEventInit.create();
     init.setDetail(javaValue);
