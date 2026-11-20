@@ -69,6 +69,6 @@ public class ButtonElement extends Element {
       return false;
     }
     final String tag = element.getTagName();
-    return "button".equalsIgnoreCase(tag);
+    return TAG.equalsIgnoreCase(tag);
   }
 }
