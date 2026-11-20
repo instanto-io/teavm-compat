@@ -56,6 +56,7 @@ import org.w3c.dom.NodeList;
  */
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true)
 public class GenerateModulesMojo extends AbstractMojo {
+  private static final String JAVA_FILE_SUFFIX = ".java";
 
   /** Where the GWT modules are, normally the shared widget sources. */
   @Parameter(required = true)
@@ -177,7 +178,7 @@ public class GenerateModulesMojo extends AbstractMojo {
         outputRoot
             .toPath()
             .resolve(pkg.replace('.', java.io.File.separatorChar))
-            .resolve(klass + ".java"),
+            .resolve(klass + JAVA_FILE_SUFFIX),
         render(fileName, pkg, module, klass, prefix, stylesheets, scripts));
 
     copyAssets(document, dir);
@@ -216,7 +217,9 @@ public class GenerateModulesMojo extends AbstractMojo {
     final List<BundleAsset> found = new ArrayList<>();
     try (Stream<Path> paths = Files.walk(dir)) {
       final List<Path> bundles = new ArrayList<>();
-      paths.filter(p -> p.getFileName().toString().endsWith(".java")).forEach(bundles::add);
+      paths
+          .filter(p -> p.getFileName().toString().endsWith(JAVA_FILE_SUFFIX))
+          .forEach(bundles::add);
       bundles.sort(Path::compareTo);
       for (final Path bundle : bundles) {
         final String source = Files.readString(bundle, StandardCharsets.UTF_8);
@@ -225,7 +228,7 @@ public class GenerateModulesMojo extends AbstractMojo {
         }
         final Matcher packageMatcher = Pattern.compile("package\\s+([\\w.]+)\\s*;").matcher(source);
         final String packageName = packageMatcher.find() ? packageMatcher.group(1) : "";
-        final String simpleName = bundle.getFileName().toString().replace(".java", "");
+        final String simpleName = bundle.getFileName().toString().replace(JAVA_FILE_SUFFIX, "");
         final boolean inline =
             inlineTextBundles != null && inlineTextBundles.contains(packageName + "." + simpleName);
         if (inline) {
@@ -321,7 +324,7 @@ public class GenerateModulesMojo extends AbstractMojo {
         outputRoot
             .toPath()
             .resolve(packageName.replace('.', '/'))
-            .resolve(implementation + ".java");
+            .resolve(implementation + JAVA_FILE_SUFFIX);
     Files.createDirectories(target.getParent());
     Files.writeString(target, java, StandardCharsets.UTF_8);
     final Path service =
