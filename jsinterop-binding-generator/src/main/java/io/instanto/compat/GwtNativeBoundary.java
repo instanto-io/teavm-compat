@@ -186,9 +186,19 @@ public final class GwtNativeBoundary {
               .asStringLiteralExpr()
               .asString();
     bridge.getAnnotations().removeIf(a -> a.getNameAsString().equals(TEAVM_METHOD));
+    expandPropertyMarker(bridge, method.getNameAsString());
+    if (!body && bridge.getAnnotationByName(TEAVM_PROPERTY).isEmpty())
+      bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSMethod(\"" + jsName + "\")"));
+    if (body && !nativeOwner) {
+      requireExplicitReceiver(owner, method);
+      bridge.setStatic(true);
+    }
+    return bridge;
+  }
+
+  private static void expandPropertyMarker(MethodDeclaration bridge, String original) {
     var property = bridge.getAnnotationByName(TEAVM_PROPERTY);
     if (property.isPresent() && property.get().isMarkerAnnotationExpr()) {
-      String original = method.getNameAsString();
       String stem =
           original.startsWith("is")
               ? original.substring(2)
@@ -201,13 +211,6 @@ public final class GwtNativeBoundary {
       property.get().remove();
       bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSProperty(\"" + name + "\")"));
     }
-    if (!body && bridge.getAnnotationByName(TEAVM_PROPERTY).isEmpty())
-      bridge.addAnnotation(StaticJavaParser.parseAnnotation("@JSMethod(\"" + jsName + "\")"));
-    if (body && !nativeOwner) {
-      requireExplicitReceiver(owner, method);
-      bridge.setStatic(true);
-    }
-    return bridge;
   }
 
   private static void requireExplicitReceiver(
