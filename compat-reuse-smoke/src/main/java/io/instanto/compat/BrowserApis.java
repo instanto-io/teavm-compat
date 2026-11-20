@@ -14,6 +14,9 @@ import org.gwtproject.i18n.shared.cldr.impl.BrowserDateTimeFormatInfo;
 
 /** Browser contracts exercise the compatibility layer beyond reachable widget declarations. */
 public final class BrowserApis {
+  private static final String PASSED = "passed";
+  private static final String DOMINO_COMPAT_PROBE = "domino-compat-probe";
+
   public static HTMLElement render() {
     HTMLElement root = (HTMLElement) DomGlobal.document.createElement("section");
     root.id = "browser-apis";
@@ -31,7 +34,7 @@ public final class BrowserApis {
       rejected = true;
     }
     BindingContracts.check(rejected, "invalid calendar date rejected");
-    root.setAttribute("data-date-parse", "passed");
+    root.setAttribute("data-date-parse", PASSED);
     var intlDate =
         new JsIntlDateTimeFormat(
             new JsArray<>("en-GB"),
@@ -49,19 +52,19 @@ public final class BrowserApis {
     BindingContracts.check("1234.50".equals(intlNumber.format(1234.5)), "Intl number format");
     BindingContracts.check(
         "integer".equals(intlNumber.formatToParts(1234.5).getAt(0).type), "Intl number parts");
-    root.setAttribute("data-intl", "passed");
+    root.setAttribute("data-intl", PASSED);
     for (var storage :
         new elemental2.webstorage.Storage[] {
           WebStorageWindow.of(DomGlobal.window).localStorage,
           WebStorageWindow.of(DomGlobal.window).sessionStorage
         }) {
-      storage.setItem("domino-compat-probe", "native-value");
+      storage.setItem(DOMINO_COMPAT_PROBE, "native-value");
       BindingContracts.check(
-          "native-value".equals(storage.getItem("domino-compat-probe")), "storage roundtrip");
-      storage.removeItem("domino-compat-probe");
-      BindingContracts.check(storage.getItem("domino-compat-probe") == null, "storage deletion");
+          "native-value".equals(storage.getItem(DOMINO_COMPAT_PROBE)), "storage roundtrip");
+      storage.removeItem(DOMINO_COMPAT_PROBE);
+      BindingContracts.check(storage.getItem(DOMINO_COMPAT_PROBE) == null, "storage deletion");
     }
-    root.setAttribute("data-storage", "passed");
+    root.setAttribute("data-storage", PASSED);
     Element svg = DomGlobal.document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("width", "80");
     svg.setAttribute("height", "40");
@@ -162,6 +165,6 @@ public final class BrowserApis {
               + " error="
               + gl.getError());
     BindingContracts.check(gl.getError() == 0, "WebGL error state");
-    root.setAttribute("data-webgl", "passed");
+    root.setAttribute("data-webgl", PASSED);
   }
 }
