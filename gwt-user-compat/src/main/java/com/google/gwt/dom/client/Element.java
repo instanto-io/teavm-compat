@@ -31,6 +31,8 @@ import org.teavm.jso.dom.html.HTMLElement;
 import org.teavm.jso.dom.xml.Node;
 
 public class Element extends com.google.gwt.dom.client.Node {
+  private static final String ACCESSKEY = "accesskey";
+
   private final HTMLElement element;
   private final Style style;
 
@@ -445,14 +447,14 @@ public class Element extends com.google.gwt.dom.client.Node {
 
   public void setAccessKey(final String key) {
     if (key == null || key.isEmpty()) {
-      removeAttribute("accesskey");
+      removeAttribute(ACCESSKEY);
     } else {
-      setAttribute("accesskey", key);
+      setAttribute(ACCESSKEY, key);
     }
   }
 
   public String getAccessKey() {
-    return getAttribute("accesskey");
+    return getAttribute(ACCESSKEY);
   }
 
   /** Inserts {@code child} directly after {@code after}, or first when it is null. */
