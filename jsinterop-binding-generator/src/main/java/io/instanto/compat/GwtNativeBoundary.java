@@ -8,6 +8,15 @@ import java.util.*;
 
 /** Bridges GWT DOM wrappers at native method boundaries while retaining the public Java API. */
 public final class GwtNativeBoundary {
+  private static final String COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT =
+      "com.google.gwt.dom.client.Element";
+  private static final String COM_GOOGLE_GWT_DOM_CLIENT_NATIVE_EVENT =
+      "com.google.gwt.dom.client.NativeEvent";
+  private static final String COM_GOOGLE_GWT_USER_CLIENT_EVENT = "com.google.gwt.user.client.Event";
+  private static final String COM_GOOGLE_GWT_USER_CLIENT_ELEMENT =
+      "com.google.gwt.user.client.Element";
+  private static final String COM_GOOGLE_GWT_DOM_CLIENT_NODE = "com.google.gwt.dom.client.Node";
+
   private static final String TEAVM_BODY = "JSBody";
   private static final String TEAVM_PROPERTY = "JSProperty";
   private static final String TEAVM_METHOD = "JSMethod";
@@ -298,7 +307,7 @@ public final class GwtNativeBoundary {
                 p.getNameAsString().equals(result)
                     && (p.getTypeBound().isEmpty()
                         || (p.getTypeBound().size() == 1
-                            && Set.of("Object", "java.lang.Object")
+                            && Set.of(JAVA_OBJECT, "java.lang.Object")
                                 .contains(p.getTypeBound().get(0).asString()))));
   }
 
@@ -330,13 +339,13 @@ public final class GwtNativeBoundary {
   private boolean isGwt(String type, Map<String, String> imports) {
     return overlays.contains(qualified(type, imports))
         || Set.of(
-                "com.google.gwt.dom.client.Element",
-                "com.google.gwt.dom.client.Node",
+                COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT,
+                COM_GOOGLE_GWT_DOM_CLIENT_NODE,
                 "com.google.gwt.core.client.JavaScriptObject",
                 "com.google.gwt.core.client.JsDate",
-                "com.google.gwt.dom.client.NativeEvent",
-                "com.google.gwt.user.client.Event",
-                "com.google.gwt.user.client.Element",
+                COM_GOOGLE_GWT_DOM_CLIENT_NATIVE_EVENT,
+                COM_GOOGLE_GWT_USER_CLIENT_EVENT,
+                COM_GOOGLE_GWT_USER_CLIENT_ELEMENT,
                 "com.google.gwt.core.client.JsArrayNumber",
                 "com.google.gwt.core.client.JsArrayString",
                 "com.google.gwt.core.client.JsArrayMixed")
@@ -346,10 +355,10 @@ public final class GwtNativeBoundary {
   private static String nativeType(String type, Map<String, String> imports) {
     String base =
         switch (qualified(type, imports)) {
-          case "com.google.gwt.dom.client.Element", "com.google.gwt.user.client.Element" ->
+          case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, COM_GOOGLE_GWT_USER_CLIENT_ELEMENT ->
               "org.teavm.jso.dom.html.HTMLElement";
-          case "com.google.gwt.dom.client.Node" -> "org.teavm.jso.dom.xml.Node";
-          case "com.google.gwt.dom.client.NativeEvent", "com.google.gwt.user.client.Event" ->
+          case COM_GOOGLE_GWT_DOM_CLIENT_NODE -> "org.teavm.jso.dom.xml.Node";
+          case COM_GOOGLE_GWT_DOM_CLIENT_NATIVE_EVENT, COM_GOOGLE_GWT_USER_CLIENT_EVENT ->
               "org.teavm.jso.dom.events.Event";
           default -> "org.teavm.jso.JSObject";
         };
@@ -358,7 +367,7 @@ public final class GwtNativeBoundary {
 
   private String wrap(String type, String value, Map<String, String> imports) {
     return switch (qualified(type, imports)) {
-      case "com.google.gwt.dom.client.Element" ->
+      case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT ->
           "com.google.gwt.dom.client.Element.as(com.google.gwt.core.client.JavaScriptObject.of("
               + value
               + "))";
@@ -366,14 +375,14 @@ public final class GwtNativeBoundary {
           "com.google.gwt.core.client.JavaScriptObject.of(" + value + ")";
       case "com.google.gwt.core.client.JsDate" ->
           "com.google.gwt.core.client.JsDate.of(" + value + ")";
-      case "com.google.gwt.dom.client.Node" -> "com.google.gwt.dom.client.Node.wrap(" + value + ")";
-      case "com.google.gwt.dom.client.NativeEvent" ->
+      case COM_GOOGLE_GWT_DOM_CLIENT_NODE -> "com.google.gwt.dom.client.Node.wrap(" + value + ")";
+      case COM_GOOGLE_GWT_DOM_CLIENT_NATIVE_EVENT ->
           "com.google.gwt.dom.client.NativeEvent.wrap(" + value + ")";
-      case "com.google.gwt.user.client.Event" ->
+      case COM_GOOGLE_GWT_USER_CLIENT_EVENT ->
           "com.google.gwt.user.client.Event.as(com.google.gwt.dom.client.NativeEvent.wrap("
               + value
               + "))";
-      case "com.google.gwt.user.client.Element" ->
+      case COM_GOOGLE_GWT_USER_CLIENT_ELEMENT ->
           "com.google.gwt.user.client.Element.as(com.google.gwt.dom.client.Element.as("
               + "com.google.gwt.core.client.JavaScriptObject.of("
               + value
