@@ -32,6 +32,7 @@ import com.google.gwt.dom.client.Style;
  * widget libraries.
  */
 public abstract class UIObject {
+  private static final String TITLE = "title";
 
   private Element element;
 
@@ -155,14 +156,14 @@ public abstract class UIObject {
 
   public void setTitle(final String title) {
     if (title == null || title.isEmpty()) {
-      getElement().removeAttribute("title");
+      getElement().removeAttribute(TITLE);
     } else {
-      getElement().setAttribute("title", title);
+      getElement().setAttribute(TITLE, title);
     }
   }
 
   public String getTitle() {
-    return getElement().getAttribute("title");
+    return getElement().getAttribute(TITLE);
   }
 
   /** Sets CSS dimensions through the overridable width and height setters, as GWT does. */
