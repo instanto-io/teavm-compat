@@ -32,6 +32,7 @@ public final class NativeCallbackBindings {
   private static final String INTEGER_NAME = "Integer";
   private static final String DOUBLE_NAME = "Double";
   private static final String BOOLEAN_NAME = "Boolean";
+  private static final String GWT_JS_OBJECT_NAME = "com.google.gwt.core.client.JavaScriptObject";
 
 
   /** Java names that must never be prefixed with the declaring package. */
@@ -397,7 +398,7 @@ public final class NativeCallbackBindings {
             "java.lang.Double",
             "java.lang.Boolean",
             COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT,
-            "com.google.gwt.core.client.JavaScriptObject")
+            GWT_JS_OBJECT_NAME)
         .contains(qualified(type, imports));
   }
 
@@ -439,7 +440,7 @@ public final class NativeCallbackBindings {
           "com.google.gwt.dom.client.Element.as(com.google.gwt.core.client.JavaScriptObject.of("
               + value
               + "))";
-      case "com.google.gwt.core.client.JavaScriptObject" ->
+      case GWT_JS_OBJECT_NAME ->
           "com.google.gwt.core.client.JavaScriptObject.of(" + value + ")";
       case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", STRING_NAME ->
           value;
@@ -453,7 +454,7 @@ public final class NativeCallbackBindings {
 
   private static String outbound(String type, String value, Map<String, String> imports) {
     return switch (qualified(type, imports)) {
-      case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, "com.google.gwt.core.client.JavaScriptObject" ->
+      case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, GWT_JS_OBJECT_NAME ->
           "com.google.gwt.core.client.JavaScriptObject.unwrapNullable(" + value + ")";
       case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", STRING_NAME ->
           value;
