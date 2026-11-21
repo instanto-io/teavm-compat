@@ -23,12 +23,13 @@ public final class NativeCallbackBindings {
   private final Map<String, ClassOrInterfaceDeclaration> declarationsByName = new LinkedHashMap<>();
 
   private final Map<String, Function> functions = new LinkedHashMap<>();
+  private static final String BOOLEAN_PRIMITIVE = "boolean";
 
   /** Java names that must never be prefixed with the declaring package. */
   private static final Set<String> LANGUAGE_TYPES =
       Set.of(
           "void",
-          "boolean",
+          BOOLEAN_PRIMITIVE,
           "byte",
           "short",
           "int",
@@ -66,8 +67,7 @@ public final class NativeCallbackBindings {
       cu.getImports().stream()
           .filter(i -> !i.isAsterisk())
           .forEach(i -> declarationImports.put(i.getName().getIdentifier(), i.getNameAsString()));
-      String packageName =
-          cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
+      String packageName = cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
       for (var type : cu.findAll(ClassOrInterfaceDeclaration.class)) {
         type.getFullyQualifiedName().ifPresent(name -> declarationsByName.put(name, type));
         if (type.getAnnotationByName("JsFunction").isEmpty()) continue;
@@ -111,8 +111,7 @@ public final class NativeCallbackBindings {
                         declarationType(
                             p.getTypeAsString(), declarationImports, packageName, variables))
                 .toList(),
-            declarationType(
-                method.getTypeAsString(), declarationImports, packageName, variables)));
+            declarationType(method.getTypeAsString(), declarationImports, packageName, variables)));
   }
 
   /**
@@ -121,10 +120,7 @@ public final class NativeCallbackBindings {
    * when the bridge is emitted into a class from another package.
    */
   private static String declarationType(
-      String type,
-      Map<String, String> imports,
-      String packageName,
-      Set<String> variables) {
+      String type, Map<String, String> imports, String packageName, Set<String> variables) {
     if (variables.contains(type)) return type;
     return packageQualified(type, imports, packageName);
   }
@@ -160,8 +156,7 @@ public final class NativeCallbackBindings {
     var cu = StaticJavaParser.parse(source);
     Map<String, String> imports = new HashMap<>();
     cu.getImports().forEach(i -> imports.put(i.getName().getIdentifier(), i.getNameAsString()));
-    String packageName =
-        cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
+    String packageName = cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
     boolean changed = false;
     for (var owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
       imports.put("$scope", owner.getFullyQualifiedName().orElse(""));
@@ -403,7 +398,7 @@ public final class NativeCallbackBindings {
 
   private static String raw(String type) {
     return switch (type) {
-      case "void", "boolean", "byte", "short", "int", "long", "float", "double", "char", "String" ->
+      case "void", BOOLEAN_PRIMITIVE, "byte", "short", "int", "long", "float", "double", "char", "String" ->
           type;
       default -> "org.teavm.jso.JSObject";
     };
@@ -437,7 +432,7 @@ public final class NativeCallbackBindings {
               + "))";
       case "com.google.gwt.core.client.JavaScriptObject" ->
           "com.google.gwt.core.client.JavaScriptObject.of(" + value + ")";
-      case "void", "boolean", "byte", "short", "int", "long", "float", "double", "char", "String" ->
+      case "void", BOOLEAN_PRIMITIVE, "byte", "short", "int", "long", "float", "double", "char", "String" ->
           value;
       default ->
           (!type.startsWith("?") ? "(" + type + ") " : "")
@@ -451,7 +446,7 @@ public final class NativeCallbackBindings {
     return switch (qualified(type, imports)) {
       case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, "com.google.gwt.core.client.JavaScriptObject" ->
           "com.google.gwt.core.client.JavaScriptObject.unwrapNullable(" + value + ")";
-      case "void", "boolean", "byte", "short", "int", "long", "float", "double", "char", "String" ->
+      case "void", BOOLEAN_PRIMITIVE, "byte", "short", "int", "long", "float", "double", "char", "String" ->
           value;
       default -> "jsinterop.base.Js.asAny(" + value + ")";
     };
