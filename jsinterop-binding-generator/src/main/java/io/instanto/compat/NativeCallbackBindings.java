@@ -28,6 +28,7 @@ public final class NativeCallbackBindings {
   private static final String FLOAT_PRIMITIVE = "float";
   private static final String DOUBLE_PRIMITIVE = "double";
   private static final String STRING_NAME = "String";
+  private static final String OBJECT_NAME = "Object";
 
 
   /** Java names that must never be prefixed with the declaring package. */
@@ -44,7 +45,7 @@ public final class NativeCallbackBindings {
           "char",
           STRING_NAME,
           "CharSequence",
-          "Object",
+          OBJECT_NAME,
           "Number",
           "Integer",
           "Long",
@@ -103,7 +104,7 @@ public final class NativeCallbackBindings {
                 .map(
                     t ->
                         t.getTypeBound().isEmpty()
-                            ? "Object"
+                            ? OBJECT_NAME
                             : boundName(
                                 t.getTypeBound().get(0).getNameWithScope(),
                                 type,
@@ -384,7 +385,7 @@ public final class NativeCallbackBindings {
 
   private static boolean needsBridge(String type, Map<String, String> imports) {
     return Set.of(
-            "Object",
+            OBJECT_NAME,
             "java.lang.Object",
             "Double",
             "Integer",
