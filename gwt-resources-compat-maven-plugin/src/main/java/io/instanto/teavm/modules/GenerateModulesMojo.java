@@ -135,22 +135,8 @@ public class GenerateModulesMojo extends AbstractMojo {
     }
     final Document document = parse(modulePath);
 
-    final List<String> stylesheets = new ArrayList<>();
-    final NodeList sheets = document.getElementsByTagName("stylesheet");
-    for (int i = 0; i < sheets.getLength(); i++) {
-      final String src = ((Element) sheets.item(i)).getAttribute("src");
-      if (!src.isEmpty()) {
-        stylesheets.add(src);
-      }
-    }
-    final Set<String> scriptNames = new LinkedHashSet<>();
-    final NodeList declaredScripts = document.getElementsByTagName("script");
-    for (int i = 0; i < declaredScripts.getLength(); i++) {
-      final String src = ((Element) declaredScripts.item(i)).getAttribute("src");
-      if (!src.isEmpty()) {
-        scriptNames.add(src);
-      }
-    }
+    final List<String> stylesheets = declaredSources(document, "stylesheet");
+    final Set<String> scriptNames = new LinkedHashSet<>(declaredSources(document, "script"));
     final List<BundleAsset> bundled = bundleAssets(dir);
     for (final BundleAsset asset : bundled) {
       if (asset.path().endsWith(".js") && !asset.inline()) {
@@ -204,6 +190,16 @@ public class GenerateModulesMojo extends AbstractMojo {
                 + (scripts.size() == 1 ? "" : "s")
                 + ")");
     return true;
+  }
+
+  private static List<String> declaredSources(Document document, String tagName) {
+    final List<String> sources = new ArrayList<>();
+    final NodeList entries = document.getElementsByTagName(tagName);
+    for (int i = 0; i < entries.getLength(); i++) {
+      final String src = ((Element) entries.item(i)).getAttribute("src");
+      if (!src.isEmpty()) sources.add(src);
+    }
+    return sources;
   }
 
   /**
