@@ -34,18 +34,23 @@ def collect_files(patterns):
     files = {}
     for pattern in patterns:
         for match in sorted(glob.glob(pattern)):
-            path = Path(match)
-            candidates = path.rglob("*") if path.is_dir() else [path]
-            for candidate in candidates:
-                # Reports must not pull credentials or other files through symlinks.
-                if candidate.is_symlink() or any(p.is_symlink() for p in candidate.parents):
-                    raise ValueError("Report paths must not contain symbolic links")
-                if candidate.is_file():
-                    name = candidate.relative_to(path).as_posix() if path.is_dir() else candidate.name
-                    if name in files and files[name] != candidate:
-                        raise ValueError("Duplicate archive path: " + name)
-                    files[name] = candidate
+            collect_report_path(Path(match), files)
     return files
+
+
+def collect_report_path(path, files):
+    directory = path.is_dir()
+    candidates = path.rglob("*") if directory else [path]
+    for candidate in candidates:
+        # Reports must not pull credentials or other files through symlinks.
+        if candidate.is_symlink() or any(p.is_symlink() for p in candidate.parents):
+            raise ValueError("Report paths must not contain symbolic links")
+        if not candidate.is_file():
+            continue
+        name = candidate.relative_to(path).as_posix() if directory else candidate.name
+        if name in files and files[name] != candidate:
+            raise ValueError("Duplicate archive path: " + name)
+        files[name] = candidate
 
 
 def publish(archive, url, username, token):
