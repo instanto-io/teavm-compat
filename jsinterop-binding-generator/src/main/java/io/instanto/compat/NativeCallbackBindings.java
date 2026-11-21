@@ -13,16 +13,6 @@ public final class NativeCallbackBindings {
   private static final String TEAVM_BODY = "JSBody";
   private static final String TEAVM_PROPERTY = "JSProperty";
 
-  private record Function(
-      List<String> variables,
-      List<String> bounds,
-      String method,
-      List<String> args,
-      String result) {}
-
-  private final Map<String, ClassOrInterfaceDeclaration> declarationsByName = new LinkedHashMap<>();
-
-  private final Map<String, Function> functions = new LinkedHashMap<>();
   private static final String BOOLEAN_PRIMITIVE = "boolean";
   private static final String SHORT_PRIMITIVE = "short";
   private static final String FLOAT_PRIMITIVE = "float";
@@ -34,6 +24,16 @@ public final class NativeCallbackBindings {
   private static final String BOOLEAN_NAME = "Boolean";
   private static final String GWT_JS_OBJECT_NAME = "com.google.gwt.core.client.JavaScriptObject";
 
+  private record Function(
+      List<String> variables,
+      List<String> bounds,
+      String method,
+      List<String> args,
+      String result) {}
+
+  private final Map<String, ClassOrInterfaceDeclaration> declarationsByName = new LinkedHashMap<>();
+
+  private final Map<String, Function> functions = new LinkedHashMap<>();
 
   /** Java names that must never be prefixed with the declaring package. */
   private static final Set<String> LANGUAGE_TYPES =
