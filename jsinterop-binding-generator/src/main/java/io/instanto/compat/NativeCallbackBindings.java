@@ -26,6 +26,7 @@ public final class NativeCallbackBindings {
   private static final String BOOLEAN_PRIMITIVE = "boolean";
   private static final String SHORT_PRIMITIVE = "short";
   private static final String FLOAT_PRIMITIVE = "float";
+  private static final String DOUBLE_PRIMITIVE = "double";
 
 
   /** Java names that must never be prefixed with the declaring package. */
@@ -38,7 +39,7 @@ public final class NativeCallbackBindings {
           "int",
           "long",
           FLOAT_PRIMITIVE,
-          "double",
+          DOUBLE_PRIMITIVE,
           "char",
           "String",
           "CharSequence",
@@ -401,7 +402,7 @@ public final class NativeCallbackBindings {
 
   private static String raw(String type) {
     return switch (type) {
-      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, "double", "char", "String" ->
+      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", "String" ->
           type;
       default -> "org.teavm.jso.JSObject";
     };
@@ -435,7 +436,7 @@ public final class NativeCallbackBindings {
               + "))";
       case "com.google.gwt.core.client.JavaScriptObject" ->
           "com.google.gwt.core.client.JavaScriptObject.of(" + value + ")";
-      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, "double", "char", "String" ->
+      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", "String" ->
           value;
       default ->
           (!type.startsWith("?") ? "(" + type + ") " : "")
@@ -449,7 +450,7 @@ public final class NativeCallbackBindings {
     return switch (qualified(type, imports)) {
       case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, "com.google.gwt.core.client.JavaScriptObject" ->
           "com.google.gwt.core.client.JavaScriptObject.unwrapNullable(" + value + ")";
-      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, "double", "char", "String" ->
+      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", "String" ->
           value;
       default -> "jsinterop.base.Js.asAny(" + value + ")";
     };
