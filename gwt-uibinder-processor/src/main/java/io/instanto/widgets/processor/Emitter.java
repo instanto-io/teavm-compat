@@ -226,31 +226,37 @@ final class Emitter {
     boolean instance = path.length == 1;
     for (int i = 1; i < path.length; i++) {
       final String member = path[i];
-      final Element resolved = env.getTypeUtils().asElement(current);
-      if (!(resolved instanceof TypeElement type) || member.isEmpty())
-        throw new UiBinderProcessor.Failure("Cannot resolve " + trimmed, owner);
-      Element match = expressionMember(type, member);
-      if (match == null)
-        throw new UiBinderProcessor.Failure(
-            type + " has no " + member + ", named by " + trimmed, owner);
+      TypeElement type = expressionType(current, member, trimmed);
+      Element match = expressionMember(type, member, trimmed);
       if (match.getModifiers().contains(Modifier.STATIC)) {
         value.setLength(0);
         value.append(type.getQualifiedName());
       } else instance = true;
-      value.append('.').append(match.getSimpleName());
-      if (match instanceof ExecutableElement method) {
-        value.append("()");
-        current =
-            ((javax.lang.model.type.ExecutableType)
-                    env.getTypeUtils().asMemberOf((DeclaredType) current, method))
-                .getReturnType();
-      } else current = env.getTypeUtils().asMemberOf((DeclaredType) current, match);
+      current = appendExpressionMember(value, (DeclaredType) current, match);
     }
     if (instance && withFields.containsKey(path[0])) withInstance(path[0]);
     return value.toString();
   }
 
-  private Element expressionMember(TypeElement type, String name) {
+  private TypeElement expressionType(TypeMirror current, String member, String expression) {
+    Element resolved = env.getTypeUtils().asElement(current);
+    if (!(resolved instanceof TypeElement type) || member.isEmpty()) {
+      throw new UiBinderProcessor.Failure("Cannot resolve " + expression, owner);
+    }
+    return type;
+  }
+
+  private TypeMirror appendExpressionMember(StringBuilder value, DeclaredType ownerType, Element match) {
+    value.append('.').append(match.getSimpleName());
+    if (match instanceof ExecutableElement method) {
+      value.append("()");
+      return ((javax.lang.model.type.ExecutableType) env.getTypeUtils().asMemberOf(ownerType, method))
+          .getReturnType();
+    }
+    return env.getTypeUtils().asMemberOf(ownerType, match);
+  }
+
+  private Element expressionMember(TypeElement type, String name, String expression) {
     String getter = "get" + Character.toUpperCase(name.charAt(0)) + name.substring(1);
     for (ExecutableElement method :
         ElementFilter.methodsIn(env.getElementUtils().getAllMembers(type))) {
@@ -264,7 +270,8 @@ final class Emitter {
         ElementFilter.fieldsIn(env.getElementUtils().getAllMembers(type))) {
       if (field.getSimpleName().contentEquals(name)) return field;
     }
-    return null;
+    throw new UiBinderProcessor.Failure(
+        type + " has no " + name + ", named by " + expression, owner);
   }
 
   String styleDeclarations() {
@@ -383,8 +390,13 @@ final class Emitter {
   }
 
   private void appendWidgetCreation(
-      String widgetType, String var, String field, boolean provided,
-      ExecutableElement factory, boolean htmlPanel, List<String> args) {
+      String widgetType,
+      String var,
+      String field,
+      boolean provided,
+      ExecutableElement factory,
+      boolean htmlPanel,
+      List<String> args) {
     body.append(INDENT).append(widgetType).append(' ').append(var);
     if (provided) {
       body.append(" = owner.").append(field).append(";\n");
@@ -409,15 +421,15 @@ final class Emitter {
   }
 
   private void recordField(String field, String var, TypeElement type) {
-      fields.put(field, var);
-      javax.lang.model.type.TypeMirror fieldType = env.getTypeUtils().erasure(type.asType());
-      for (var member :
-          ElementFilter.fieldsIn(env.getElementUtils().getAllMembers((TypeElement) owner))) {
-        if (member.getSimpleName().contentEquals(field)) {
-          fieldType = env.getTypeUtils().asMemberOf((DeclaredType) owner.asType(), member);
-          break;
-        }
+    fields.put(field, var);
+    javax.lang.model.type.TypeMirror fieldType = env.getTypeUtils().erasure(type.asType());
+    for (var member :
+        ElementFilter.fieldsIn(env.getElementUtils().getAllMembers((TypeElement) owner))) {
+      if (member.getSimpleName().contentEquals(field)) {
+        fieldType = env.getTypeUtils().asMemberOf((DeclaredType) owner.asType(), member);
+        break;
       }
+    }
     fieldTypes.put(field, fieldType);
   }
 
@@ -486,9 +498,7 @@ final class Emitter {
     // "into" and <strong>ordinary Java</strong> is part of the sentence,
     // and trimming it runs the words together.
     final String text =
-        preformatted(element)
-            ? child.getNodeValue()
-            : child.getNodeValue().replaceAll("\\s+", " ");
+        preformatted(element) ? child.getNodeValue() : child.getNodeValue().replaceAll("\\s+", " ");
     if (!text.isBlank() || hasElementSibling(child)) {
       final String target = domVars.contains(var) ? var : var + ".getElement()";
       body.append(INDENT)
@@ -807,7 +817,10 @@ final class Emitter {
   }
 
   private Boolean providedValue(AnnotationMirror annotation) {
-    if (!annotation.getAnnotationType().toString().equals("com.google.gwt.uibinder.client.UiField")) {
+    if (!annotation
+        .getAnnotationType()
+        .toString()
+        .equals("com.google.gwt.uibinder.client.UiField")) {
       return null;
     }
     for (var attribute :
