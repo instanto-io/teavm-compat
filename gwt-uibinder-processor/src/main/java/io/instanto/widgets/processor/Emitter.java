@@ -846,46 +846,55 @@ final class Emitter {
             .equals("com.google.gwt.uibinder.client.UiHandler")) {
           continue;
         }
-        if (method.getParameters().size() != 1) {
-          throw new UiBinderProcessor.Failure("@UiHandler methods take exactly one event", method);
-        }
-        final javax.lang.model.type.TypeMirror event = method.getParameters().get(0).asType();
-        for (final String fieldName : Handlers.namedFields(mirror)) {
-          final String var = fields.get(fieldName);
-          if (var == null) {
-            throw new UiBinderProcessor.Failure(
-                "@UiHandler names " + fieldName + ", which no ui:field declares", method);
-          }
-          final Handlers.Binding binding = Handlers.resolve(env, fieldTypes.get(fieldName), event);
-          if (binding == null) {
-            throw new UiBinderProcessor.Failure(
-                fieldName
-                    + " has no method that "
-                    + "takes a handler for "
-                    + env.getTypeUtils().erasure(event),
-                method);
-          }
-          out.append(INDENT)
-              .append(var)
-              .append('.')
-              .append(binding.adder)
-              .append("(new ")
-              .append(binding.handler)
-              .append("() {\n")
-              .append("            @Override\n")
-              .append("            public void ")
-              .append(binding.method)
-              .append("(final ")
-              .append(binding.parameter)
-              .append(" event) {\n")
-              .append("                owner.")
-              .append(method.getSimpleName())
-              .append("(event);\n")
-              .append("            }\n        });\n");
-        }
+        appendHandler(out, method, mirror);
       }
     }
     return out.toString();
+  }
+
+  private void appendHandler(StringBuilder out, ExecutableElement method, AnnotationMirror mirror) {
+    if (method.getParameters().size() != 1) {
+      throw new UiBinderProcessor.Failure("@UiHandler methods take exactly one event", method);
+    }
+    final javax.lang.model.type.TypeMirror event = method.getParameters().get(0).asType();
+    for (String fieldName : Handlers.namedFields(mirror)) {
+      appendFieldHandler(out, method, event, fieldName);
+    }
+  }
+
+  private void appendFieldHandler(
+      StringBuilder out, ExecutableElement method, TypeMirror event, String fieldName) {
+    final String var = fields.get(fieldName);
+    if (var == null) {
+      throw new UiBinderProcessor.Failure(
+          "@UiHandler names " + fieldName + ", which no ui:field declares", method);
+    }
+    final Handlers.Binding binding = Handlers.resolve(env, fieldTypes.get(fieldName), event);
+    if (binding == null) {
+      throw new UiBinderProcessor.Failure(
+          fieldName
+              + " has no method that "
+              + "takes a handler for "
+              + env.getTypeUtils().erasure(event),
+          method);
+    }
+    out.append(INDENT)
+        .append(var)
+        .append('.')
+        .append(binding.adder)
+        .append("(new ")
+        .append(binding.handler)
+        .append("() {\n")
+        .append("            @Override\n")
+        .append("            public void ")
+        .append(binding.method)
+        .append("(final ")
+        .append(binding.parameter)
+        .append(" event) {\n")
+        .append("                owner.")
+        .append(method.getSimpleName())
+        .append("(event);\n")
+        .append("            }\n        });\n");
   }
 
   /**
