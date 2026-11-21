@@ -246,11 +246,13 @@ final class Emitter {
     return type;
   }
 
-  private TypeMirror appendExpressionMember(StringBuilder value, DeclaredType ownerType, Element match) {
+  private TypeMirror appendExpressionMember(
+      StringBuilder value, DeclaredType ownerType, Element match) {
     value.append('.').append(match.getSimpleName());
     if (match instanceof ExecutableElement method) {
       value.append("()");
-      return ((javax.lang.model.type.ExecutableType) env.getTypeUtils().asMemberOf(ownerType, method))
+      return ((javax.lang.model.type.ExecutableType)
+              env.getTypeUtils().asMemberOf(ownerType, method))
           .getReturnType();
     }
     return env.getTypeUtils().asMemberOf(ownerType, match);

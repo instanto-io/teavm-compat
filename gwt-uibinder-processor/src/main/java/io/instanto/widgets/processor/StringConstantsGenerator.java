@@ -102,8 +102,7 @@ final class StringConstantsGenerator {
     }
     java.append("public String getString(String name){ if(name!=null) switch(name){")
         .append(cases)
-        .append(
-            "} throw new java.util.MissingResourceException(\"Unknown string" + " constant\", ")
+        .append("} throw new java.util.MissingResourceException(\"Unknown string" + " constant\", ")
         .append(quote(binary))
         .append(", name); }\n}\n");
     return java.toString();
@@ -116,8 +115,7 @@ final class StringConstantsGenerator {
           .getAnnotationType()
           .toString()
           .equals("com.google.gwt.i18n.client.Constants.DefaultStringValue"))
-        for (var entry :
-            env.getElementUtils().getElementValuesWithDefaults(annotation).entrySet())
+        for (var entry : env.getElementUtils().getElementValuesWithDefaults(annotation).entrySet())
           if (entry.getKey().getSimpleName().contentEquals("value"))
             value = (String) entry.getValue().getValue();
     }
