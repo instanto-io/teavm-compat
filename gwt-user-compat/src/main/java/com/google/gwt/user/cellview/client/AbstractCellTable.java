@@ -240,8 +240,8 @@ public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
     appendClass(classes, getSortableHeaderStyle());
     ColumnSortList.ColumnSortInfo first = sortList.size() == 0 ? null : sortList.get(0);
     if (first != null && first.getColumn() == column) {
-      appendClass(classes,
-          first.isAscending() ? getSortedAscendingStyle() : getSortedDescendingStyle());
+      appendClass(
+          classes, first.isAscending() ? getSortedAscendingStyle() : getSortedDescendingStyle());
     }
   }
 

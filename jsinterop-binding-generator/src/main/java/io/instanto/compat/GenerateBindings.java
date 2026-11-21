@@ -406,8 +406,7 @@ public final class GenerateBindings {
   private static void collectDirectorySources(Path input, Path out, Map<Path, String> sources)
       throws Exception {
     try (var files = Files.walk(input)) {
-      for (Path file :
-          files.filter(f -> f.toString().endsWith(JAVA_FILE_SUFFIX)).sorted().toList())
+      for (Path file : files.filter(f -> f.toString().endsWith(JAVA_FILE_SUFFIX)).sorted().toList())
         sources.put(out.resolve(input.relativize(file)), Files.readString(file));
     }
   }

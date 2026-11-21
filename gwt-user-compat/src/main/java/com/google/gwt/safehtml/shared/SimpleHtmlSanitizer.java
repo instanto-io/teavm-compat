@@ -87,8 +87,7 @@ public final class SimpleHtmlSanitizer implements HtmlSanitizer {
   private static String simpleSanitize(String text) {
     String[] segments = text.split("<", -1);
     // The first segment cannot have followed a tag opener.
-    StringBuilder sanitized = new StringBuilder(
-        SafeHtmlUtils.htmlEscapeAllowEntities(segments[0]));
+    StringBuilder sanitized = new StringBuilder(SafeHtmlUtils.htmlEscapeAllowEntities(segments[0]));
     for (int i = 1; i < segments.length; i++) {
       appendSegment(sanitized, segments[i]);
     }
