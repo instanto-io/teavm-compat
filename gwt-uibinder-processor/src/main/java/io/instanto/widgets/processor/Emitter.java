@@ -478,23 +478,27 @@ final class Emitter {
       if (child.getNodeType() == Node.ELEMENT_NODE) {
         emit(child, var);
       } else if (keepText && child.getNodeType() == Node.TEXT_NODE) {
-        // Collapse runs of whitespace but do not trim: the space between
-        // "into" and <strong>ordinary Java</strong> is part of the sentence,
-        // and trimming it runs the words together.
-        final String text =
-            preformatted(element)
-                ? child.getNodeValue()
-                : child.getNodeValue().replaceAll("\\s+", " ");
-        if (!text.isBlank() || hasElementSibling(child)) {
-          final String target = domVars.contains(var) ? var : var + ".getElement()";
-          body.append(INDENT)
-              .append(target)
-              .append(".appendChild(com.google.gwt.dom.client.Document.get()")
-              .append(".createTextNode(\"")
-              .append(escape(text))
-              .append("\"));\n");
-        }
+        emitTextChild(element, child, var);
       }
+    }
+  }
+
+  private void emitTextChild(Node element, Node child, String var) {
+    // Collapse runs of whitespace but do not trim: the space between
+    // "into" and <strong>ordinary Java</strong> is part of the sentence,
+    // and trimming it runs the words together.
+    final String text =
+        preformatted(element)
+            ? child.getNodeValue()
+            : child.getNodeValue().replaceAll("\\s+", " ");
+    if (!text.isBlank() || hasElementSibling(child)) {
+      final String target = domVars.contains(var) ? var : var + ".getElement()";
+      body.append(INDENT)
+          .append(target)
+          .append(".appendChild(com.google.gwt.dom.client.Document.get()")
+          .append(".createTextNode(\"")
+          .append(escape(text))
+          .append("\"));\n");
     }
   }
 
