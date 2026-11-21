@@ -44,8 +44,7 @@ public class OptionElement extends Element {
     setPropertyBoolean("disabled", value);
   }
 
-  private static final JSObject IDENTITIES = identities();
-  private static int nextIdentity;
+  private static final JSObject IDENTITY_FOR_ELEMENT = createIdentityLookup();
 
   public OptionElement(HTMLElement element) {
     super(element);
@@ -78,19 +77,28 @@ public class OptionElement extends Element {
 
   @Override
   public int hashCode() {
-    return identity(IDENTITIES, unwrap(), ++nextIdentity);
+    return identity(IDENTITY_FOR_ELEMENT, unwrap());
   }
 
-  @JSBody(script = "return new WeakMap();")
-  private static native JSObject identities();
+  @JSBody(
+      script = """
+          const identities = new WeakMap();
+          let next = 0;
+          return element => {
+            if (!identities.has(element)) {
+              next = (next + 1) | 0;
+              identities.set(element, next);
+            }
+            return identities.get(element);
+          };
+          """)
+  private static native JSObject createIdentityLookup();
 
   @JSBody(
       params = {"a", "b"},
       script = "return a === b;")
   private static native boolean same(JSObject a, JSObject b);
 
-  @JSBody(
-      params = {"map", "element", "id"},
-      script = "if(!map.has(element)) map.set(element,id); return map.get(element);")
-  private static native int identity(JSObject map, JSObject element, int id);
+  @JSBody(params = {"lookup", "element"}, script = "return lookup(element);")
+  private static native int identity(JSObject lookup, JSObject element);
 }

@@ -56,6 +56,21 @@ public class LifecycleRegressionTest {
   }
 
   @Test
+  public void optionElementHashFollowsTheDomNodeAcrossWrappers() {
+    Element node = Document.get().createElement("option");
+    OptionElement original = OptionElement.as(node);
+    OptionElement anotherWrapper = OptionElement.as(node);
+    int hash = original.hashCode();
+
+    assertEquals(original, anotherWrapper);
+    assertEquals(hash, anotherWrapper.hashCode());
+    assertEquals(hash, original.hashCode());
+    OptionElement different = OptionElement.as(Document.get().createElement("option"));
+    assertNotEquals(original, different);
+    assertEquals("only a new node allocates an identity", hash + 1, different.hashCode());
+  }
+
+  @Test
   public void removedDisplayStopsRequestingData() {
     CellList<String> display = new CellList<>(new TextCell());
     int[] calls = {0};
