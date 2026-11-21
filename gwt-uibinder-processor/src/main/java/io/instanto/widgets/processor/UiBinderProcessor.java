@@ -72,35 +72,38 @@ public class UiBinderProcessor extends AbstractProcessor {
       new ResourceBundleGenerator(processingEnv).process(element);
       new SafeHtmlTemplateGenerator(processingEnv).process(element);
       new StringConstantsGenerator(processingEnv).process(element);
-      if (element.getKind() != ElementKind.CLASS) {
-        continue;
-      }
-      final TypeElement owner = (TypeElement) element;
-      final TypeElement binder = findBinder(owner);
-      if (binder != null) {
-        try {
-          generate(owner, binder);
-        } catch (final Failure failure) {
-          processingEnv
-              .getMessager()
-              .printMessage(
-                  Diagnostic.Kind.ERROR,
-                  failure.getMessage(),
-                  failure.element == null ? owner : failure.element);
-        } catch (final Exception problem) {
-          processingEnv
-              .getMessager()
-              .printMessage(
-                  Diagnostic.Kind.ERROR,
-                  "could not generate a UiBinder for " + owner.getSimpleName() + ": " + problem,
-                  owner);
-        }
-      }
+      processBinder(element);
     }
     return false;
   }
 
-  /** The nested interface that extends UiBinder, if the owner declares one. */
+  private void processBinder(Element element) {
+    if (element.getKind() != ElementKind.CLASS) {
+      return;
+    }
+    final TypeElement owner = (TypeElement) element;
+    final TypeElement binder = findBinder(owner);
+    if (binder != null) {
+      try {
+        generate(owner, binder);
+      } catch (final Failure failure) {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                Diagnostic.Kind.ERROR,
+                failure.getMessage(),
+                failure.element == null ? owner : failure.element);
+      } catch (final Exception problem) {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                Diagnostic.Kind.ERROR,
+                "could not generate a UiBinder for " + owner.getSimpleName() + ": " + problem,
+                owner);
+      }
+    }
+  }
+
   private TypeElement findBinder(final TypeElement owner) {
     for (final Element nested : owner.getEnclosedElements()) {
       if (nested.getKind() != ElementKind.INTERFACE) {
