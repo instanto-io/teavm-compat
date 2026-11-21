@@ -229,26 +229,7 @@ final class Emitter {
       final Element resolved = env.getTypeUtils().asElement(current);
       if (!(resolved instanceof TypeElement type) || member.isEmpty())
         throw new UiBinderProcessor.Failure("Cannot resolve " + trimmed, owner);
-      Element match = null;
-      for (ExecutableElement method :
-          ElementFilter.methodsIn(env.getElementUtils().getAllMembers(type))) {
-        String name = method.getSimpleName().toString();
-        if (method.getParameters().isEmpty()
-            && (name.equals(member)
-                || name.equals(
-                    "get" + Character.toUpperCase(member.charAt(0)) + member.substring(1)))) {
-          match = method;
-          break;
-        }
-      }
-      if (match == null)
-        for (VariableElement field :
-            ElementFilter.fieldsIn(env.getElementUtils().getAllMembers(type))) {
-          if (field.getSimpleName().contentEquals(member)) {
-            match = field;
-            break;
-          }
-        }
+      Element match = expressionMember(type, member);
       if (match == null)
         throw new UiBinderProcessor.Failure(
             type + " has no " + member + ", named by " + trimmed, owner);
@@ -267,6 +248,23 @@ final class Emitter {
     }
     if (instance && withFields.containsKey(path[0])) withInstance(path[0]);
     return value.toString();
+  }
+
+  private Element expressionMember(TypeElement type, String name) {
+    String getter = "get" + Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    for (ExecutableElement method :
+        ElementFilter.methodsIn(env.getElementUtils().getAllMembers(type))) {
+      String methodName = method.getSimpleName().toString();
+      if (method.getParameters().isEmpty()
+          && (methodName.equals(name) || methodName.equals(getter))) {
+        return method;
+      }
+    }
+    for (VariableElement field :
+        ElementFilter.fieldsIn(env.getElementUtils().getAllMembers(type))) {
+      if (field.getSimpleName().contentEquals(name)) return field;
+    }
+    return null;
   }
 
   String styleDeclarations() {
