@@ -50,6 +50,7 @@ final class Emitter {
   private static final String FIELD_TEXT = "$field";
 
   private static final String FIELD_ATTRIBUTE = "field";
+  private static final String QUOTED_ARGUMENT_END = "\");\n";
   private static final String INDENT = "        ";
 
   static final String UI_NS = "urn:ui:com.google.gwt.uibinder";
@@ -387,7 +388,7 @@ final class Emitter {
           .append(var)
           .append(".setText(\"")
           .append(escapeTrimmed(text))
-          .append("\");\n");
+          .append(QUOTED_ARGUMENT_END);
     }
     if (field != null) {
       fields.put(field, var);
@@ -429,7 +430,7 @@ final class Emitter {
         .append(var)
         .append(" = com.google.gwt.dom.client.Document.get().createElement(\"")
         .append(escape(tag))
-        .append("\");\n");
+        .append(QUOTED_ARGUMENT_END);
     if (rootType == null) {
       throw new UiBinderProcessor.Failure(
           "a template has to start with a widget, not <" + tag + ">", owner);
@@ -444,7 +445,7 @@ final class Emitter {
           .append(escapeTrimmed(attr.getKey()))
           .append("\", \"")
           .append(escapeTrimmed(attr.getValue()))
-          .append("\");\n");
+          .append(QUOTED_ARGUMENT_END);
     }
     if (field != null) {
       fields.put(field, var);
@@ -593,7 +594,7 @@ final class Emitter {
             .append(var)
             .append(".addStyleName(\"")
             .append(escape(style))
-            .append("\");\n");
+            .append(QUOTED_ARGUMENT_END);
       }
       return;
     }
