@@ -384,36 +384,55 @@ public final class GenerateBindings {
       Path input = Path.of(args[i]).toAbsolutePath().normalize();
       if (input.startsWith(out) || out.startsWith(input))
         throw new IllegalArgumentException("Inputs and output must be separate");
-      if (Files.isDirectory(input)) {
-        try (var files = Files.walk(input)) {
-          for (Path file :
-              files.filter(f -> f.toString().endsWith(JAVA_FILE_SUFFIX)).sorted().toList())
-            sources.put(out.resolve(input.relativize(file)), Files.readString(file));
-        }
-      } else {
-        try (JarFile jar = new JarFile(input.toFile())) {
-          for (var entry :
-              jar.stream()
-                  .filter(e -> e.getName().endsWith(JAVA_FILE_SUFFIX))
-                  .sorted(Comparator.comparing(JarEntry::getName))
-                  .toList()) {
-            Path destination = out.resolve(entry.getName()).normalize();
-            if (!destination.startsWith(out))
-              throw new IllegalArgumentException("Invalid source entry: " + entry.getName());
-            try (var stream = jar.getInputStream(entry)) {
-              sources.put(
-                  destination,
-                  new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-            }
-          }
-        }
-      }
+      collectSources(input, out, sources);
     }
     BindingPipeline pipeline = new BindingPipeline(sources.values(), false);
     for (var source : sources.entrySet()) {
       Files.createDirectories(source.getKey().getParent());
       Files.writeString(source.getKey(), pipeline.transform(source.getValue()));
     }
+    writeManifest(out);
+  }
+
+  private static void collectSources(Path input, Path out, Map<Path, String> sources)
+      throws Exception {
+    if (Files.isDirectory(input)) {
+      collectDirectorySources(input, out, sources);
+    } else {
+      collectJarSources(input, out, sources);
+    }
+  }
+
+  private static void collectDirectorySources(Path input, Path out, Map<Path, String> sources)
+      throws Exception {
+    try (var files = Files.walk(input)) {
+      for (Path file :
+          files.filter(f -> f.toString().endsWith(JAVA_FILE_SUFFIX)).sorted().toList())
+        sources.put(out.resolve(input.relativize(file)), Files.readString(file));
+    }
+  }
+
+  private static void collectJarSources(Path input, Path out, Map<Path, String> sources)
+      throws Exception {
+    try (JarFile jar = new JarFile(input.toFile())) {
+      for (var entry :
+          jar.stream()
+              .filter(e -> e.getName().endsWith(JAVA_FILE_SUFFIX))
+              .sorted(Comparator.comparing(JarEntry::getName))
+              .toList()) {
+        Path destination = out.resolve(entry.getName()).normalize();
+        if (!destination.startsWith(out))
+          throw new IllegalArgumentException("Invalid source entry: " + entry.getName());
+        try (var stream = jar.getInputStream(entry)) {
+          sources.put(
+              destination,
+              new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+      }
+    }
+  }
+
+  private static void writeManifest(Path out) throws Exception {
     StringBuilder manifest = new StringBuilder();
     var digest = java.security.MessageDigest.getInstance("SHA-256");
     try (var files = Files.walk(out)) {
