@@ -170,7 +170,9 @@ public class Widget extends UIObject
   }
 
   /** Called after this widget is attached to the document. */
-  protected void onLoad() {}
+  protected void onLoad() {
+    // Subclasses can initialize resources when attached.
+  }
 
   /** Called before this widget is detached from the document. */
   protected void onUnload() {}
