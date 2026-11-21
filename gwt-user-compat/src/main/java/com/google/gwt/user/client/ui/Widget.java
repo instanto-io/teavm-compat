@@ -175,7 +175,9 @@ public class Widget extends UIObject
   }
 
   /** Called before this widget is detached from the document. */
-  protected void onUnload() {}
+  protected void onUnload() {
+    // Subclasses can release resources before detaching.
+  }
 
   /** Registers for attach/detach notifications on this widget. */
   public HandlerRegistration addAttachHandler(
