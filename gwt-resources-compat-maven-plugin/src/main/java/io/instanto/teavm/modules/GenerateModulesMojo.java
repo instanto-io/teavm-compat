@@ -218,41 +218,48 @@ public class GenerateModulesMojo extends AbstractMojo {
           .forEach(bundles::add);
       bundles.sort(Path::compareTo);
       for (final Path bundle : bundles) {
-        final String source = Files.readString(bundle, StandardCharsets.UTF_8);
-        if (!Pattern.compile("\\bextends\\s+[^{;]*\\bClientBundle\\b").matcher(source).find()) {
-          continue;
-        }
-        final Matcher packageMatcher = Pattern.compile("package\\s+([\\w.]+)\\s*;").matcher(source);
-        final String packageName = packageMatcher.find() ? packageMatcher.group(1) : "";
-        final String simpleName = bundle.getFileName().toString().replace(JAVA_FILE_SUFFIX, "");
-        final boolean inline =
-            inlineTextBundles != null && inlineTextBundles.contains(packageName + "." + simpleName);
-        if (inline) {
-          generateTextBundle(bundle, source, packageName, simpleName);
-        }
-        final Matcher matcher = BUNDLE_SOURCE.matcher(source);
-        while (matcher.find()) {
-          final Matcher literal = SOURCE_LITERAL.matcher(matcher.group(1));
-          while (literal.find()) {
-            final String path = literal.group(1);
-            final Path file = bundle.getParent().resolve(path).normalize();
-            if (!Files.isRegularFile(file)) {
-              throw new MojoExecutionException(
-                  "Missing ClientBundle resource " + path + " in " + bundle);
-            }
-            String deployed = path.startsWith("resource/") ? path.substring(9) : path;
-            if (Path.of(deployed).isAbsolute() || deployed.contains("..")) {
-              throw new MojoExecutionException(
-                  "Unsupported resource path " + path + " in " + bundle);
-            }
-            found.add(new BundleAsset(file, deployed, inline));
-          }
-        }
+        readBundleAssets(bundle, found);
       }
     } catch (final IOException problem) {
       throw new MojoExecutionException("could not scan " + dir, problem);
     }
     return found;
+  }
+
+  private void readBundleAssets(Path bundle, List<BundleAsset> found)
+      throws IOException, MojoExecutionException {
+    final String source = Files.readString(bundle, StandardCharsets.UTF_8);
+    if (!Pattern.compile("\\bextends\\s+[^{;]*\\bClientBundle\\b").matcher(source).find()) {
+      return;
+    }
+    final Matcher packageMatcher = Pattern.compile("package\\s+([\\w.]+)\\s*;").matcher(source);
+    final String packageName = packageMatcher.find() ? packageMatcher.group(1) : "";
+    final String simpleName = bundle.getFileName().toString().replace(JAVA_FILE_SUFFIX, "");
+    final boolean inline =
+        inlineTextBundles != null && inlineTextBundles.contains(packageName + "." + simpleName);
+    if (inline) {
+      generateTextBundle(bundle, source, packageName, simpleName);
+    }
+    final Matcher matcher = BUNDLE_SOURCE.matcher(source);
+    while (matcher.find()) {
+      final Matcher literal = SOURCE_LITERAL.matcher(matcher.group(1));
+      while (literal.find()) {
+        found.add(bundleAsset(bundle, literal.group(1), inline));
+      }
+    }
+  }
+
+  private static BundleAsset bundleAsset(Path bundle, String path, boolean inline)
+      throws MojoExecutionException {
+    final Path file = bundle.getParent().resolve(path).normalize();
+    if (!Files.isRegularFile(file)) {
+      throw new MojoExecutionException("Missing ClientBundle resource " + path + " in " + bundle);
+    }
+    String deployed = path.startsWith("resource/") ? path.substring(9) : path;
+    if (Path.of(deployed).isAbsolute() || deployed.contains("..")) {
+      throw new MojoExecutionException("Unsupported resource path " + path + " in " + bundle);
+    }
+    return new BundleAsset(file, deployed, inline);
   }
 
   private void generateTextBundle(Path bundle, String source, String packageName, String simpleName)
