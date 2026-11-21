@@ -85,57 +85,28 @@ public final class SimpleHtmlSanitizer implements HtmlSanitizer {
    */
   // TODO(xtof): should this be in a utils class?
   private static String simpleSanitize(String text) {
-    StringBuilder sanitized = new StringBuilder();
-
-    boolean firstSegment = true;
-    for (String segment : text.split("<", -1)) {
-      if (firstSegment) {
-        /*
-         *  the first segment is never part of a valid tag; note that if the
-         *  input string starts with a tag, we will get an empty segment at the
-         *  beginning.
-         */
-        firstSegment = false;
-        sanitized.append(SafeHtmlUtils.htmlEscapeAllowEntities(segment));
-        continue;
-      }
-
-      /*
-       *  determine if the current segment is the start of an attribute-free tag
-       *  or end-tag in our whitelist
-       */
-      int tagStart = 0; // will be 1 if this turns out to be an end tag.
-      int tagEnd = segment.indexOf('>');
-      String tag = null;
-      boolean isValidTag = false;
-      if (tagEnd > 0) {
-        if (segment.charAt(0) == '/') {
-          tagStart = 1;
-        }
-        tag = segment.substring(tagStart, tagEnd);
-        if (TAG_WHITELIST.contains(tag)) {
-          isValidTag = true;
-        }
-      }
-
-      if (isValidTag) {
-        // append the tag, not escaping it
-        if (tagStart == 0) {
-          sanitized.append('<');
-        } else {
-          // we had seen an end-tag
-          sanitized.append("</");
-        }
-        sanitized.append(tag).append('>');
-
-        // append the rest of the segment, escaping it
-        sanitized.append(SafeHtmlUtils.htmlEscapeAllowEntities(segment.substring(tagEnd + 1)));
-      } else {
-        // just escape the whole segment
-        sanitized.append("&lt;").append(SafeHtmlUtils.htmlEscapeAllowEntities(segment));
-      }
+    String[] segments = text.split("<", -1);
+    // The first segment cannot have followed a tag opener.
+    StringBuilder sanitized = new StringBuilder(
+        SafeHtmlUtils.htmlEscapeAllowEntities(segments[0]));
+    for (int i = 1; i < segments.length; i++) {
+      appendSegment(sanitized, segments[i]);
     }
     return sanitized.toString();
+  }
+
+  private static void appendSegment(StringBuilder sanitized, String segment) {
+    int tagEnd = segment.indexOf('>');
+    if (tagEnd > 0) {
+      int tagStart = segment.charAt(0) == '/' ? 1 : 0;
+      String tag = segment.substring(tagStart, tagEnd);
+      if (TAG_WHITELIST.contains(tag)) {
+        sanitized.append(tagStart == 0 ? "<" : "</").append(tag).append('>');
+        sanitized.append(SafeHtmlUtils.htmlEscapeAllowEntities(segment.substring(tagEnd + 1)));
+        return;
+      }
+    }
+    sanitized.append("&lt;").append(SafeHtmlUtils.htmlEscapeAllowEntities(segment));
   }
 
   /*
