@@ -339,7 +339,7 @@ final class Emitter {
     final ExecutableElement uiConstructor = factory == null ? uiConstructor(type) : factory;
     final List<String> args =
         provided ? List.of() : constructorArguments(simple, uiConstructor, attrs);
-    appendWidgetCreation(pkg, simple, var, field, provided, factory, htmlPanel, args);
+    appendWidgetCreation(pkg + "." + simple, var, field, provided, factory, htmlPanel, args);
     if (rootType == null) {
       rootType = pkg + "." + simple;
     }
@@ -383,9 +383,9 @@ final class Emitter {
   }
 
   private void appendWidgetCreation(
-      String pkg, String simple, String var, String field, boolean provided,
+      String widgetType, String var, String field, boolean provided,
       ExecutableElement factory, boolean htmlPanel, List<String> args) {
-    body.append(INDENT).append(pkg).append('.').append(simple).append(' ').append(var);
+    body.append(INDENT).append(widgetType).append(' ').append(var);
     if (provided) {
       body.append(" = owner.").append(field).append(";\n");
       body.append("        java.util.Objects.requireNonNull(")
@@ -401,9 +401,7 @@ final class Emitter {
           .append(");\n");
     } else {
       body.append(" = new ")
-          .append(pkg)
-          .append('.')
-          .append(simple)
+          .append(widgetType)
           .append('(')
           .append(htmlPanel && args.isEmpty() ? "\"\"" : String.join(", ", args))
           .append(");\n");
