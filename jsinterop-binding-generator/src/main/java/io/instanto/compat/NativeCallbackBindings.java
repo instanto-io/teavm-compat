@@ -408,7 +408,16 @@ public final class NativeCallbackBindings {
 
   private static String raw(String type) {
     return switch (type) {
-      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", STRING_NAME ->
+      case "void",
+          BOOLEAN_PRIMITIVE,
+          "byte",
+          SHORT_PRIMITIVE,
+          "int",
+          "long",
+          FLOAT_PRIMITIVE,
+          DOUBLE_PRIMITIVE,
+          "char",
+          STRING_NAME ->
           type;
       default -> "org.teavm.jso.JSObject";
     };
@@ -440,9 +449,17 @@ public final class NativeCallbackBindings {
           "com.google.gwt.dom.client.Element.as(com.google.gwt.core.client.JavaScriptObject.of("
               + value
               + "))";
-      case GWT_JS_OBJECT_NAME ->
-          "com.google.gwt.core.client.JavaScriptObject.of(" + value + ")";
-      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", STRING_NAME ->
+      case GWT_JS_OBJECT_NAME -> "com.google.gwt.core.client.JavaScriptObject.of(" + value + ")";
+      case "void",
+          BOOLEAN_PRIMITIVE,
+          "byte",
+          SHORT_PRIMITIVE,
+          "int",
+          "long",
+          FLOAT_PRIMITIVE,
+          DOUBLE_PRIMITIVE,
+          "char",
+          STRING_NAME ->
           value;
       default ->
           (!type.startsWith("?") ? "(" + type + ") " : "")
@@ -456,7 +473,16 @@ public final class NativeCallbackBindings {
     return switch (qualified(type, imports)) {
       case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT, GWT_JS_OBJECT_NAME ->
           "com.google.gwt.core.client.JavaScriptObject.unwrapNullable(" + value + ")";
-      case "void", BOOLEAN_PRIMITIVE, "byte", SHORT_PRIMITIVE, "int", "long", FLOAT_PRIMITIVE, DOUBLE_PRIMITIVE, "char", STRING_NAME ->
+      case "void",
+          BOOLEAN_PRIMITIVE,
+          "byte",
+          SHORT_PRIMITIVE,
+          "int",
+          "long",
+          FLOAT_PRIMITIVE,
+          DOUBLE_PRIMITIVE,
+          "char",
+          STRING_NAME ->
           value;
       default -> "jsinterop.base.Js.asAny(" + value + ")";
     };

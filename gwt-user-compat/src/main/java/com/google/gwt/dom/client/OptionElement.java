@@ -81,7 +81,8 @@ public class OptionElement extends Element {
   }
 
   @JSBody(
-      script = """
+      script =
+          """
           const identities = new WeakMap();
           let next = 0;
           return element => {
@@ -99,6 +100,8 @@ public class OptionElement extends Element {
       script = "return a === b;")
   private static native boolean same(JSObject a, JSObject b);
 
-  @JSBody(params = {"lookup", "element"}, script = "return lookup(element);")
+  @JSBody(
+      params = {"lookup", "element"},
+      script = "return lookup(element);")
   private static native int identity(JSObject lookup, JSObject element);
 }

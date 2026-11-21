@@ -49,9 +49,7 @@ public class LifecycleRegressionTest {
           calls[0]++;
         });
     com.google.gwt.event.dom.client.DomEvent.fireNativeEvent(
-        Document.get().createKeyUpEvent(true, false, true, false, 65),
-        source,
-        source.getElement());
+        Document.get().createKeyUpEvent(true, false, true, false, 65), source, source.getElement());
     assertEquals("one native key delivery", 1, calls[0]);
   }
 
