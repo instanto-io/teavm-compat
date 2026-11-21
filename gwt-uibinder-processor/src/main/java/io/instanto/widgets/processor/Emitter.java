@@ -337,9 +337,38 @@ final class Emitter {
         "com.google.gwt.user.client.ui.HTMLPanel".equals(type.getQualifiedName().toString());
     final ExecutableElement factory = uiFactory(type);
     final ExecutableElement uiConstructor = factory == null ? uiConstructor(type) : factory;
+    final List<String> args =
+        provided ? List.of() : constructorArguments(simple, uiConstructor, attrs);
+    appendWidgetCreation(pkg, simple, var, field, provided, factory, htmlPanel, args);
+    if (rootType == null) {
+      rootType = pkg + "." + simple;
+    }
+
+    for (final Map.Entry<String, String> attr : attrs.entrySet()) {
+      appendSetter(var, type, attr.getKey(), attr.getValue(), simple);
+    }
+    final String text = directText(element);
+    if (!text.isEmpty() && !hasElementChildren(element)) {
+      body.append(INDENT)
+          .append(var)
+          .append(".setText(\"")
+          .append(escapeTrimmed(text))
+          .append(QUOTED_ARGUMENT_END);
+    }
+    if (field != null) recordField(field, var, type);
+
+    emitChildren(element, var, hasElementChildren(element));
+    if (parent != null) {
+      attach(parent, var, false);
+    }
+    return var;
+  }
+
+  private List<String> constructorArguments(
+      String simple, ExecutableElement constructor, Map<String, String> attrs) {
     final List<String> args = new ArrayList<>();
-    if (!provided && uiConstructor != null) {
-      for (final VariableElement param : uiConstructor.getParameters()) {
+    if (constructor != null) {
+      for (final VariableElement param : constructor.getParameters()) {
         final String name = param.getSimpleName().toString();
         final String value = attrs.remove(name);
         if (value == null) {
@@ -350,6 +379,12 @@ final class Emitter {
       }
     }
 
+    return args;
+  }
+
+  private void appendWidgetCreation(
+      String pkg, String simple, String var, String field, boolean provided,
+      ExecutableElement factory, boolean htmlPanel, List<String> args) {
     body.append(INDENT).append(pkg).append('.').append(simple).append(' ').append(var);
     if (provided) {
       body.append(" = owner.").append(field).append(";\n");
@@ -373,22 +408,9 @@ final class Emitter {
           .append(htmlPanel && args.isEmpty() ? "\"\"" : String.join(", ", args))
           .append(");\n");
     }
-    if (rootType == null) {
-      rootType = pkg + "." + simple;
-    }
+  }
 
-    for (final Map.Entry<String, String> attr : attrs.entrySet()) {
-      appendSetter(var, type, attr.getKey(), attr.getValue(), simple);
-    }
-    final String text = directText(element);
-    if (!text.isEmpty() && !hasElementChildren(element)) {
-      body.append(INDENT)
-          .append(var)
-          .append(".setText(\"")
-          .append(escapeTrimmed(text))
-          .append(QUOTED_ARGUMENT_END);
-    }
-    if (field != null) {
+  private void recordField(String field, String var, TypeElement type) {
       fields.put(field, var);
       javax.lang.model.type.TypeMirror fieldType = env.getTypeUtils().erasure(type.asType());
       for (var member :
@@ -398,14 +420,7 @@ final class Emitter {
           break;
         }
       }
-      fieldTypes.put(field, fieldType);
-    }
-
-    emitChildren(element, var, hasElementChildren(element));
-    if (parent != null) {
-      attach(parent, var, false);
-    }
-    return var;
+    fieldTypes.put(field, fieldType);
   }
 
   /**
