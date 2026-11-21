@@ -29,6 +29,7 @@ public final class NativeCallbackBindings {
   private static final String DOUBLE_PRIMITIVE = "double";
   private static final String STRING_NAME = "String";
   private static final String OBJECT_NAME = "Object";
+  private static final String INTEGER_NAME = "Integer";
 
 
   /** Java names that must never be prefixed with the declaring package. */
@@ -47,7 +48,7 @@ public final class NativeCallbackBindings {
           "CharSequence",
           OBJECT_NAME,
           "Number",
-          "Integer",
+          INTEGER_NAME,
           "Long",
           "Double",
           "Float",
@@ -388,7 +389,7 @@ public final class NativeCallbackBindings {
             OBJECT_NAME,
             "java.lang.Object",
             "Double",
-            "Integer",
+            INTEGER_NAME,
             "Boolean",
             "java.lang.Integer",
             "java.lang.Double",
@@ -426,7 +427,7 @@ public final class NativeCallbackBindings {
 
   private static String inbound(String type, String value, Map<String, String> imports) {
     return switch (qualified(type, imports)) {
-      case "Integer", "java.lang.Integer" ->
+      case INTEGER_NAME, "java.lang.Integer" ->
           "java.lang.Integer.valueOf(jsinterop.base.Js.asInt(" + value + "))";
       case "Double", "java.lang.Double" ->
           "java.lang.Double.valueOf(jsinterop.base.Js.asDouble(" + value + "))";
