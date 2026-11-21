@@ -269,39 +269,40 @@ public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
 
     final int pageStart = getPageStart();
     for (int r = 0; r < rows.size(); r++) {
-      final T value = rows.get(r);
-      final int absoluteIndex = pageStart + r;
-      final StringBuilder rowClass = new StringBuilder();
-      if (isRowSelected(value)) {
-        rowClass.append(getSelectedRowStyle());
-      }
-      if (rowStyles != null) {
-        final String extra = rowStyles.getStyleNames(value, absoluteIndex);
-        if (extra != null && !extra.isEmpty()) {
-          if (rowClass.length() > 0) {
-            rowClass.append(' ');
-          }
-          rowClass.append(extra);
-        }
-      }
-      sb.appendHtmlConstant(
-          "<tr" + (rowClass.length() == 0 ? "" : CLASS_ATTRIBUTE_PREFIX + rowClass + "\"") + ">");
-      for (int c = 0; c < columns.size(); c++) {
-        final Column<T, ?> column = columns.get(c);
-        final Cell.Context context = new Cell.Context(absoluteIndex, c, getRowKey(value));
-        final String cellStyles = column.getCellStyleNames(context, value);
-        final String align = column.getHorizontalAlignment();
-        sb.appendHtmlConstant(
-            "<td"
-                + (cellStyles == null ? "" : CLASS_ATTRIBUTE_PREFIX + cellStyles + "\"")
-                + (align == null ? "" : " style=\"text-align:" + align + "\"")
-                + ">");
-        column.render(context, value, sb);
-        sb.appendHtmlConstant("</td>");
-      }
-      sb.appendHtmlConstant("</tr>");
+      renderBodyRow(sb, rows.get(r), pageStart + r);
     }
     tbody.setInnerSafeHtml(sb.toSafeHtml());
+  }
+
+  private void renderBodyRow(SafeHtmlBuilder sb, T value, int absoluteIndex) {
+    final StringBuilder rowClass = new StringBuilder();
+    if (isRowSelected(value)) {
+      rowClass.append(getSelectedRowStyle());
+    }
+    if (rowStyles != null) {
+      final String extra = rowStyles.getStyleNames(value, absoluteIndex);
+      appendClass(rowClass, extra);
+    }
+    sb.appendHtmlConstant(
+        "<tr" + (rowClass.length() == 0 ? "" : CLASS_ATTRIBUTE_PREFIX + rowClass + "\"") + ">");
+    for (int c = 0; c < columns.size(); c++) {
+      renderBodyCell(sb, value, absoluteIndex, c);
+    }
+    sb.appendHtmlConstant("</tr>");
+  }
+
+  private void renderBodyCell(SafeHtmlBuilder sb, T value, int absoluteIndex, int index) {
+    final Column<T, ?> column = columns.get(index);
+    final Cell.Context context = new Cell.Context(absoluteIndex, index, getRowKey(value));
+    final String cellStyles = column.getCellStyleNames(context, value);
+    final String align = column.getHorizontalAlignment();
+    sb.appendHtmlConstant(
+        "<td"
+            + (cellStyles == null ? "" : CLASS_ATTRIBUTE_PREFIX + cellStyles + "\"")
+            + (align == null ? "" : " style=\"text-align:" + align + "\"")
+            + ">");
+    column.render(context, value, sb);
+    sb.appendHtmlConstant("</td>");
   }
 
   /** Binds the header click that drives sorting, once. */
