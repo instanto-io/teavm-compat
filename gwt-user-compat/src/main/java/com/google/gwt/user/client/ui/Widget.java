@@ -160,7 +160,9 @@ public class Widget extends UIObject
   }
 
   /** Attaches children before this widget's load notification. */
-  protected void doAttachChildren() {}
+  protected void doAttachChildren() {
+    // Leaf widgets have no children to attach.
+  }
 
   /** Detaches children after this widget's unload notification. */
   protected void doDetachChildren() {}
