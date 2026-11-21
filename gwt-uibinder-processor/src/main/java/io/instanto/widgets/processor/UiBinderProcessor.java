@@ -117,7 +117,7 @@ public class UiBinderProcessor extends AbstractProcessor {
   }
 
   static final class Failure extends RuntimeException {
-    final Element element;
+    final transient Element element;
 
     Failure(final String message, final Element element) {
       super(message);
