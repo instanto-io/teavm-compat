@@ -165,7 +165,9 @@ public class Widget extends UIObject
   }
 
   /** Detaches children after this widget's unload notification. */
-  protected void doDetachChildren() {}
+  protected void doDetachChildren() {
+    // Leaf widgets have no children to detach.
+  }
 
   /** Called after this widget is attached to the document. */
   protected void onLoad() {}
