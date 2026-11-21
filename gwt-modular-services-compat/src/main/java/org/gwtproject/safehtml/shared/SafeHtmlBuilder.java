@@ -24,8 +24,6 @@ public final class SafeHtmlBuilder {
 
   private final StringBuilder buffer = new StringBuilder();
 
-  public SafeHtmlBuilder() {}
-
   /**
    * Appends a string that is known to be safe HTML (no escaping is applied). Use only for
    * compile-time HTML constants, never for user-supplied content.
