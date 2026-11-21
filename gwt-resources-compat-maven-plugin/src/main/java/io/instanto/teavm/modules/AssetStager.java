@@ -27,46 +27,9 @@ final class AssetStager {
     for (Path inputDependency : dependencies) {
       Path dependency = inputDependency.toRealPath();
       if (Files.isDirectory(dependency)) {
-        Path descriptor = dependency.resolve(DESCRIPTOR);
-        if (!Files.isRegularFile(descriptor)) continue;
-        Properties properties;
-        try (InputStream input = Files.newInputStream(descriptor)) {
-          properties = read(input);
-        }
-        String source = relative(properties.getProperty("source"));
-        String target = relative(properties.getProperty("target"));
-        Path root = dependency.resolve(source);
-        rejectSymlinks(root);
-        if (!Files.isDirectory(root)) throw new IOException("Missing asset directory " + root);
-        int count = 0;
-        try (var files = Files.walk(root)) {
-          for (Path file : files.filter(Files::isRegularFile).sorted().toList()) {
-            rejectSymlinks(file);
-            String name = root.relativize(file).toString().replace(java.io.File.separatorChar, '/');
-            add(assets, target + "/" + relative(name), new Asset(file, null));
-            count++;
-          }
-        }
-        if (count == 0) throw new IOException("No assets under " + root);
+        collectDirectoryAssets(dependency, assets);
       } else if (dependency.toString().endsWith(".jar")) {
-        try (ZipFile jar = new ZipFile(dependency.toFile())) {
-          var descriptor = jar.getEntry(DESCRIPTOR);
-          if (descriptor == null) continue;
-          Properties properties;
-          try (InputStream input = jar.getInputStream(descriptor)) {
-            properties = read(input);
-          }
-          String source = relative(properties.getProperty("source")) + "/";
-          String target = relative(properties.getProperty("target"));
-          int count = 0;
-          for (var entry : jar.stream().filter(e -> !e.isDirectory()).toList()) {
-            if (!entry.getName().startsWith(source)) continue;
-            String name = relative(entry.getName().substring(source.length()));
-            add(assets, target + "/" + name, new Asset(dependency, entry.getName()));
-            count++;
-          }
-          if (count == 0) throw new IOException("No assets under " + source + " in " + dependency);
-        }
+        collectJarAssets(dependency, assets);
       }
     }
     if (assets.isEmpty()) {
@@ -77,6 +40,64 @@ final class AssetStager {
               + " descriptors");
     }
     Path root = output.toFile().getCanonicalFile().toPath();
+    validateDestinations(root, assets);
+    for (var entry : assets.entrySet()) {
+      Path destination = root.resolve(entry.getKey());
+      Files.createDirectories(destination.getParent());
+      entry.getValue().copyTo(destination);
+    }
+    return assets.size();
+  }
+
+  private static void collectDirectoryAssets(Path dependency, Map<String, Asset> assets)
+      throws IOException {
+    Path descriptor = dependency.resolve(DESCRIPTOR);
+    if (!Files.isRegularFile(descriptor)) return;
+    Properties properties;
+    try (InputStream input = Files.newInputStream(descriptor)) {
+      properties = read(input);
+    }
+    String source = relative(properties.getProperty("source"));
+    String target = relative(properties.getProperty("target"));
+    Path root = dependency.resolve(source);
+    rejectSymlinks(root);
+    if (!Files.isDirectory(root)) throw new IOException("Missing asset directory " + root);
+    int count = 0;
+    try (var files = Files.walk(root)) {
+      for (Path file : files.filter(Files::isRegularFile).sorted().toList()) {
+        rejectSymlinks(file);
+        String name = root.relativize(file).toString().replace(java.io.File.separatorChar, '/');
+        add(assets, target + "/" + relative(name), new Asset(file, null));
+        count++;
+      }
+    }
+    if (count == 0) throw new IOException("No assets under " + root);
+  }
+
+  private static void collectJarAssets(Path dependency, Map<String, Asset> assets)
+      throws IOException {
+    try (ZipFile jar = new ZipFile(dependency.toFile())) {
+      var descriptor = jar.getEntry(DESCRIPTOR);
+      if (descriptor == null) return;
+      Properties properties;
+      try (InputStream input = jar.getInputStream(descriptor)) {
+        properties = read(input);
+      }
+      String source = relative(properties.getProperty("source")) + "/";
+      String target = relative(properties.getProperty("target"));
+      int count = 0;
+      for (var entry : jar.stream().filter(e -> !e.isDirectory()).toList()) {
+        if (!entry.getName().startsWith(source)) continue;
+        String name = relative(entry.getName().substring(source.length()));
+        add(assets, target + "/" + name, new Asset(dependency, entry.getName()));
+        count++;
+      }
+      if (count == 0) throw new IOException("No assets under " + source + " in " + dependency);
+    }
+  }
+
+  private static void validateDestinations(Path root, Map<String, Asset> assets)
+      throws IOException {
     // Validate every destination before modifying the served tree.
     for (String name : assets.keySet()) {
       Path destination = root.resolve(name);
@@ -97,12 +118,6 @@ final class AssetStager {
         }
       }
     }
-    for (var entry : assets.entrySet()) {
-      Path destination = root.resolve(entry.getKey());
-      Files.createDirectories(destination.getParent());
-      entry.getValue().copyTo(destination);
-    }
-    return assets.size();
   }
 
   private static Properties read(InputStream input) throws IOException {
