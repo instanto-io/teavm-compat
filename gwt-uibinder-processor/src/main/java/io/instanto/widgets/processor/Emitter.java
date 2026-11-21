@@ -801,18 +801,24 @@ final class Emitter {
         ElementFilter.fieldsIn(env.getElementUtils().getAllMembers((TypeElement) owner))) {
       if (!field.getSimpleName().contentEquals(name)) continue;
       for (var annotation : field.getAnnotationMirrors()) {
-        if (!annotation
-            .getAnnotationType()
-            .toString()
-            .equals("com.google.gwt.uibinder.client.UiField")) continue;
-        for (var attribute :
-            env.getElementUtils().getElementValuesWithDefaults(annotation).entrySet()) {
-          if (attribute.getKey().getSimpleName().contentEquals("provided"))
-            return Boolean.TRUE.equals(attribute.getValue().getValue());
-        }
+        Boolean provided = providedValue(annotation);
+        if (provided != null) return provided;
       }
     }
     return false;
+  }
+
+  private Boolean providedValue(AnnotationMirror annotation) {
+    if (!annotation.getAnnotationType().toString().equals("com.google.gwt.uibinder.client.UiField")) {
+      return null;
+    }
+    for (var attribute :
+        env.getElementUtils().getElementValuesWithDefaults(annotation).entrySet()) {
+      if (attribute.getKey().getSimpleName().contentEquals("provided")) {
+        return Boolean.TRUE.equals(attribute.getValue().getValue());
+      }
+    }
+    return null;
   }
 
   /** Whether the owner, or anything it extends, has a field of this name. */
