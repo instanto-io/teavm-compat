@@ -25,6 +25,7 @@
 package com.google.gwt.cell.client;
 
 import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.text.shared.SafeHtmlRenderer;
 import com.google.gwt.text.shared.SimpleSafeHtmlRenderer;
@@ -37,7 +38,7 @@ public class DateCell extends AbstractCell<Date> {
   private final SafeHtmlRenderer<String> renderer;
 
   public DateCell() {
-    this(DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_MEDIUM));
+    this(DateTimeFormat.getFormat(PredefinedFormat.DATE_MEDIUM));
   }
 
   public DateCell(final DateTimeFormat format) {
