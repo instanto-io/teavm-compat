@@ -30,6 +30,7 @@ public final class NativeCallbackBindings {
   private static final String STRING_NAME = "String";
   private static final String OBJECT_NAME = "Object";
   private static final String INTEGER_NAME = "Integer";
+  private static final String DOUBLE_NAME = "Double";
 
 
   /** Java names that must never be prefixed with the declaring package. */
@@ -50,7 +51,7 @@ public final class NativeCallbackBindings {
           "Number",
           INTEGER_NAME,
           "Long",
-          "Double",
+          DOUBLE_NAME,
           "Float",
           "Boolean",
           "Byte",
@@ -388,7 +389,7 @@ public final class NativeCallbackBindings {
     return Set.of(
             OBJECT_NAME,
             "java.lang.Object",
-            "Double",
+            DOUBLE_NAME,
             INTEGER_NAME,
             "Boolean",
             "java.lang.Integer",
@@ -429,7 +430,7 @@ public final class NativeCallbackBindings {
     return switch (qualified(type, imports)) {
       case INTEGER_NAME, "java.lang.Integer" ->
           "java.lang.Integer.valueOf(jsinterop.base.Js.asInt(" + value + "))";
-      case "Double", "java.lang.Double" ->
+      case DOUBLE_NAME, "java.lang.Double" ->
           "java.lang.Double.valueOf(jsinterop.base.Js.asDouble(" + value + "))";
       case "Boolean", "java.lang.Boolean" ->
           "java.lang.Boolean.valueOf(jsinterop.base.Js.asBoolean(" + value + "))";
