@@ -31,6 +31,7 @@ public final class NativeCallbackBindings {
   private static final String OBJECT_NAME = "Object";
   private static final String INTEGER_NAME = "Integer";
   private static final String DOUBLE_NAME = "Double";
+  private static final String BOOLEAN_NAME = "Boolean";
 
 
   /** Java names that must never be prefixed with the declaring package. */
@@ -53,7 +54,7 @@ public final class NativeCallbackBindings {
           "Long",
           DOUBLE_NAME,
           "Float",
-          "Boolean",
+          BOOLEAN_NAME,
           "Byte",
           "Short",
           "Character",
@@ -391,7 +392,7 @@ public final class NativeCallbackBindings {
             "java.lang.Object",
             DOUBLE_NAME,
             INTEGER_NAME,
-            "Boolean",
+            BOOLEAN_NAME,
             "java.lang.Integer",
             "java.lang.Double",
             "java.lang.Boolean",
@@ -432,7 +433,7 @@ public final class NativeCallbackBindings {
           "java.lang.Integer.valueOf(jsinterop.base.Js.asInt(" + value + "))";
       case DOUBLE_NAME, "java.lang.Double" ->
           "java.lang.Double.valueOf(jsinterop.base.Js.asDouble(" + value + "))";
-      case "Boolean", "java.lang.Boolean" ->
+      case BOOLEAN_NAME, "java.lang.Boolean" ->
           "java.lang.Boolean.valueOf(jsinterop.base.Js.asBoolean(" + value + "))";
       case COM_GOOGLE_GWT_DOM_CLIENT_ELEMENT ->
           "com.google.gwt.dom.client.Element.as(com.google.gwt.core.client.JavaScriptObject.of("
