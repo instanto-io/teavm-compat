@@ -210,44 +210,39 @@ public abstract class AbstractCellTable<T> extends AbstractHasData<T> {
   private void renderSection(
       final Element section, final List<Header<?>> cells, final boolean isHeader) {
     section.setInnerHTML("");
-    boolean any = false;
-    for (final Header<?> header : cells) {
-      if (header != null) {
-        any = true;
-        break;
-      }
-    }
-    if (!any) {
-      return;
-    }
+    if (cells.stream().allMatch(java.util.Objects::isNull)) return;
+
     final SafeHtmlBuilder sb = new SafeHtmlBuilder();
     sb.appendHtmlConstant("<tr>");
+    final String tag = isHeader ? "th" : "td";
     for (int i = 0; i < cells.size(); i++) {
-      final Header<?> header = cells.get(i);
-      final String tag = isHeader ? "th" : "td";
-      final StringBuilder classes = new StringBuilder();
-      final String styles = header == null ? null : header.getHeaderStyleNames();
-      if (styles != null && !styles.isEmpty()) {
-        classes.append(styles);
-      }
-      if (isHeader && i < columns.size() && columns.get(i).isSortable()) {
-        appendClass(classes, getSortableHeaderStyle());
-        final ColumnSortList.ColumnSortInfo first = sortList.size() == 0 ? null : sortList.get(0);
-        if (first != null && first.getColumn() == columns.get(i)) {
-          appendClass(
-              classes,
-              first.isAscending() ? getSortedAscendingStyle() : getSortedDescendingStyle());
-        }
-      }
-      sb.appendHtmlConstant(
-          "<" + tag + (classes.length() == 0 ? "" : CLASS_ATTRIBUTE_PREFIX + classes + "\"") + ">");
-      if (header != null) {
-        header.render(new Cell.Context(0, i, null), sb);
-      }
-      sb.appendHtmlConstant("</" + tag + ">");
+      renderSectionCell(sb, tag, i, cells.get(i), isHeader);
     }
     sb.appendHtmlConstant("</tr>");
     section.setInnerSafeHtml(sb.toSafeHtml());
+  }
+
+  private void renderSectionCell(
+      SafeHtmlBuilder sb, String tag, int index, Header<?> header, boolean isHeader) {
+    final StringBuilder classes = new StringBuilder();
+    if (header != null) appendClass(classes, header.getHeaderStyleNames());
+    if (isHeader) appendSortClasses(classes, index);
+    sb.appendHtmlConstant(
+        "<" + tag + (classes.length() == 0 ? "" : CLASS_ATTRIBUTE_PREFIX + classes + "\"") + ">");
+    if (header != null) header.render(new Cell.Context(0, index, null), sb);
+    sb.appendHtmlConstant("</" + tag + ">");
+  }
+
+  private void appendSortClasses(StringBuilder classes, int index) {
+    if (index >= columns.size()) return;
+    Column<T, ?> column = columns.get(index);
+    if (!column.isSortable()) return;
+    appendClass(classes, getSortableHeaderStyle());
+    ColumnSortList.ColumnSortInfo first = sortList.size() == 0 ? null : sortList.get(0);
+    if (first != null && first.getColumn() == column) {
+      appendClass(classes,
+          first.isAscending() ? getSortedAscendingStyle() : getSortedDescendingStyle());
+    }
   }
 
   private static void appendClass(final StringBuilder classes, final String name) {
