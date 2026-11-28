@@ -11,6 +11,8 @@
   <dependencies>
     <dependency><groupId>io.instanto</groupId><artifactId>gwt-uibinder-processor</artifactId><version>${project.version}</version><scope>test</scope></dependency>
     <dependency><groupId>io.instanto</groupId><artifactId>gwt-modular-services-compat</artifactId><version>${project.version}</version><scope>test</scope></dependency>
+    <!-- Adapts the native JsInterop fixtures in src/test/jsinterop before the tests compile. -->
+    <dependency><groupId>io.instanto</groupId><artifactId>jsinterop-binding-generator</artifactId><version>${project.version}</version><scope>test</scope></dependency>
     <dependency>
       <groupId>io.instanto</groupId>
       <artifactId>gwt-user-compat</artifactId>
@@ -73,13 +75,34 @@
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions><execution>
+          <id>adapt-native-jsinterop-fixtures</id>
+          <phase>generate-test-sources</phase>
+          <goals><goal>java</goal></goals>
+          <configuration>
+            <mainClass>io.instanto.compat.GenerateBindings</mainClass>
+            <classpathScope>test</classpathScope>
+            <arguments>
+              <argument>${project.build.directory}/generated-test-sources/jsinterop</argument>
+              <argument>${project.basedir}/src/test/jsinterop</argument>
+            </arguments>
+          </configuration>
+        </execution></executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <version>3.6.1</version>
         <executions><execution>
           <id>compile-shared-material-contracts-for-teavm</id>
           <phase>generate-test-sources</phase>
           <goals><goal>add-test-source</goal></goals>
-          <configuration><sources><source>${project.build.directory}/generated-test-sources/contracts</source></sources></configuration>
+          <configuration><sources>
+            <source>${project.build.directory}/generated-test-sources/contracts</source>
+            <source>${project.build.directory}/generated-test-sources/jsinterop</source>
+          </sources></configuration>
         </execution></executions>
       </plugin>
       <plugin>

@@ -179,6 +179,39 @@ Older code that still uses JSNI can set `<legacyJsni>true</legacyJsni>`: JSNI bo
 so the build fails naming the file; give that callback a `@JsFunction` type and call it as a
 function instead. Java 17 source syntax, including records, is accepted.
 
+### Boxed numbers and booleans
+
+GWT passes a `Double`, `Number` or `Boolean` to JavaScript as a plain number or boolean, so
+JsInterop libraries often declare native members with these types. TeaVM would pass the Java
+object instead, and JavaScript would receive something that is not a number.
+
+The adapter converts them on native methods of native `@JsType` classes and interfaces,
+including `@JsProperty` accessors and static methods. The Java signature stays the same:
+
+```java
+@JsType(isNative = true, namespace = JsPackage.GLOBAL, name = "Object")
+public interface PointsMaterialParameters {
+  @JsProperty void setSize(Number size); // JavaScript receives 0.03, not a Java Double
+  @JsProperty Number getSize();          // a number comes back as a Double
+}
+```
+
+- Arguments of type `Double`, `Float`, `Integer`, `Short`, `Byte` and `Number` cross as
+  JavaScript numbers, and `Boolean` as a JavaScript boolean. `null` stays `null`.
+- Results come back as the declared box. A `Number` result is a `Double`, as in GWT. A
+  `null` or `undefined` result is `null`.
+- `Long` and `Character` are left alone, because GWT does not pass them as primitives
+  either. A library type with the same simple name as a box, such as its own `Number`, is
+  left alone too.
+
+Native fields cannot be converted this way. A field is read and written in the code that
+uses it, not in the adapted declaration, so there is no place to put the conversion, and
+changing the field's Java type would change what callers may assign to it. The adapter
+therefore fails on a boxed native field and names it, for example
+`Native field demo.PointsMaterialParameters.size is declared Number`. Declare such a field
+`double` or `boolean`, or replace it with `@JsProperty` accessor methods. Fields marked
+`@JsOverlay` are Java-only and are not affected.
+
 Direct subclasses of GWT `JavaScriptObject` with empty no-argument constructors
 can remain in the canonical sources. The adapter generates TeaVM wrapper
 constructors and converts native arguments and results, including nulls. Native

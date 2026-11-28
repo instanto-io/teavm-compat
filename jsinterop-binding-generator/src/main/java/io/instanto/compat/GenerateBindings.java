@@ -160,8 +160,10 @@ public final class GenerateBindings {
   }
 
   private static void adaptNativeFields(ClassOrInterfaceDeclaration c) {
+    var shadowing = BoxedValues.shadowing(c.findCompilationUnit().orElseThrow());
     for (FieldDeclaration f : c.getFields()) {
       if (f.getAnnotationByName(JS_OVERLAY).isPresent()) continue;
+      BoxedValues.rejectField(c, f, shadowing);
       if (f.isStatic() && f.getAnnotationByName(JS_INTEROP_PROPERTY).isEmpty())
         annotate(f, "@JSProperty");
       for (var v : f.getVariables()) v.removeInitializer();

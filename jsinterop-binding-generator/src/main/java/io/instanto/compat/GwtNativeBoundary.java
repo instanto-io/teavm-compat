@@ -23,6 +23,7 @@ public final class GwtNativeBoundary {
   private static final String JAVA_OBJECT = "Object";
 
   private final Set<String> overlays;
+  private Map<String, String> shadowing = Map.of();
 
   private GwtNativeBoundary(Set<String> overlays) {
     this.overlays = overlays;
@@ -38,6 +39,7 @@ public final class GwtNativeBoundary {
 
   private void transform(CompilationUnit cu) {
     Map<String, String> imported = nativeImports(cu);
+    shadowing = BoxedValues.shadowing(cu);
     for (var owner : cu.findAll(ClassOrInterfaceDeclaration.class)) {
       boolean nativeOwner = owner.isAnnotationPresent("JSClass");
       boolean nativeInterface =
@@ -48,7 +50,9 @@ public final class GwtNativeBoundary {
       if (nativeOwner) adaptFieldGetters(owner, imported);
       int index = 0;
       for (var method : new ArrayList<>(owner.getMethods())) {
-        if (nativeInterface && method.getBody().isEmpty() && isErasedResult(method)) {
+        if (nativeInterface
+            && method.getBody().isEmpty()
+            && (isErasedResult(method) || hasBoxedValue(method))) {
           method.setNative(true);
           adaptMethod(owner, method, true, index++, imported);
         } else if (needsBoundary(method, nativeOwner, imported))
@@ -112,8 +116,23 @@ public final class GwtNativeBoundary {
             || (method.getTypeAsString().equals(JAVA_OBJECT) && !property)
             || (body && !nativeOwner && !method.isStatic());
     return result
+        || hasBoxedValue(method)
         || method.getParameters().stream()
             .anyMatch(p -> isGwt(p.getTypeAsString(), imported) || (isObjectValue(p) && !property));
+  }
+
+  /** GWT passes boxed numbers and booleans to JavaScript as primitives; TeaVM needs a bridge. */
+  private boolean hasBoxedValue(MethodDeclaration method) {
+    return isBoxed(method.getTypeAsString())
+        || method.getParameters().stream().anyMatch(this::isBoxed);
+  }
+
+  private boolean isBoxed(Parameter parameter) {
+    return !parameter.isVarArgs() && isBoxed(parameter.getTypeAsString());
+  }
+
+  private boolean isBoxed(String type) {
+    return BoxedValues.isConverted(type, shadowing);
   }
 
   private void adaptMethod(
@@ -240,6 +259,9 @@ public final class GwtNativeBoundary {
         String rawType = nativeType(parameter.getTypeAsString(), imported);
         bridge.getParameter(i).setType(rawType);
         args.add(unwrapArgument(parameter, rawType, i, setup));
+      } else if (isBoxed(parameter)) {
+        bridge.getParameter(i).setType(BoxedValues.NATIVE_TYPE);
+        args.add(BoxedValues.argument(name));
       } else if (isObjectValue(parameter) && !method.isAnnotationPresent(TEAVM_PROPERTY)) {
         bridge.getParameter(i).setType("jsinterop.base.Any");
         args.add("jsinterop.base.Js.asAny(" + name + ")");
@@ -291,6 +313,16 @@ public final class GwtNativeBoundary {
       if (method.getType().isArrayType()) {
         appendArrayResult(type, bridge.getTypeAsString(), call, setup, imported);
       } else setup.append("return ").append(wrap(type, call, imported)).append(";");
+    } else if (isBoxed(method.getTypeAsString())) {
+      bridge.setType(BoxedValues.NATIVE_TYPE);
+      setup
+          .append(BoxedValues.NATIVE_TYPE)
+          .append(" $boxed = ")
+          .append(call)
+          .append("; return ")
+          .append(
+              BoxedValues.result(BoxedValues.kind(method.getTypeAsString(), shadowing), "$boxed"))
+          .append(";");
     } else if (method.getTypeAsString().equals(JAVA_OBJECT) || isErasedResult(method)) {
       if (isErasedResult(method)) bridge.setType(JAVA_OBJECT);
       setup.append("return jsinterop.base.Js.cast(").append(call).append(");");
