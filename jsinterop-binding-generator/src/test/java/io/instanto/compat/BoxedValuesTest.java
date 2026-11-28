@@ -136,13 +136,88 @@ public class BoxedValuesTest {
   }
 
   @Test
+  public void boxedArraysAndVarargsCrossAsArraysOfPrimitives() {
+    String result =
+        adapt(
+            NATIVE
+                + " public native void interpolate(Float[] positions, int size, Number... samples);"
+                + " public native Double[] weights(); }");
+    var interpolate = method(result, "interpolate");
+    assertFalse(result, interpolate.isNative());
+    assertEquals(
+        List.of("Float[]", "int", "Number"),
+        interpolate.getParameters().stream().map(p -> p.getTypeAsString()).toList());
+    assertTrue(result, interpolate.getParameter(2).isVarArgs());
+    String body = interpolate.getBody().orElseThrow().toString();
+    assertTrue(
+        body, body.contains("java.util.Arrays.stream(positions).map(jsinterop.base.Js::asAny)"));
+    assertTrue(
+        body, body.contains("java.util.Arrays.stream(samples).map(jsinterop.base.Js::asAny)"));
+    var bridge =
+        bridges(result).stream()
+            .filter(b -> b.getParameters().size() == 3)
+            .findFirst()
+            .orElseThrow();
+    assertEquals(
+        List.of("jsinterop.base.Any[]", "int", "jsinterop.base.Any"),
+        bridge.getParameters().stream().map(p -> p.getTypeAsString()).toList());
+    assertTrue(result, bridge.getParameter(2).isVarArgs());
+
+    var weights = method(result, "weights");
+    assertEquals("Double[]", weights.getTypeAsString());
+    String read = weights.getBody().orElseThrow().toString();
+    assertTrue(read, read.contains("$v == null || \"undefined\".equals("));
+    assertTrue(read, read.contains("toArray(java.lang.Double[]::new)"));
+  }
+
+  @Test
+  public void boxedConstructorParametersAreRejectedByName() {
+    var failure =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> adapt(NATIVE + " public Probe(double radius, Number color2) {} }"));
+    String message = failure.getMessage();
+    assertTrue(message, message.contains("demo.Probe(double, Number)"));
+    assertTrue(message, message.contains("parameter color2 as Number"));
+    assertTrue(message, message.contains("Declare it double"));
+    var array =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> adapt(NATIVE + " public Probe(Float[] positions, int size) {} }"));
+    assertTrue(array.getMessage(), array.getMessage().contains("parameter positions as Float[]"));
+    assertTrue(array.getMessage(), array.getMessage().contains("array of Java objects"));
+    assertTrue(array.getMessage(), array.getMessage().contains("Declare it float[]"));
+    var varargs =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> adapt(NATIVE + " public Probe(Boolean... flags) {} }"));
+    assertTrue(varargs.getMessage(), varargs.getMessage().contains("Declare it boolean[]"));
+  }
+
+  @Test
+  public void boxedArrayFieldsAndNestedArraysAreRejectedByName() {
+    var field =
+        assertThrows(
+            IllegalArgumentException.class, () -> adapt(NATIVE + " public Float[] values; }"));
+    assertTrue(field.getMessage(), field.getMessage().contains("demo.Probe.values"));
+    assertTrue(field.getMessage(), field.getMessage().contains("Declare it float[]"));
+    var nested =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> adapt(NATIVE + " public native void grid(Double[][] cells); }"));
+    assertTrue(nested.getMessage(), nested.getMessage().contains("demo.Probe.grid"));
+    assertTrue(nested.getMessage(), nested.getMessage().contains("parameter cells"));
+    assertTrue(nested.getMessage(), nested.getMessage().contains("Declare it double[][]"));
+  }
+
+  @Test
   public void primitivesOverlaysAndLongsAreLeftAlone() {
     String source =
         NATIVE
             + " public double opacity; public boolean visible; public native double ratio(double r);"
             + " @JsOverlay public static final Double DEFAULT = 1.0;"
             + " @JsOverlay public final Double twice(Double v) { return v * 2; }"
-            + " public native Long stamp(Long l); }";
+            + " public native Long stamp(Long l); public Probe(double r, float[] p, Long l) {} }";
     String result = adapt(source);
     assertTrue(result, bridges(result).isEmpty());
     assertTrue(result, method(result, "ratio").isNative());
@@ -155,6 +230,7 @@ public class BoxedValuesTest {
         adapt(
             "package demo; import jsinterop.annotations.*; import demo.math.Number;"
                 + " @JsType(isNative=true) public class Probe { public Number size;"
+                + " public Probe(Number size) {}"
                 + " public native void take(Number n); }");
     assertTrue(result, bridges(result).isEmpty());
     assertTrue(result, method(result, "take").isNative());

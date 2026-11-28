@@ -200,6 +200,11 @@ public interface PointsMaterialParameters {
   JavaScript numbers, and `Boolean` as a JavaScript boolean. `null` stays `null`.
 - Results come back as the declared box. A `Number` result is a `Double`, as in GWT. A
   `null` or `undefined` result is `null`.
+- Arrays of these boxes, such as `Float[]`, and varargs such as `Number...` cross as
+  JavaScript arrays of numbers or booleans, converted element by element. An array result
+  such as `Double[]` comes back as a new Java array of boxes, with `undefined` elements as
+  `null`. As with TeaVM's primitive arrays, JavaScript gets a copy, so changes it makes to
+  an argument array are not seen in Java.
 - `Long` and `Character` are left alone, because GWT does not pass them as primitives
   either. A library type with the same simple name as a box, such as its own `Number`, is
   left alone too.
@@ -209,8 +214,21 @@ uses it, not in the adapted declaration, so there is no place to put the convers
 changing the field's Java type would change what callers may assign to it. The adapter
 therefore fails on a boxed native field and names it, for example
 `Native field demo.PointsMaterialParameters.size is declared Number`. Declare such a field
-`double` or `boolean`, or replace it with `@JsProperty` accessor methods. Fields marked
-`@JsOverlay` are Java-only and are not affected.
+`double` or `boolean` (or `float[]`, `boolean[]` and so on for an array), or replace it
+with `@JsProperty` accessor methods. Fields marked `@JsOverlay` are Java-only and are not
+affected.
+
+Native constructors cannot be converted either. TeaVM turns `new PolarGridHelper(...)`
+straight into a JavaScript `new` in the calling code and passes each argument by its
+declared type; the constructor's own body never runs. So the adapter fails on a native
+constructor with a boxed or boxed-array parameter and names it, for example
+`Native constructor demo.PolarGridHelper(double, double, double, double, Color, Number)
+declares parameter color2 as Number`. Declare the parameter with the matching primitive
+type. Where the boxed parameter allowed `null` to mean "leave it out", add an overload
+without that parameter.
+
+Methods convert one-dimensional arrays only. A native member declared with a deeper array
+of boxes, such as `Double[][]`, is rejected by name in the same way.
 
 Direct subclasses of GWT `JavaScriptObject` with empty no-argument constructors
 can remain in the canonical sources. The adapter generates TeaVM wrapper

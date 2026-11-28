@@ -53,6 +53,18 @@ public class BoxedNativeValuesTest {
   }
 
   @Test
+  public void boxedArraysCrossAsArraysOfPrimitives() {
+    BoxedProbe probe = new BoxedProbe();
+    probe.takeAll(new Float[] {1.5f, null, 2f});
+    assertEquals("number,null,number", elementTypes(probe));
+    probe.takeAll(null);
+    assertTrue(allIsNull(probe));
+    probe.takeEach(1, 2.5);
+    assertEquals("number,number", elementTypes(probe));
+    assertArrayEquals(new Double[] {0.25, null, 2.0}, probe.weights());
+  }
+
+  @Test
   public void boxedPropertiesAreStoredAsPrimitives() {
     BoxedProbe probe = new BoxedProbe();
     probe.setSize(0.03);
@@ -79,7 +91,11 @@ public class BoxedNativeValuesTest {
               + "BoxedProbe.prototype.ratio = function() { return 0.5; };"
               + "BoxedProbe.prototype.count = function() { return 3; };"
               + "BoxedProbe.prototype.visible = function() { return true; };"
-              + "BoxedProbe.prototype.missing = function() { return undefined; };")
+              + "BoxedProbe.prototype.missing = function() { return undefined; };"
+              + "BoxedProbe.prototype.takeAll = function(v) { this.all = v; };"
+              + "BoxedProbe.prototype.takeEach = function() {"
+              + " this.all = Array.prototype.slice.call(arguments); };"
+              + "BoxedProbe.prototype.weights = function() { return [0.25, undefined, 2]; };")
   private static native void install();
 
   @JSBody(params = "probe", script = "return typeof probe.last;")
@@ -87,6 +103,17 @@ public class BoxedNativeValuesTest {
 
   @JSBody(params = "probe", script = "return probe.last;")
   private static native double lastNumber(BoxedProbe probe);
+
+  @JSBody(
+      params = "probe",
+      script =
+          "return Array.isArray(probe.all)"
+              + " ? probe.all.map(function(v) { return v === null ? 'null' : typeof v; }).join()"
+              + " : 'not an array';")
+  private static native String elementTypes(BoxedProbe probe);
+
+  @JSBody(params = "probe", script = "return probe.all === null;")
+  private static native boolean allIsNull(BoxedProbe probe);
 
   @JSBody(params = "probe", script = "return probe.last === null;")
   private static native boolean lastIsNull(BoxedProbe probe);

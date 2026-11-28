@@ -2,8 +2,11 @@ package io.instanto.compat;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Boxed numbers and booleans in native JsInterop declarations.
@@ -22,6 +25,16 @@ final class BoxedValues {
           "Short", "java.lang.Short.valueOf(jsinterop.base.Js.asShort(%s))",
           "Byte", "java.lang.Byte.valueOf(jsinterop.base.Js.asByte(%s))",
           "Boolean", "java.lang.Boolean.valueOf(jsinterop.base.Js.asBoolean(%s))");
+
+  private static final Map<String, String> PRIMITIVES =
+      Map.of(
+          "Double", "double",
+          "Number", "double",
+          "Float", "float",
+          "Integer", "int",
+          "Short", "short",
+          "Byte", "byte",
+          "Boolean", "boolean");
 
   /** The JavaScript-side type of a converted value at the bridge. */
   static final String NATIVE_TYPE = "jsinterop.base.Any";
@@ -42,6 +55,26 @@ final class BoxedValues {
     return simple;
   }
 
+  /** How many array dimensions {@code type} has, counting a varargs parameter as one. */
+  static int dimensions(String type) {
+    int count = 0;
+    while (type.endsWith("[]")) {
+      type = type.substring(0, type.length() - 2).strip();
+      count++;
+    }
+    return count;
+  }
+
+  /** The box kind of {@code type} or of its array elements, else {@code null}. */
+  static String elementKind(String type, Map<String, String> imported) {
+    return kind(type.replace("[]", "").strip(), imported);
+  }
+
+  /** The declared type of a parameter, with varargs written as an array. */
+  static String typeOf(Parameter parameter) {
+    return parameter.getTypeAsString() + (parameter.isVarArgs() ? "[]" : "");
+  }
+
   /** Converts a bridge result to the declared box. Null and undefined both become null. */
   static String result(String kind, String value) {
     return value
@@ -54,6 +87,28 @@ final class BoxedValues {
   /** Converts a declared box to the JavaScript primitive it represents. Null stays null. */
   static String argument(String value) {
     return "jsinterop.base.Js.asAny(" + value + ")";
+  }
+
+  /** Converts an array of boxes element by element into a JavaScript array of primitives. */
+  static String arrayArgument(String value) {
+    return value
+        + " == null ? null : java.util.Arrays.stream("
+        + value
+        + ").map(jsinterop.base.Js::asAny).toArray("
+        + NATIVE_TYPE
+        + "[]::new)";
+  }
+
+  /** Converts a bridge array result back to an array of the declared box. */
+  static String arrayResult(String kind, String value) {
+    return value
+        + " == null ? null : java.util.Arrays.stream("
+        + value
+        + ").map($v -> "
+        + result(kind, "$v")
+        + ").toArray(java.lang."
+        + kind
+        + "[]::new)";
   }
 
   /** Simple names a source imports or declares, so a library's own {@code Number} is left alone. */
@@ -74,22 +129,98 @@ final class BoxedValues {
   static void rejectField(
       ClassOrInterfaceDeclaration owner, FieldDeclaration field, Map<String, String> imported) {
     for (var variable : field.getVariables()) {
-      String kind = kind(variable.getTypeAsString(), imported);
+      String type = variable.getTypeAsString();
+      String kind = elementKind(type, imported);
       if (kind == null) continue;
-      String primitive = kind.equals("Boolean") ? "boolean" : "double";
       throw new IllegalArgumentException(
           "Native field "
-              + owner.getFullyQualifiedName().orElse(owner.getNameAsString())
+              + name(owner)
               + "."
               + variable.getNameAsString()
               + " is declared "
-              + kind
-              + ". TeaVM would hand JavaScript a Java object instead of a "
-              + (kind.equals("Boolean") ? "boolean" : "number")
+              + type
+              + ". TeaVM would hand JavaScript "
+              + handed(kind, type)
               + ". Declare it "
-              + primitive
+              + primitive(kind, type)
               + ", or replace it with @JsProperty accessor methods, which are converted.");
     }
+  }
+
+  /**
+   * TeaVM turns {@code new NativeType(...)} into a JavaScript {@code new} where the caller
+   * compiles, passing each argument by its declared type, and never runs the constructor body. So
+   * there is nowhere to convert a boxed argument. Reject it by name.
+   */
+  static void rejectConstructor(
+      ClassOrInterfaceDeclaration owner,
+      ConstructorDeclaration constructor,
+      Map<String, String> imported) {
+    for (var parameter : constructor.getParameters()) {
+      String type = typeOf(parameter);
+      String kind = elementKind(type, imported);
+      if (kind == null) continue;
+      throw new IllegalArgumentException(
+          "Native constructor "
+              + name(owner)
+              + "("
+              + constructor.getParameters().stream()
+                  .map(BoxedValues::typeOf)
+                  .collect(Collectors.joining(", "))
+              + ") declares parameter "
+              + parameter.getNameAsString()
+              + " as "
+              + type
+              + ". TeaVM passes constructor arguments by their declared type, so JavaScript would"
+              + " receive "
+              + handed(kind, type)
+              + ". Declare it "
+              + primitive(kind, type)
+              + (dimensions(type) == 0
+                  ? ", and add an overload without it where null was meant."
+                  : "."));
+    }
+  }
+
+  /**
+   * Methods convert boxes and one-dimensional arrays of boxes. Deeper arrays are rejected by name
+   * rather than passed as nested arrays of Java objects.
+   */
+  static void rejectNested(
+      ClassOrInterfaceDeclaration owner,
+      String method,
+      String what,
+      String type,
+      Map<String, String> imported) {
+    String kind = elementKind(type, imported);
+    if (kind == null || dimensions(type) < 2) return;
+    throw new IllegalArgumentException(
+        "Native method "
+            + name(owner)
+            + "."
+            + method
+            + " declares "
+            + what
+            + " as "
+            + type
+            + ". Only boxes and one-dimensional arrays of boxes are converted. Declare it "
+            + primitive(kind, type)
+            + ".");
+  }
+
+  private static String name(ClassOrInterfaceDeclaration owner) {
+    return owner.getFullyQualifiedName().orElse(owner.getNameAsString());
+  }
+
+  private static String handed(String kind, String type) {
+    String value = kind.equals("Boolean") ? "boolean" : "number";
+    return dimensions(type) == 0
+        ? "a Java object instead of a " + value
+        : "an array of Java objects instead of " + value + "s";
+  }
+
+  private static String primitive(String kind, String type) {
+    return PRIMITIVES.get(kind) + "[]".repeat(dimensions(type));
   }
 
   static boolean isConverted(String type, Map<String, String> imported) {

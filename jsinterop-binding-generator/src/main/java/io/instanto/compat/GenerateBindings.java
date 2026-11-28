@@ -168,6 +168,8 @@ public final class GenerateBindings {
         annotate(f, "@JSProperty");
       for (var v : f.getVariables()) v.removeInitializer();
     }
+    for (var constructor : c.getConstructors())
+      BoxedValues.rejectConstructor(c, constructor, shadowing);
   }
 
   private static void adaptUnionCast(MethodCallExpr call) {

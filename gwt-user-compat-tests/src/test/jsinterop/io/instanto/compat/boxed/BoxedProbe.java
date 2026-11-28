@@ -26,6 +26,12 @@ public class BoxedProbe {
 
   public native Double missing();
 
+  public native void takeAll(Float[] values);
+
+  public native void takeEach(Number... values);
+
+  public native Double[] weights();
+
   @JsProperty
   public native void setSize(Double size);
 
