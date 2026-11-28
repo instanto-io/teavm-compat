@@ -1,18 +1,18 @@
 package io.instanto.compat;
 
 import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /** Adapts direct GWT overlay subclasses while leaving their canonical sources GWT-compatible. */
 final class GwtOverlayTypes {
   private final Set<String> types = new HashSet<>();
 
-  GwtOverlayTypes(Collection<String> sources) {
-    for (String source : sources) {
-      var cu = StaticJavaParser.parse(source);
+  GwtOverlayTypes(List<CompilationUnit> declarations) {
+    for (var cu : declarations) {
       boolean imported =
           cu.getImports().stream()
               .anyMatch(

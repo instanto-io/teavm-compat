@@ -12,9 +12,8 @@ final class NativeInheritedResults {
 
   private final Map<String, Declaration> types = new HashMap<>();
 
-  NativeInheritedResults(Collection<String> sources) {
-    for (String source : sources) {
-      CompilationUnit unit = StaticJavaParser.parse(source);
+  NativeInheritedResults(List<CompilationUnit> declarations) {
+    for (var unit : declarations) {
       for (var type : unit.getTypes()) {
         if (type.isClassOrInterfaceDeclaration()) {
           var declaration = type.asClassOrInterfaceDeclaration();

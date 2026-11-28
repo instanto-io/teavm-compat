@@ -1,6 +1,7 @@
 package io.instanto.compat;
 
 import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.type.*;
 import java.util.*;
@@ -68,18 +69,20 @@ public final class NativeCallbackBindings {
           "Comparable");
 
   public NativeCallbackBindings(Collection<String> declarations) {
-    for (String source : declarations)
-      for (var type : StaticJavaParser.parse(source).findAll(ClassOrInterfaceDeclaration.class))
+    this(declarations.stream().map(StaticJavaParser::parse).toList());
+  }
+
+  NativeCallbackBindings(List<CompilationUnit> declarations) {
+    for (var cu : declarations)
+      for (var type : cu.findAll(ClassOrInterfaceDeclaration.class))
         type.getFullyQualifiedName().ifPresent(name -> declarationsByName.put(name, type));
-    for (String source : declarations) {
-      var cu = StaticJavaParser.parse(source);
+    for (var cu : declarations) {
       Map<String, String> declarationImports = new HashMap<>();
       cu.getImports().stream()
           .filter(i -> !i.isAsterisk())
           .forEach(i -> declarationImports.put(i.getName().getIdentifier(), i.getNameAsString()));
       String packageName = cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
       for (var type : cu.findAll(ClassOrInterfaceDeclaration.class)) {
-        type.getFullyQualifiedName().ifPresent(name -> declarationsByName.put(name, type));
         if (type.getAnnotationByName("JsFunction").isEmpty()) continue;
         registerFunction(type, declarationImports, packageName);
       }

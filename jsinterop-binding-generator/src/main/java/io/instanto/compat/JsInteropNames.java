@@ -1,6 +1,7 @@
 package io.instanto.compat;
 
 import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.*;
@@ -10,11 +11,9 @@ import java.util.*;
 final class JsInteropNames {
   private final Map<String, Expression> constants = new HashMap<>();
 
-  JsInteropNames(Collection<String> sources) {
-    for (String source : sources) {
-      StaticJavaParser.parse(source)
-          .findAll(ClassOrInterfaceDeclaration.class)
-          .forEach(this::collectConstants);
+  JsInteropNames(List<CompilationUnit> declarations) {
+    for (var cu : declarations) {
+      cu.findAll(ClassOrInterfaceDeclaration.class).forEach(this::collectConstants);
     }
   }
 

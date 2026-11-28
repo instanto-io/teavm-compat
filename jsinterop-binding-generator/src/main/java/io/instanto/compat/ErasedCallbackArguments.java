@@ -13,8 +13,12 @@ final class ErasedCallbackArguments {
   private final Map<String, ClassOrInterfaceDeclaration> types = new LinkedHashMap<>();
 
   ErasedCallbackArguments(Collection<String> sources) {
-    for (String source : sources) {
-      for (var type : StaticJavaParser.parse(source).findAll(ClassOrInterfaceDeclaration.class)) {
+    this(sources.stream().map(StaticJavaParser::parse).toList());
+  }
+
+  ErasedCallbackArguments(List<CompilationUnit> declarations) {
+    for (var cu : declarations) {
+      for (var type : cu.findAll(ClassOrInterfaceDeclaration.class)) {
         type.getFullyQualifiedName().ifPresent(name -> types.put(name, type));
       }
     }
